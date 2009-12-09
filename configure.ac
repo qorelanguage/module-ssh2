@@ -106,7 +106,16 @@ if test "$enable_64bit" = "auto"; then
    if test "$host_cpu" = "ia64" -o "$host_cpu" = "x86_64"; then
       enable_64bit=yes
    else
-      enable_64bit=no
+      case "${host_os}" in
+          darwin*)   mv=`uname -r|cut -f1 -d.`
+                     if test $mv -ge 10 -a "${host_cpu}" = "i386"; then
+                         enable_64bit=yes
+                     fi
+                     ;;
+      esac
+      if test "$enable_64bit" = "auto"; then
+          enable_64bit=no
+      fi
    fi
 fi
 
@@ -235,7 +244,7 @@ AC_ARG_WITH([libssh2-dir],
   [with_libssh2_dir="$LIBSSH2_DIR"])
 
 AC_MSG_CHECKING([for libssh2 libraries and header files])
-for dir in "${with_libssh2_dir}" /usr /usr/local /opt/libssh2 ; do
+for dir in "${with_libssh2_dir}" "${find_prefix}" /usr /usr/local /opt/libssh2 /opt/local /sw /usr/sfw /opt/sfw /opt/gnu /opt/qore /usr/local/qore ; do
     find_libssh2 $dir
     if test -n "$LIBSSH2_LDFLAGS"; then
         break
@@ -344,11 +353,15 @@ else
       qv_minor=`grep QORE_VERSION_MINOR $QORE_INC_DIR/qore/qore-version.h|cut -f3 -d\  2>/dev/null`
       qv_sub=`grep QORE_VERSION_SUB $QORE_INC_DIR/qore/qore-version.h|cut -f3 -d\  2>/dev/null`
 
-      qvc=`printf "%02d%02d%02d" $qv_major $qv_minor $qv_sub`
+      if test "$qv_major" -gt 0; then
+         qvc=`printf "%d%02d%02d" $qv_major $qv_minor $qv_sub`
+      else
+         qvc=`printf "%d%02d" $qv_major $qv_minor $qv_sub`
+      fi
       AC_DEFINE_UNQUOTED([QORE_VERSION_CODE], $qvc, [define when missing in Qore headers])
    fi
 
-   if test $qvc -lt 000701; then
+   if test $qvc -lt 701; then
       AC_MSG_ERROR([found $qore_version; this module requires at least version 0.7.1])
    fi
 
