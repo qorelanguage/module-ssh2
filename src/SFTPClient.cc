@@ -127,6 +127,7 @@ QoreHashNode *SFTPClient::sftp_list(const char *path, ExceptionSink *xsink) {
     xsink->raiseException("SFTPCLIENT-LIST-ERROR", "cannot open '%s' as directory", pstr.c_str());
     return NULL;
   }
+  ON_BLOCK_EXIT(libssh2_sftp_close_handle, dh);
 
   // create objects after only possible error
   QoreListNode *files=new QoreListNode();
@@ -154,7 +155,6 @@ QoreHashNode *SFTPClient::sftp_list(const char *path, ExceptionSink *xsink) {
       files->push(new QoreStringNode(buff));
     }
   }
-  libssh2_sftp_closedir(dh);
 
   //ret->setKeyValue("path", sftp_path(), xsink);
   ret->setKeyValue("path", new QoreStringNode(pstr.c_str()), xsink);
@@ -464,8 +464,12 @@ BinaryNode *SFTPClient::sftp_getFile(const char *file, ExceptionSink *xsink=0) {
     return NULL;
   }
 
+  // close file
+  // errors can be ignored, because by the time we close, we should have already what we want
+  ON_BLOCK_EXIT(libssh2_sftp_close_handle, sftp_handle);
+
   // create binary node for return with the size the server gave us on stat
-  BinaryNode *bn=new BinaryNode();
+  SimpleRefHolder<BinaryNode> bn(new BinaryNode());
   bn->preallocate(fsize);
   rc=libssh2_sftp_read(sftp_handle, (char*)bn->getPtr(), fsize);
   if(rc<0) {
@@ -474,11 +478,7 @@ BinaryNode *SFTPClient::sftp_getFile(const char *file, ExceptionSink *xsink=0) {
   }
   bn->setSize(rc);
 
-  // close file
-  // errors can be ignored, because we have already what we want
-  rc=libssh2_sftp_close(sftp_handle);
-
-  return bn;
+  return bn.release();
 }
 
 
@@ -511,23 +511,23 @@ QoreStringNode *SFTPClient::sftp_getTextFile(const char *file, ExceptionSink *xs
     return NULL;
   }
 
+  // close file
+  // errors can be ignored, because by the time we close, we should already have what we want
+  ON_BLOCK_EXIT(libssh2_sftp_close_handle, sftp_handle);
+
   // create buffer for return with the size the server gave us on stat
   char *memptr=(char*)malloc(sizeof(char)*(fsize+1));
+  ON_BLOCK_EXIT(free, memptr);
+
   memptr[sizeof(char)*(fsize)]='\0';
 
   rc=libssh2_sftp_read(sftp_handle, memptr, fsize);
   if(rc<0) {
     xsink && xsink->raiseException("SFTPCLIENT-TRANSFER-ERROR", "error during reading file from server");
-    free(memptr);
     return NULL;
   }
-  // close file
-  // errors can be ignored, because we have already what we want
-  rc=libssh2_sftp_close(sftp_handle);
 
   QoreStringNode *rn=new QoreStringNode(memptr, fsize);
-
-  free(memptr);
 
   return rn;
 }
@@ -556,7 +556,6 @@ int SFTPClient::sftp_putFile(const BinaryNode *data, const char *fname, int mode
     return -1;
   }
 
-
   // write in 1024 byte packages
   const char *outb=(char*)data->getPtr();
   int maxwrite=1024;
@@ -565,13 +564,14 @@ int SFTPClient::sftp_putFile(const BinaryNode *data, const char *fname, int mode
     size=libssh2_sftp_write(sftp_handle, outb, towrite<maxwrite? towrite: maxwrite);
     if(size<0) {
       xsink && xsink->raiseException("SFTPCLIENT-TRANSFER-ERROR", "error during transfering file: %d", size);      
+      libssh2_sftp_close(sftp_handle);
       return -1;
     }
     // correct pointers
     towrite-=size;
     outb+=size;
   }
-  
+
   // will return 0 on sucess
   // we check this error, because we want to be sure the file was written
   rc=libssh2_sftp_close(sftp_handle);
