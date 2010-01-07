@@ -42,7 +42,7 @@ DAMAGE.
 <link rel='alternate' type='application/rss+xml' title='RSS' href='index.xml' />
 <!--}}}-->
 <!--PRE-HEAD-END-->
-<title> Qore oracle Module Documentation </title>
+<title> Qore ssh2 Module Documentation </title>
 <style id="styleArea" type="text/css">
 #saveTest {display:none;}
 #messageArea {display:none;}
@@ -506,65 +506,6 @@ Also see AdvancedOptions</pre>
 </div>
 <!--POST-SHADOWAREA-->
 <div id="storeArea">
-<div title="Binding By Value" modifier="DavidNichols" created="200809060743" modified="200809071812" changecount="24">
-<pre>|!Argument|!OCI Type|!Description|h
-|{{{Type::Binary}}}|{{{SQLT_BIN}}}|For use with {{{BLOB}}} columns, for example.|
-|{{{Type::String}}}|{{{SQLT_STR}}}|For use with string data, {{{VARCHAR}}}, {{{CHAR}}}, {{{CLOB}}} columns, etc|
-|{{{Type::Int}}}|{{{SQLT_INT}}} or {{{SQLT_STR}}}|if the int &gt; 32-bits = {{{SQLT_STR}}}, &lt;= 32-bit int = {{{SQLT_INT}}}|
-|{{{Type::Boolean}}}|{{{SQLT_INT}}}|True is bound as 1, False as 0|
-|{{{Type::Float}}}|{{{SQLT_BDOUBLE}}}|For use with {{{FLOAT}}}, {{{BINARY_FLOAT}}}, {{{BINARY_DOUBLE}}} columns, etc|
-|{{{Type::Date}}}|{{{SQLT_TIMESTAMP}}}|For use with {{{DATE}}}, {{{TIMESTAMP}}}, etc columns|
-</pre>
-</div>
-<div title="Binding and Types" modifier="DavidNichols" created="200809060754" modified="200809071813" changecount="22">
-<pre>When retrieving Oracle data, Oracle types are converted to Qore types as per [[Default Oracle to Qore Type Mappings]].
-
-Binding by value is supported for any statement executed through this driver; Oracle types are converted to Qore types as per [[Binding By Value]].
-
-Binding by placeholder is required to retrieve values from a procedure or function call.  The oracle driver assumes that any placeholder values are string values unless a placeholder buffer specification is passed in the argument position corresponding to the placeholder specification in the string.  For placeholder buffer specification values, see [[Placeholder Type Mappings]].
-
-Oracle {{{TIMESTAMP}}} data supports time resolution to the microsecond, however Qore's date/time value only supports a millisecond resolution. Any Oracle {{{TIMESTAMP}}} values are rounded to millisecond resolution when converted to Qore data types.
-
-PL/SQL code and stored procedure and function execution is supported; the following is an example of a stored procedure call using bind by value and bind by placeholder (the {{{%v}}} characters represent the positions for binding the arguments following the SQL string by value, and the placeholder names are prefixed by a colon):
-
-{{{
-$result = $db.exec(&quot;begin h3g_psft_order_import.insert_h3g_psft_customers(%v, %v, :status_code, :error_code, :error_description); end;&quot;,
-                   &quot;Customer Name&quot;, &quot;Customer-ID&quot;, Type::Int, Type::Int);
-printf(&quot;%N\n&quot;, $result);
-}}}
-
-This will bind the {{{&quot;Customer Name&quot;}}} and {{{&quot;Customer-ID&quot;}}} strings by value (as per [[Binding By Value]] these will be bound with Oracle type {{{SQLT_STRING}}}), and the output variables will be bound by placeholder (the first two will be bound as per [[Placeholder Type Mappings]] with buffers of Oracle type {{{SQLT_INT}}}, and the last placeholder buffer will get the default buffer type of {{{SQLT_STRING}}}), resulting in a hash giving the values of the output variables:
-
-{{{
-hash: (3 members)
-  status_code : 0
-  error_code : 0
-  error_description : &lt;NULL&gt;
-}}}
-</pre>
-</div>
-<div title="DavidNichols" modifier="DavidNichols" created="200808201022" modified="200808201024" changecount="3">
-<pre>David Nichols is the author of the [[Qore programming language|http://qoretechnologies.com/qore]] and of this xmlsec module.
-You can reach me at: mailto:david_nichols@users.sourceforge.net</pre>
-</div>
-<div title="Default Oracle to Qore Type Mappings" modifier="DavidNichols" created="200809060731" modified="200809071812" changecount="19">
-<pre>''Default Oracle to Qore Type Mappings''
-|!Oracle Column Type|!Qore Type|!Notes|h
-|{{{REAL, FLOAT, DOUBLE PRECISION, BINARY_FLOAT, BINARY_DOUBLE}}}|{{{Type::Float}}}|direct conversion|
-|{{{DATE}}}|{{{Type::Date}}}|direct conversion|
-|{{{TIMESTAMP}}}|{{{Type::Date}}} (absolute)|microseconds are converted to milliseconds, some precision may be lost|
-|{{{TIMESTAMP WITH TIME ZONE}}}|{{{Type::Date}}} (absolute)|time zone information is ignored and as microseconds are converted to milliseconds, some precision may be lost|
-|{{{TIMESTAMP WITH LOCAL TIME ZONE}}}|{{{Type::Date}}} (absolute)|time zone information is ignored and as microseconds are converted to milliseconds, some precision may be lost|
-|{{{INTERVAL YEAR TO MONTH}}}|{{{Type::Date}}} (relative)|direct conversion to a relative date|
-|{{{INTERVAL DAY TO SECOND}}}|{{{Type::Date}}} (relative)|direct conversion to a relative date|
-|{{{SMALLINT, INTEGER}}}|{{{Type::Int}}}|direct conversion|
-|{{{NUMBER, NUMERIC, DECIMAL}}}|{{{Type::String}}}|conversion to a string to avoid loss of precision|
-|{{{CLOB}}}|{{{Type::String}}}|the LOB handle is used to read the entire CLOB content into a string|
-|{{{RAW, LONG RAW}}}|{{{Type::Binary}}}|direct conversion|
-|{{{BLOB}}}|{{{Type::Binary}}}|the LOB handle is used to read the entire BLOB content into a binary object|
-|{{{CURSOR}}} (result set)|{{{Type::Hash}}}|the result set is returned as a hash of lists|
-</pre>
-</div>
 <div title="DefaultTiddlers" modifier="DavidNichols" created="200808200745" modified="200809060801" changecount="4">
 <pre>[[Introduction]]
 [[Binding and Types]]
@@ -591,31 +532,19 @@ When starting the connection the module will try to
 
 </pre>
 </div>
-<div title="MainMenu" modifier="DavidNichols" created="200808200730" modified="200809060801" changecount="29">
+<div title="MainMenu" modifier="YourName" created="200808200730" modified="201001071421" changecount="30">
 <pre>[[Introduction]]
-[[Binding and Types]]
-[[Binding By Value]]
-[[Default Oracle to Qore Type Mappings]]
-[[Placeholder Type Mappings]]</pre>
-</div>
-<div title="Placeholder Type Mappings" modifier="DavidNichols" created="200809060750" modified="200809060752" changecount="17">
-<pre>&quot;Placeholder Type Mappings&quot;
-|!Argument|OCI Type|Description|h
-|{{{Type::Binary}}}|{{{SQLT_BIN}}}|For retrieving {{{RAW}}} data up to 65531 bytes in size.|
-|{{{SQL::BLOB}}}|{{{SQLT_BLOB}}}|For retrieving {{{BLOB}}} data. The {{{LOB}}} handle is used to read the entire {{{BLOB}}} content into a binary object.|
-|{{{SQL::CLOB}}}|{{{SQLT_CLOB}}}|For retrieving {{{CLOB}}} data. The {{{LOB handle is used to read the entire {{{CLOB}}} content into a Qore string.|
-|{{{SQL::VARCHAR}}}|{{{SQLT_STR}}}|For retrieving character data ({{{VARCHAR}}}, etc). To specify a buffer size larger than 512 bytes, simply use the size in bytes as the argument.|
-|{{{Type::Int}}}|{{{SQLT_INT}}}|For retrieving integer numeric data up to 32 bits (for larger numbers or for non-integer numbers use {{{SQL::VARCHAR}}} or {{{Type::Float}}}.|
-|{{{Type::Float}}}|{{{SQLT_BDOUBLE}}}|For retrieving data in 64-bit floating point format.|
-|{{{Type::Date}}}|{{{SQLT_TIMESTAMP}}}|For retrieving dates and times.|
-|{{{Type::Hash}}}|{{{SQLT_RSET}}}|For retrieving result sets from a stored procedure that returns a cursor.|
 </pre>
 </div>
 <div title="SiteSubtitle" modifier="YourName" created="200808200718" changecount="25">
 <pre></pre>
 </div>
-<div title="SiteTitle" modifier="DavidNichols" created="200808200717" modified="200809060717" changecount="27">
-<pre>Qore oracle Module Documentation</pre>
+<div title="SiteTitle" modifier="YourName" created="200808200717" modified="201001071423" changecount="28">
+<pre>Qore ssh2 Module Documentation</pre>
+</div>
+<div title="WolfgangRitzinger" modifier="YourName" created="200808201022" modified="201001071422" changecount="4">
+<pre>Wolfgang Ritzinger is the author of the this ssh2 module.
+You can reach me at: mailto:aargon@rat.at</pre>
 </div>
 </div>
 <!--POST-STOREAREA-->
