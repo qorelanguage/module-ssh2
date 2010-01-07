@@ -46,6 +46,9 @@ class SFTPClient : public SSH2Client {
   DLLLOCAL virtual ~SFTPClient();
   DLLLOCAL virtual void deref(ExceptionSink*);
 
+  DLLLOCAL int sftp_connected_unlocked();
+  DLLLOCAL QoreStringNode *sftp_path_unlocked();
+
  public:
   // session props
   char *sftppath;

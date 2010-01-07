@@ -55,6 +55,21 @@ class SSH2Client : public AbstractPrivateData {
  protected:
   DLLLOCAL virtual ~SSH2Client();
   DLLLOCAL virtual void deref(ExceptionSink*);
+  DLLLOCAL int ssh_connected_unlocked();
+  DLLLOCAL int ssh_disconnect_unlocked(int, ExceptionSink *);
+  DLLLOCAL int ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink);
+
+  // the following functions are unlocked so are protected
+  DLLLOCAL const char *getHost();
+  DLLLOCAL const uint32_t getPort();
+  DLLLOCAL const char *getUser();
+  DLLLOCAL const char *getPassword();
+  DLLLOCAL const char *getKeyPriv();
+  DLLLOCAL const char *getKeyPub();
+  DLLLOCAL const char *getAuthenticatedWith();
+
+  // to ensure thread-safe operations
+  QoreThreadLock m;
   LIBSSH2_SESSION *ssh_session;
 
  public:
@@ -68,13 +83,6 @@ class SSH2Client : public AbstractPrivateData {
   int ssh_connect(int timeout_ms, ExceptionSink *xsink);
 
   int ssh_connected();
-  const char *getHost();
-  const uint32_t getPort();
-  const char *getUser();
-  const char *getPassword();
-  const char *getKeyPriv();
-  const char *getKeyPub();
-  const char *getAuthenticatedWith();
 
   //QoreStringNode *exec(const char *dir, ExceptionSink *xsink);
 

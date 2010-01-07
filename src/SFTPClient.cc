@@ -77,8 +77,13 @@ void SFTPClient::deref(ExceptionSink *xsink) {
 }
 
 
-int SFTPClient::sftp_connected() {
+int SFTPClient::sftp_connected_unlocked() {
   return (sftp_session? 1: 0);
+}
+
+int SFTPClient::sftp_connected() {
+   AutoLocker al(m);
+   return sftp_connected();
 }
 
 int SFTPClient::sftp_disconnect(int force = 0, ExceptionSink *xsink = 0) {
@@ -98,13 +103,13 @@ int SFTPClient::sftp_disconnect(int force = 0, ExceptionSink *xsink = 0) {
 }
 
 QoreHashNode *SFTPClient::sftp_list(const char *path, ExceptionSink *xsink) {
-  //AutoLocker al(m);
+   AutoLocker al(m);
 
   //ReferenceHolder<QoreListNode> lst(new QoreListNode(), xsink);
   //return lst.release();
 
   // no path?
-  if(!sftp_connected()) {
+  if(!sftp_connected_unlocked()) {
     return NULL;
   }
 
@@ -131,9 +136,8 @@ QoreHashNode *SFTPClient::sftp_list(const char *path, ExceptionSink *xsink) {
 
   // create objects after only possible error
   QoreListNode *files=new QoreListNode();
-  QoreListNode *dirs=new QoreListNode();
+  ReferenceHolder<QoreListNode> dirs(new QoreListNode, xsink);
   QoreListNode *links=new QoreListNode();
-  QoreHashNode *ret=new QoreHashNode();
 
   char buff[PATH_MAX];
   while(libssh2_sftp_readdir(dh, buff, sizeof(buff), &attrs) > 0) {
@@ -156,8 +160,10 @@ QoreHashNode *SFTPClient::sftp_list(const char *path, ExceptionSink *xsink) {
     }
   }
 
-  //ret->setKeyValue("path", sftp_path(), xsink);
+  QoreHashNode *ret=new QoreHashNode();
+
   ret->setKeyValue("path", new QoreStringNode(pstr.c_str()), xsink);
+  // QoreListNode::sort() returns a new QoreListNode object
   ret->setKeyValue("directories", dirs->sort(), xsink);
   ret->setKeyValue("files", files->sort(), xsink);
   ret->setKeyValue("links", links->sort(), xsink);
@@ -172,8 +178,10 @@ int SFTPClient::sftp_chmod(const char *file, const int mode, ExceptionSink *xsin
   LIBSSH2_SFTP_ATTRIBUTES attrs;
   //  LIBSSH2_SFTP_HANDLE *sftp_handle;
 
+  AutoLocker al(m);
+
   // no path?
-  if(!sftp_connected()) {
+  if(!sftp_connected_unlocked()) {
     return -2;
   }
 
@@ -232,8 +240,10 @@ int SFTPClient::sftp_chmod(const char *file, const int mode, ExceptionSink *xsin
 int SFTPClient::sftp_mkdir(const char *dir, const int mode, ExceptionSink *xsink) {
   int rc;
 
+  AutoLocker al(m);
+
   // no path?
-  if(!sftp_connected()) {
+  if(!sftp_connected_unlocked()) {
     return -2;
   }
 
@@ -259,8 +269,10 @@ int SFTPClient::sftp_mkdir(const char *dir, const int mode, ExceptionSink *xsink
 int SFTPClient::sftp_rmdir(const char *dir, ExceptionSink *xsink) {
   int rc;
 
+  AutoLocker al(m);
+
   // no path?
-  if(!sftp_connected()) {
+  if(!sftp_connected_unlocked()) {
     xsink->raiseException("SFTPCLIENT-CONNECTION-ERROR", "not connected");
     return -2;
   }
@@ -286,8 +298,10 @@ int SFTPClient::sftp_rmdir(const char *dir, ExceptionSink *xsink) {
 int SFTPClient::sftp_rename(const char *from, const char *to, ExceptionSink *xsink) {
   int rc;
 
+  AutoLocker al(m);
+
   // no path?
-  if(!sftp_connected()) {
+  if(!sftp_connected_unlocked()) {
     return -2;
   }
 
@@ -306,8 +320,10 @@ int SFTPClient::sftp_rename(const char *from, const char *to, ExceptionSink *xsi
 int SFTPClient::sftp_unlink(const char *file, ExceptionSink *xsink) {
   int rc;
 
+  AutoLocker al(m);
+
   // no path?
-  if(!sftp_connected()) {
+  if(!sftp_connected_unlocked()) {
     return -2;
   }
 
@@ -335,8 +351,10 @@ QoreStringNode *SFTPClient::sftp_chdir(const char *nwd, ExceptionSink *xsink) {
   char buff[PATH_MAX];
   *buff='\0';
 
+  AutoLocker al(m);
+
   // no path?
-  if(!sftp_connected()) {
+  if(!sftp_connected_unlocked()) {
     return NULL;
   }
 
@@ -375,15 +393,16 @@ QoreStringNode *SFTPClient::sftp_chdir(const char *nwd, ExceptionSink *xsink) {
   sftppath=strdup(buff);
 
   //  return sftp_path(xsink);
-  return sftp_path();
+  return sftp_path_unlocked();
 }
 
-
-//QoreStringNode *SFTPClient::sftp_path(ExceptionSink *xsink) {
-QoreStringNode *SFTPClient::sftp_path() {
-
+QoreStringNode *SFTPClient::sftp_path_unlocked() {
   return sftppath? new QoreStringNode(sftppath): NULL;
+}
 
+QoreStringNode *SFTPClient::sftp_path() {
+   AutoLocker al(m);
+   return sftp_path();
 }
 
 /**
@@ -437,8 +456,9 @@ int SFTPClient::sftp_connect(int timeout_ms, ExceptionSink *xsink = 0) {
 
 
 BinaryNode *SFTPClient::sftp_getFile(const char *file, ExceptionSink *xsink=0) {
+  AutoLocker al(m);
 
-  if(!sftp_connected()) {
+  if(!sftp_connected_unlocked()) {
     xsink && xsink->raiseException("SFTPCLIENT-NOT-CONNECTED", "This action can only be performed if the client is connected");
     return NULL;
   }
@@ -485,7 +505,9 @@ BinaryNode *SFTPClient::sftp_getFile(const char *file, ExceptionSink *xsink=0) {
 
 
 QoreStringNode *SFTPClient::sftp_getTextFile(const char *file, ExceptionSink *xsink=0) {
-  if(!sftp_connected()) {
+  AutoLocker al(m);
+
+  if(!sftp_connected_unlocked()) {
     xsink && xsink->raiseException("SFTPCLIENT-NOT-CONNECTED", "This action can only be performed if the client is connected");
     return NULL;
   }
@@ -542,7 +564,9 @@ int SFTPClient::sftp_putFile(const BinaryNode *data, const char *fname, int mode
   int size;
   LIBSSH2_SFTP_HANDLE *sftp_handle;
 
-  if(!sftp_connected()) {
+  AutoLocker al(m);
+
+  if(!sftp_connected_unlocked()) {
     xsink && xsink->raiseException("SFTPCLIENT-NOT-CONNECTED", "This action can only be performed if the client is connected");
     return -1;
   }
@@ -583,7 +607,6 @@ int SFTPClient::sftp_putFile(const BinaryNode *data, const char *fname, int mode
   return size; // the bytes actually written
 }
 
-
 //LIBSSH2_SFTP_ATTRIBUTES 
 // return:
 //  0   ok
@@ -595,7 +618,9 @@ int SFTPClient::sftp_getAttributes(const char *fname, LIBSSH2_SFTP_ATTRIBUTES *a
   int rc;
   char buff[PATH_MAX];
 
-  if(!sftp_connected()) {
+  AutoLocker al(m);
+
+  if(!sftp_connected_unlocked()) {
     xsink && xsink->raiseException("SFTPCLIENT-NOT-CONNECTED", "This action can only be performed if the client is connected");
     return -3;
   }

@@ -78,29 +78,29 @@ SSH2Client::SSH2Client(const char *hostname, const uint32_t port) {
  * return 0 on ok.
  * sets errno
  */
-int SSH2Client::ssh_disconnect(int force = 0, ExceptionSink *xsink = 0) {
-  if(!ssh_session) {
-    if(force) {
-      return 0;
-    }
-    errno=ENOTCONN;
-    xsink && xsink->raiseException("SSH2CLIENT-DISCONNECT-ERROR", "disconnect(): %s", strerror(errno));
-    return -1;
+int SSH2Client::ssh_disconnect_unlocked(int force = 0, ExceptionSink *xsink = 0) {
+  if(!ssh_session && !force) {
+     errno=ENOTCONN;
+     xsink && xsink->raiseException("SSH2CLIENT-DISCONNECT-ERROR", "disconnect(): %s", strerror(errno));
   }
 
-  // close ssh session if not null
-  libssh2_session_disconnect(ssh_session, (char*)"qore programm disconnect");
-  libssh2_session_free(ssh_session);
-  ssh_session=NULL;
-  
-  // close socket
-  if(close(ssh_socket) && !force) {
-    if(errno==EINTR || errno==EIO) {
-      xsink && xsink->raiseException("SSH2CLIENT-DISCONNECT-ERROR", "disconnect(): error in socket closing: %s", strerror(errno));
-      return -1;
-    }
+  if (ssh_session) {
+     // close ssh session if not null
+     libssh2_session_disconnect(ssh_session, (char*)"qore programm disconnect");
+     libssh2_session_free(ssh_session);
+     ssh_session=NULL;
   }
-  ssh_socket=0;
+
+  if (ssh_socket) {
+     // close socket
+     if(close(ssh_socket) && !force) {
+	if(errno==EINTR || errno==EIO) {
+	   xsink && xsink->raiseException("SSH2CLIENT-DISCONNECT-ERROR", "disconnect(): error in socket closing: %s", strerror(errno));
+	   return -1;
+	}
+     }
+     ssh_socket=0;
+  }
 
   /*
   // free engaged mem
@@ -116,6 +116,12 @@ int SSH2Client::ssh_disconnect(int force = 0, ExceptionSink *xsink = 0) {
   return 0;
 }
 
+int SSH2Client::ssh_disconnect(int force = 0, ExceptionSink *xsink = 0) {
+   AutoLocker al(m);
+
+   return ssh_disconnect_unlocked(force, xsink);
+}
+
 
 /*
  * close session/connection
@@ -128,7 +134,7 @@ SSH2Client::~SSH2Client() {
   // close up
 
   // disconnect
-  ssh_disconnect(1);
+  ssh_disconnect_unlocked(1);
 
   // free
   free_string(sshhost);
@@ -145,8 +151,14 @@ SSH2Client::~SSH2Client() {
 /**
  * return 1 if we think we are connected
  */
-int SSH2Client::ssh_connected() {
+int SSH2Client::ssh_connected_unlocked() {
   return (ssh_session? 1: 0);
+}
+
+int SSH2Client::ssh_connected() {
+   AutoLocker al(m);
+
+   return ssh_connected_unlocked();
 }
 
 const char *SSH2Client::getHost() {
@@ -168,6 +180,8 @@ void SSH2Client::deref(ExceptionSink *xsink) {
 }
 
 int SSH2Client::setUser(const char *user) {
+  AutoLocker al(m);
+
   free_string(sshuser);
   sshuser=strdup(user);
   return 0;
@@ -178,6 +192,8 @@ const char *SSH2Client::getUser() {
 }
 
 int SSH2Client::setPassword(const char *pwd) {
+  AutoLocker al(m);
+
   free_string(sshpass);
   sshpass=strdup(pwd);
   return 0;
@@ -188,6 +204,8 @@ const char *SSH2Client::getPassword() {
 }
 
 int SSH2Client::setKeys(const char *priv, const char *pub) {
+  AutoLocker al(m);
+
   free_string(sshkeys_priv);
   free_string(sshkeys_pub);
 
@@ -217,7 +235,9 @@ const char *SSH2Client::getKeyPub() {
  * return the fingerprint given from the server as md5 string
  */
 QoreStringNode *SSH2Client::fingerprint() {
-  if(!ssh_connected()) {
+   AutoLocker al(m);
+
+  if(!ssh_connected_unlocked()) {
     return NULL;
   }
 
@@ -245,7 +265,7 @@ QoreStringNode *SSH2Client::fingerprint() {
  * 3	socket not created
  * 4	session init failure
  */
-int SSH2Client::ssh_connect(int timeout_ms, ExceptionSink *xsink = 0) {
+int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
   // check for host connectivity
   // getaddrinfo(3)
   // see Socket class
@@ -281,6 +301,10 @@ int SSH2Client::ssh_connect(int timeout_ms, ExceptionSink *xsink = 0) {
     xsink && xsink->raiseException("SSH2CLIENT-CONNECT-ERROR", "cannot resolve hostname '%s'", sshhost);
     return -1;
   }
+
+  // force disconnect session if already connected
+  if (ssh_session)
+     ssh_disconnect_unlocked(1);
   
   //do_resolved_event(AF_INET, (const char *)&addr_p.sin_addr);
 
@@ -294,7 +318,6 @@ int SSH2Client::ssh_connect(int timeout_ms, ExceptionSink *xsink = 0) {
     return -1;
   }
 
-
   // set non-blocking if a non-negative timeout was passed
   // TODO: check this nonblocking stuff
   if (timeout_ms >= 0) {
@@ -302,13 +325,13 @@ int SSH2Client::ssh_connect(int timeout_ms, ExceptionSink *xsink = 0) {
 
     // get socket descriptor status flags
     if ((arg = fcntl(ssh_socket, F_GETFL, 0)) < 0) { 
-      ssh_socket = 0;
+      ssh_disconnect_unlocked(1);
       xsink && xsink->raiseException("SSH2CLIENT-CONNECT-ERROR", "error in fcntl() getting socket descriptor status flag: ", strerror(errno));
       return -1;
     } 
     arg |= O_NONBLOCK; 
     if (fcntl(ssh_socket, F_SETFL, arg) < 0) { 
-      ssh_socket = 0;
+      ssh_disconnect_unlocked(1);
       xsink && xsink->raiseException("SSH2CLIENT-CONNECT-ERROR", "error in fcntl() setting socket descriptor status flags: ", strerror(errno));
       return -1;
     } 
@@ -316,10 +339,9 @@ int SSH2Client::ssh_connect(int timeout_ms, ExceptionSink *xsink = 0) {
 
   //do_connect_event(AF_INET, host, prt);
 
-
   // now we have a socket. lets try to connect
   if (connect(ssh_socket, (struct sockaddr*)(&addr_p), sizeof(struct sockaddr_in)) != 0) {
-    ssh_disconnect(1); // clean up connection
+    ssh_disconnect_unlocked(1); // clean up connection
     xsink && xsink->raiseException("SSH2CLIENT-CONNECT-ERROR", "error in connect(): %s", strerror(errno));
     return -1;
   }
@@ -328,7 +350,7 @@ int SSH2Client::ssh_connect(int timeout_ms, ExceptionSink *xsink = 0) {
   // Create a session instance
   ssh_session = libssh2_session_init();
   if(!ssh_session) {
-    ssh_disconnect(1); // clean up connection
+    ssh_disconnect_unlocked(1); // clean up connection
     xsink && xsink->raiseException("SSH2CLIENT-CONNECT-ERROR", "error in libssh2_session_init(): ", strerror(errno));
     return -1;
   }
@@ -341,7 +363,7 @@ int SSH2Client::ssh_connect(int timeout_ms, ExceptionSink *xsink = 0) {
    */
   rc = libssh2_session_startup(ssh_session, ssh_socket);
   if(rc) {
-    ssh_disconnect(1); // clean up connection
+    ssh_disconnect_unlocked(1); // clean up connection
     xsink && xsink->raiseException("SSH2CLIENT-CONNECT-ERROR", "failure establishing SSH session: %d", rc);
     return -1;
   }
@@ -379,7 +401,7 @@ int SSH2Client::ssh_connect(int timeout_ms, ExceptionSink *xsink = 0) {
   
   // could we auth?
   if(!loggedin) {
-    ssh_disconnect(1); // clean up connection
+    ssh_disconnect_unlocked(1); // clean up connection
     xsink && xsink->raiseException("SSH2CLIENT-AUTH-ERROR", "No proper authentication method found");
     return -1;
   }
@@ -387,7 +409,11 @@ int SSH2Client::ssh_connect(int timeout_ms, ExceptionSink *xsink = 0) {
   return 0;
 }
 
+int SSH2Client::ssh_connect(int timeout_ms, ExceptionSink *xsink = 0) {
+   AutoLocker al(m);
 
+   return ssh_connect_unlocked(timeout_ms, xsink);
+}
 
 QoreHashNode *SSH2Client::ssh_info(ExceptionSink *xsink = 0) {
 
@@ -426,7 +452,7 @@ QoreHashNode *SSH2Client::ssh_info(ExceptionSink *xsink = 0) {
 void SSH2C_constructor(class QoreObject *self, const QoreListNode *params, ExceptionSink *xsink) {
   QORE_TRACE("SSH2C_constructor");
 
-  char *ex_param=(char*)"use SSH2Client(host (string), [port (int)])";
+  static char *ex_param=(char*)"use SSH2Client(host (string), [port (int)])";
 
   const QoreStringNode *p0;
   const AbstractQoreNode *p1;
