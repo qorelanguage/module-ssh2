@@ -20,7 +20,7 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include <qore/Qore.h>
+#include "SFTPClient.h"
 
 #include <memory>
 #include <string>
@@ -31,8 +31,6 @@
 
 #include <assert.h>
 #include <unistd.h>
-
-#include "SFTPClient.h"
 
 qore_classid_t CID_SFTP_CLIENT;
 
@@ -50,6 +48,10 @@ SFTPClient::SFTPClient(const char *hostname, const uint32_t port) : SSH2Client(h
   printd(5, "SFTPClient::SFTPClient() this=%08p\n", this);
 }
 
+SFTPClient::SFTPClient(QoreURL &url, const uint32_t port) : SSH2Client(url, port), sftppath(0), sftp_session(0) {
+  //SSH2Client::SSH2Client(hostname, port);
+  printd(5, "SFTPClient::SFTPClient() this=%08p\n", this);
+}
 
 /*
  * close session/connection
@@ -677,11 +679,9 @@ int SFTPClient::sftp_getAttributes(const char *fname, LIBSSH2_SFTP_ATTRIBUTES *a
 void SFTPC_constructor(class QoreObject *self, const QoreListNode *params, ExceptionSink *xsink) {
   QORE_TRACE("SFTPC_constructor");
 
-  char *ex_param=(char*)"use SFTPClient(host (string), [port (int)])";
+  const char *ex_param=(char*)"use SFTPClient(host/URL (string), [port (int)]); note that providing a port number in the second argument will override any port number given in the URL";
 
   const QoreStringNode *p0;
-  const AbstractQoreNode *p1;
-  int port=22; // default ssh port
 
   if(num_params(params) > 2 || num_params(params) < 1) {
     xsink->raiseException("SFTPCLIENT-PARAMETER-ERROR", ex_param);
@@ -693,18 +693,24 @@ void SFTPC_constructor(class QoreObject *self, const QoreListNode *params, Excep
     return;
   }
 
-  // optional port
-  if((p1=get_param(params, 1))) {
-    if(p1->getType()!=NT_INT) {
-      xsink->raiseException("SFTPCLIENT-PARAMETER-ERROR", ex_param);
-      return;
-    }
-    port=p1->getAsInt();
+  QoreURL url(p0);
+
+  if (!url.getHost()) {
+    xsink->raiseException("SSH2CLIENT-PARAMETER-ERROR", ex_param);
+    return;
   }
 
+  if (url.getProtocol() && strcasecmp("sftp", url.getProtocol()->getBuffer())) {
+     xsink->raiseException("SFTPCLIENT-PARAMETER-ERROR", "URL given in the first argument to SFTPClient::constructor() specifies invalid protocol '%s' (expecting 'sftp')", url.getProtocol()->getBuffer());
+     return;
+  }
+
+  // get optional port number
+  const AbstractQoreNode *p1 = get_param(params, 1);
+  int port = !is_nothing(p1) ? p1->getAsInt() : 0;
+
   // create me
-  class SFTPClient *mySFTPClient=NULL;
-  mySFTPClient=new SFTPClient(p0->getBuffer(), port);
+  class SFTPClient *mySFTPClient = new SFTPClient(url, port);
 
   /*
   if(*xsink) {

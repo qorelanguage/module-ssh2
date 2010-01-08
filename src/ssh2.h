@@ -24,6 +24,7 @@
 
 #define QORE_SSH2_H
 
+#include "../config.h"
 
 #include <libssh2.h>
 #include <libssh2_sftp.h>
@@ -46,6 +47,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <stdlib.h>
 
 #ifndef PATH_MAX
 #define PATH_MAX 4096

@@ -32,7 +32,7 @@
 
 #include <time.h>
 
-
+#define DEFAULT_SSH_PORT 22
 
 class SSH2Client : public AbstractPrivateData {
 
@@ -74,6 +74,7 @@ class SSH2Client : public AbstractPrivateData {
 
  public:
   DLLLOCAL SSH2Client(const char*, const uint32_t);
+  DLLLOCAL SSH2Client(QoreURL &url, const uint32_t = 0);
   int setUser(const char *);
   int setPassword(const char *);
   int setKeys(const char *, const char *);

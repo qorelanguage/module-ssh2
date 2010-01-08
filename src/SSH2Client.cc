@@ -20,7 +20,7 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include <qore/Qore.h>
+#include "SSH2Client.h"
 
 #include <memory>
 #include <string>
@@ -29,11 +29,10 @@
 #include <sys/types.h>
 #include <pwd.h>
 #include <errno.h>
+#include <strings.h>
 
 #include <assert.h>
 #include <unistd.h>
-
-#include "SSH2Client.h"
 
 qore_classid_t CID_SSH2_CLIENT;
 
@@ -68,7 +67,36 @@ SSH2Client::SSH2Client(const char *hostname, const uint32_t port) {
   ssh_session=NULL;
 }
 
+SSH2Client::SSH2Client(QoreURL &url, const uint32_t port) {
+  // remember host settings
+   sshhost = url.take_host();
+   sshport = port ? port : url.getPort();
+   if (!sshport)
+      sshport = DEFAULT_SSH_PORT;
+   sshuser = url.take_username();
+   sshpass = url.take_password();
+   if (sshpass) printd(0, "pass: %s\n", sshpass);
+   sshkeys_pub = 0;
+   sshkeys_priv = 0;
+   sshauthenticatedwith = 0; // will be filled on connect
 
+  // prefill the user if not already set and 'estimate' the key files for rsa
+  struct passwd *usrpwd = getpwuid(getuid());
+  if (usrpwd) {
+    char thome[PATH_MAX];
+    if (!sshuser)
+       sshuser = strdup(usrpwd->pw_name);
+    strncpy(thome, usrpwd->pw_dir, sizeof(thome) - 1);
+    sshkeys_pub = strdup(strncat(thome, "/.ssh/id_rsa.pub", sizeof(thome) - 1));
+    strncpy(thome, usrpwd->pw_dir, sizeof(thome) - 1);
+    sshkeys_priv = strdup(strncat(thome, "/.ssh/id_rsa", sizeof(thome) - 1));
+
+    printd(0, "keys='%s' priv='%s'\n", sshkeys_pub, sshkeys_priv);
+  }
+    
+  ssh_socket = 0;
+  ssh_session = 0;
+}
 
 /**
  * disconnect from the server if connected
@@ -373,6 +401,8 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
   // remove the info how we are actual authenticated (should be NULL anyway)
   free_string(sshauthenticatedwith);
 
+  printd(0, "userauthlist: %s\n", userauthlist);
+
   // set flags for use with authentification
   if (strstr(userauthlist, "publickey") != NULL) {
     auth_pw |= 1;
@@ -384,7 +414,7 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
   // try auth 
   // a) key
   if(!loggedin && (auth_pw & 1) && (sshkeys_priv && sshkeys_pub)) {
-    printd(2, "SSH2Client::connect(): try pubkey auth: %s %s", sshkeys_priv, sshkeys_pub);
+    printd(0, "SSH2Client::connect(): try pubkey auth: %s %s\n", sshkeys_priv, sshkeys_pub);
     if(libssh2_userauth_publickey_fromfile(ssh_session, sshuser, sshkeys_pub, sshkeys_priv, sshpass? sshpass: "") == 0) {
       loggedin=1;
       sshauthenticatedwith=strdup("publickey");
@@ -392,7 +422,7 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
   }
   // b) password
   if(!loggedin && (auth_pw & 2)) {
-    printd(2, "SSH2Client::connect(): try user/pass auth: %s *****", sshuser);
+     printd(0, "SSH2Client::connect(): try user/pass auth: %s/%s\n", sshuser, sshpass ? sshpass : "");
     if(libssh2_userauth_password(ssh_session, sshuser, sshpass? sshpass: "") == 0) {
       loggedin=1;
       sshauthenticatedwith=strdup("password");
@@ -452,11 +482,9 @@ QoreHashNode *SSH2Client::ssh_info(ExceptionSink *xsink = 0) {
 void SSH2C_constructor(class QoreObject *self, const QoreListNode *params, ExceptionSink *xsink) {
   QORE_TRACE("SSH2C_constructor");
 
-  static char *ex_param=(char*)"use SSH2Client(host (string), [port (int)])";
+  static char *ex_param=(char*)"use SSH2Client(URL/host (string), [port (int)]; note that providing a port number in the second argument will override any port number given in the URL";
 
   const QoreStringNode *p0;
-  const AbstractQoreNode *p1;
-  int port=22; // default ssh port
 
   if(num_params(params) > 2 || num_params(params) < 1) {
     xsink->raiseException("SSH2CLIENT-PARAMETER-ERROR", ex_param);
@@ -468,18 +496,24 @@ void SSH2C_constructor(class QoreObject *self, const QoreListNode *params, Excep
     return;
   }
 
-  // optional port
-  if((p1=get_param(params, 1))) {
-    if(p1->getType()!=NT_INT) {
-      xsink->raiseException("SSH2CLIENT-PARAMETER-ERROR", ex_param);
-      return;
-    }
-    port=p1->getAsInt();
+  QoreURL url(p0);
+
+  if (!url.getHost()) {
+    xsink->raiseException("SSH2CLIENT-PARAMETER-ERROR", ex_param);
+    return;
   }
 
+  if (url.getProtocol() && strcasecmp("ssh", url.getProtocol()->getBuffer()) && strcasecmp("ssh2", url.getProtocol()->getBuffer())) {
+     xsink->raiseException("SSH2CLIENT-PARAMETER-ERROR", "URL given in the first argument to SSH2Client::constructor() specifies invalid protocol '%s' (expecting 'ssh' or 'ssh2')", url.getProtocol()->getBuffer());
+     return;
+  }
+
+  // get optional port number
+  const AbstractQoreNode *p1 = get_param(params, 1);
+  int port = !is_nothing(p1) ? p1->getAsInt() : 0;
+
   // create me
-  class SSH2Client *mySSH2Client=NULL;
-  mySSH2Client=new SSH2Client(p0->getBuffer(), port);
+  SSH2Client *mySSH2Client = new SSH2Client(url, port);
 
   self->setPrivate(CID_SSH2_CLIENT, mySSH2Client);
 }

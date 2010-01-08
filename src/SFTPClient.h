@@ -57,6 +57,7 @@ class SFTPClient : public SSH2Client {
   LIBSSH2_SFTP *sftp_session;
 
   DLLLOCAL SFTPClient(const char*, const uint32_t);
+  DLLLOCAL SFTPClient(QoreURL &url, const uint32_t = 0);
 
   int sftp_connected();
 
