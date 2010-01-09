@@ -34,6 +34,10 @@
 
 #define DEFAULT_SSH_PORT 22
 
+#define QAUTH_PASSWORD             (1 << 0)
+#define QAUTH_KEYBOARD_INTERACTIVE (1 << 1)
+#define QAUTH_PUBLICKEY            (1 << 2)
+
 class SSH2Client : public AbstractPrivateData {
 
  private:
@@ -47,7 +51,7 @@ class SSH2Client : public AbstractPrivateData {
   char *sshkeys_priv;
 
   // server info
-  char *sshauthenticatedwith;
+  const char *sshauthenticatedwith;
 
   // internal
   int ssh_socket;

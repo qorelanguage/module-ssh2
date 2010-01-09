@@ -75,7 +75,6 @@ SSH2Client::SSH2Client(QoreURL &url, const uint32_t port) {
       sshport = DEFAULT_SSH_PORT;
    sshuser = url.take_username();
    sshpass = url.take_password();
-   if (sshpass) printd(0, "pass: %s\n", sshpass);
    sshkeys_pub = 0;
    sshkeys_priv = 0;
    sshauthenticatedwith = 0; // will be filled on connect
@@ -91,7 +90,7 @@ SSH2Client::SSH2Client(QoreURL &url, const uint32_t port) {
     strncpy(thome, usrpwd->pw_dir, sizeof(thome) - 1);
     sshkeys_priv = strdup(strncat(thome, "/.ssh/id_rsa", sizeof(thome) - 1));
 
-    printd(0, "keys='%s' priv='%s'\n", sshkeys_pub, sshkeys_priv);
+    //printd(5, "keys='%s' priv='%s'\n", sshkeys_pub, sshkeys_priv);
   }
     
   ssh_socket = 0;
@@ -138,7 +137,6 @@ int SSH2Client::ssh_disconnect_unlocked(int force = 0, ExceptionSink *xsink = 0)
   free_string(sshkeys_pub);
   free_string(sshkeys_priv);
   free_string(sshpath);
-  free_string(sshauthenticatedwith);
   */
 
   return 0;
@@ -170,8 +168,8 @@ SSH2Client::~SSH2Client() {
   free_string(sshpass);
   free_string(sshkeys_pub);
   free_string(sshkeys_priv);
-  free_string(sshauthenticatedwith);
 
+  sshauthenticatedwith = 0;
 }
 
 
@@ -283,6 +281,18 @@ QoreStringNode *SSH2Client::fingerprint() {
   return fpstr;
 }
 
+static void kbd_callback(const char *name, int name_len,
+			 const char *instruction, int instruction_len, int num_prompts,
+			 const LIBSSH2_USERAUTH_KBDINT_PROMPT *prompts,
+			 LIBSSH2_USERAUTH_KBDINT_RESPONSE *responses,
+			 void **abstract) {
+   const char *password = keyboardPassword.get();
+   //printd(5, "kdb_callback() num_prompts=%d pass=%s\n", num_prompts, password);
+   if (num_prompts == 1) {
+      responses[0].text = strdup(password);
+      responses[0].length = strlen(password);
+   }
+} /* kbd_callback */ 
 
 /**
  * connect()
@@ -313,7 +323,6 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
 
   printd(1, "SSH2Client::connect(%s:%s, %dms)\n", sshhost, sshport, timeout_ms);
   
-
   // sanity check of data
   if(!sshuser) {
     xsink && xsink->raiseException("SSH2CLIENT-CONNECT-ERROR", "ssh user must not be NOTHING");
@@ -399,34 +408,63 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
   // check what types are available for authentifcation
   userauthlist = libssh2_userauth_list(ssh_session, sshuser, strlen(sshuser));
   // remove the info how we are actual authenticated (should be NULL anyway)
-  free_string(sshauthenticatedwith);
+  sshauthenticatedwith = 0;
 
-  printd(0, "userauthlist: %s\n", userauthlist);
+  printd(5, "userauthlist: %s\n", userauthlist);
 
   // set flags for use with authentification
-  if (strstr(userauthlist, "publickey") != NULL) {
-    auth_pw |= 1;
-  }
-  if (strstr(userauthlist, "password") != NULL) {
-    auth_pw |= 2;
-  }
+  if (strstr(userauthlist, "publickey"))
+     auth_pw |= QAUTH_PUBLICKEY;
+  if (strstr(userauthlist, "password"))
+     auth_pw |= QAUTH_PASSWORD;
+  if (strstr(userauthlist, "keyboard-interactive"))
+     auth_pw |= QAUTH_KEYBOARD_INTERACTIVE;
 
   // try auth 
-  // a) key
-  if(!loggedin && (auth_pw & 1) && (sshkeys_priv && sshkeys_pub)) {
-    printd(0, "SSH2Client::connect(): try pubkey auth: %s %s\n", sshkeys_priv, sshkeys_pub);
+
+  // try password and keyboard-interactive first if a password was given
+  if (sshpass) {
+     if (!loggedin && (auth_pw & QAUTH_PASSWORD)) {
+	printd(5, "SSH2Client::connect(): try user/pass auth: %s/%s\n", sshuser, sshpass ? sshpass : "");
+	if (!libssh2_userauth_password(ssh_session, sshuser, sshpass)) {
+	   loggedin=1;
+	   sshauthenticatedwith = "password";
+	   printd(5, "password authentication succeeded\n");
+	}
+#ifdef DEBUG
+	else
+	   printd(5, "password authentication failed\n");
+#endif
+     }
+
+     if (!loggedin && (auth_pw & QAUTH_KEYBOARD_INTERACTIVE)) {
+	printd(5, "SSH2Client::connect(): try user/pass with keyboard-interactive auth: %s/%s\n", sshuser, sshpass);
+	// thread thread-local storage for password
+	keyboardPassword.set(sshpass);
+	if (!libssh2_userauth_keyboard_interactive(ssh_session, sshuser, &kbd_callback)) {
+	   loggedin=1;
+	   sshauthenticatedwith = "keyboard-interactive";
+	   printd(5, "keyboard-interactive authentication succeeded\n");
+	}
+#ifdef DEBUG
+	else
+	   printd(5, "keyboard-interactive authentication failed\n");
+#endif	
+     }
+  }
+
+  // try publickey last
+  if (!loggedin && (auth_pw & QAUTH_PUBLICKEY) && (sshkeys_priv && sshkeys_pub)) {
+    printd(5, "SSH2Client::connect(): try pubkey auth: %s %s\n", sshkeys_priv, sshkeys_pub);
     if(libssh2_userauth_publickey_fromfile(ssh_session, sshuser, sshkeys_pub, sshkeys_priv, sshpass? sshpass: "") == 0) {
       loggedin=1;
-      sshauthenticatedwith=strdup("publickey");
+      sshauthenticatedwith = "publickey";
+      printd(5, "publickey authentication succeeded\n");
     }
-  }
-  // b) password
-  if(!loggedin && (auth_pw & 2)) {
-     printd(0, "SSH2Client::connect(): try user/pass auth: %s/%s\n", sshuser, sshpass ? sshpass : "");
-    if(libssh2_userauth_password(ssh_session, sshuser, sshpass? sshpass: "") == 0) {
-      loggedin=1;
-      sshauthenticatedwith=strdup("password");
-    }
+#ifdef DEBUG
+    else
+       printd(5, "publickey authentication failed\n");
+#endif	
   }
   
   // could we auth?

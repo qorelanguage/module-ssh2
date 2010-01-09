@@ -28,6 +28,9 @@
 
 #include <string.h>
 
+// thread-local storage for password for faked keyboard-interactive authentication
+TLKeyboardPassword keyboardPassword;
+
 // maybe needed for the hidden classes...
 
 static class QoreNamespace *ssh2ns; // namespace

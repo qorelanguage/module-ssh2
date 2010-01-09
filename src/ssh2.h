@@ -25,6 +25,7 @@
 #define QORE_SSH2_H
 
 #include "../config.h"
+#include <qore/Qore.h>
 
 #include <libssh2.h>
 #include <libssh2_sftp.h>
@@ -61,6 +62,11 @@ static inline void free_string(char *&str) {
   str=(char*)NULL;
 }
 
+// thread-local storage type for faked keyboard-interactive authentication
+typedef QoreThreadLocalStorage<const char> TLKeyboardPassword;
+
+// thread-local storage for faked keyboard-interactive authentication
+extern TLKeyboardPassword keyboardPassword;
 
 #endif
 
