@@ -28,9 +28,11 @@
 
 #include "ssh2.h"
 
-#include <qore/Qore.h>
+#include <qore/QoreSocket.h>
 
 #include <time.h>
+
+#include <set>
 
 #define DEFAULT_SSH_PORT 22
 
@@ -38,9 +40,14 @@
 #define QAUTH_KEYBOARD_INTERACTIVE (1 << 1)
 #define QAUTH_PUBLICKEY            (1 << 2)
 
-class SSH2Client : public AbstractPrivateData {
+class SSH2Channel;
 
- private:
+class SSH2Client : public AbstractPrivateData {
+   friend class SSH2Channel;
+
+private:
+   typedef std::set<SSH2Channel *> channel_set_t;
+
   // connection
   char *sshhost;
   uint32_t sshport;
@@ -53,15 +60,29 @@ class SSH2Client : public AbstractPrivateData {
   // server info
   const char *sshauthenticatedwith;
 
-  // internal
-  int ssh_socket;
+  // set of connected channels
+  channel_set_t channel_set;
+   // socket object for the connection
+  QoreSocket socket;
 
  protected:
+   /*
+    * close session/connection
+    * free ressources
+    */
   DLLLOCAL virtual ~SSH2Client();
+
   DLLLOCAL virtual void deref(ExceptionSink*);
   DLLLOCAL int ssh_connected_unlocked();
-  DLLLOCAL int ssh_disconnect_unlocked(int, ExceptionSink *);
+  DLLLOCAL int ssh_disconnect_unlocked(int force = 0, ExceptionSink *xsink = 0);
   DLLLOCAL int ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink);
+  DLLLOCAL void channel_deleted_unlocked(SSH2Channel *channel) {
+#ifdef DEBUG
+     int rc =
+#endif
+	channel_set.erase(channel);
+     assert(rc);
+   }
 
   // the following functions are unlocked so are protected
   DLLLOCAL const char *getHost();
@@ -72,6 +93,16 @@ class SSH2Client : public AbstractPrivateData {
   DLLLOCAL const char *getKeyPub();
   DLLLOCAL const char *getAuthenticatedWith();
   DLLLOCAL QoreStringNode *fingerprint_unlocked();
+  DLLLOCAL const char *get_session_err_unlocked() {
+     assert(ssh_session);
+     char *msg = 0;
+     libssh2_session_last_error(ssh_session, &msg, 0, 0);
+     assert(msg);
+     return msg;
+  }
+  DLLLOCAL void do_session_err_unlocked(ExceptionSink *xsink) {
+     xsink->raiseException("SSH2-ERROR", get_session_err_unlocked());
+  }
 
   // to ensure thread-safe operations
   QoreThreadLock m;
@@ -90,9 +121,21 @@ class SSH2Client : public AbstractPrivateData {
 
   DLLLOCAL int ssh_connected();
 
+  DLLLOCAL QoreObject *register_channel(LIBSSH2_CHANNEL *channel);
+
   //QoreStringNode *exec(const char *dir, ExceptionSink *xsink);
 
   DLLLOCAL QoreHashNode *ssh_info(ExceptionSink *xsink);
+
+  DLLLOCAL LIBSSH2_CHANNEL *openSessionChannel(ExceptionSink *xsink) {
+     AutoLocker al(m);
+
+     LIBSSH2_CHANNEL *channel = libssh2_channel_open_session(ssh_session);
+     if (!channel)
+	do_session_err_unlocked(xsink);
+
+     return channel;
+  }
 
 };
 

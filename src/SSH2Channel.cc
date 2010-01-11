@@ -1,0 +1,84 @@
+/*
+  SSH2Channel.cc
+
+  libssh2 ssh2 channel integration in Qore
+
+  Qore Programming Language
+
+  Copyright 2010 Wolfgang Ritzinger
+
+  This library is free software; you can redistribute it and/or
+  modify it under the terms of the GNU Lesser General Public
+  License as published by the Free Software Foundation; either
+  version 2.1 of the License, or (at your option) any later version.
+
+  This library is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  Lesser General Public License for more details.
+
+  You should have received a copy of the GNU Lesser General Public
+  License along with this library; if not, write to the Free Software
+  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+#include "SSH2Channel.h"
+#include "SSH2Client.h"
+
+void SSH2Channel::destructor() {
+   // close channel and deregister from parent
+   AutoLocker al(parent->m);
+   if (channel) {
+      parent->channel_deleted_unlocked(this);
+      close_unlocked();
+   }
+}
+
+int SSH2Channel::setenv(const char *name, const char *value, ExceptionSink *xsink) {
+   AutoLocker al(parent->m);
+   if (check_open(xsink))
+      return -1;
+
+   int rc;
+   if ((rc = libssh2_channel_setenv(channel, (char *)name, value)))
+      parent->do_session_err_unlocked(xsink);
+
+   return rc;
+}
+
+static QoreString vanilla("vanilla");
+
+int SSH2Channel::requestPty(ExceptionSink *xsink, const QoreString *term, const QoreString *modes, int width, int height, int width_px, int height_px) {
+   AutoLocker al(parent->m);
+   if (check_open(xsink))
+      return -1;
+
+   if (!term)
+      term = &vanilla;
+
+   int rc = libssh2_channel_request_pty_ex(channel, term->getBuffer(), term->strlen(), modes ? modes->getBuffer() : 0, modes ? modes->strlen() : 0, width, height, width_px, height_px);
+   if (rc)
+      parent->do_session_err_unlocked(xsink);
+
+   return rc;
+}
+
+int SSH2Channel::shell(ExceptionSink *xsink) {
+   AutoLocker al(parent->m);
+   if (check_open(xsink))
+      return -1;
+
+   int rc = libssh2_channel_shell(channel);
+   if (rc)
+      parent->do_session_err_unlocked(xsink);
+
+   return rc;
+}
+
+bool SSH2Channel::eof(ExceptionSink *xsink) {
+   AutoLocker al(parent->m);
+   if (check_open(xsink))
+      return -1;
+
+   return (bool)libssh2_channel_eof(channel);
+}

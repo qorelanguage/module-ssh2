@@ -21,6 +21,7 @@
 */
 
 #include "SSH2Client.h"
+#include "SSH2Channel.h"
 
 #include <memory>
 #include <string>
@@ -63,7 +64,6 @@ SSH2Client::SSH2Client(const char *hostname, const uint32_t port) {
     sshkeys_priv=strdup(strncat(thome, "/.ssh/id_rsa", sizeof(thome)-1));
   }
     
-  ssh_socket=0;
   ssh_session=NULL;
 }
 
@@ -93,8 +93,38 @@ SSH2Client::SSH2Client(QoreURL &url, const uint32_t port) {
     //printd(5, "keys='%s' priv='%s'\n", sshkeys_pub, sshkeys_priv);
   }
     
-  ssh_socket = 0;
   ssh_session = 0;
+}
+
+/*
+ * close session/connection
+ * free ressources
+ */
+SSH2Client::~SSH2Client() {
+   QORE_TRACE("SSH2Client::~SSH2Client()");
+   printd(5, "SSH2Client::~SSH2Client() this=%08p\n", this);
+
+   // first close all open channels
+   {
+      AutoLocker al(m);
+      for (channel_set_t::iterator i = channel_set.begin(), e = channel_set.end(); i != e; ++i) {
+	 (*i)->close_unlocked();
+      }
+   }
+   
+   // close up
+   
+   // disconnect
+   ssh_disconnect_unlocked(1);
+   
+   // free
+   free_string(sshhost);
+   free_string(sshuser);
+   free_string(sshpass);
+   free_string(sshkeys_pub);
+   free_string(sshkeys_priv);
+   
+   sshauthenticatedwith = 0;
 }
 
 /**
@@ -105,7 +135,7 @@ SSH2Client::SSH2Client(QoreURL &url, const uint32_t port) {
  * return 0 on ok.
  * sets errno
  */
-int SSH2Client::ssh_disconnect_unlocked(int force = 0, ExceptionSink *xsink = 0) {
+int SSH2Client::ssh_disconnect_unlocked(int force, ExceptionSink *xsink) {
   if(!ssh_session && !force) {
      errno=ENOTCONN;
      xsink && xsink->raiseException("SSH2CLIENT-DISCONNECT-ERROR", "disconnect(): %s", strerror(errno));
@@ -113,31 +143,12 @@ int SSH2Client::ssh_disconnect_unlocked(int force = 0, ExceptionSink *xsink = 0)
 
   if (ssh_session) {
      // close ssh session if not null
-     libssh2_session_disconnect(ssh_session, (char*)"qore programm disconnect");
+     libssh2_session_disconnect(ssh_session, (char*)"qore program disconnect");
      libssh2_session_free(ssh_session);
      ssh_session=NULL;
   }
 
-  if (ssh_socket) {
-     // close socket
-     if(close(ssh_socket) && !force) {
-	if(errno==EINTR || errno==EIO) {
-	   xsink && xsink->raiseException("SSH2CLIENT-DISCONNECT-ERROR", "disconnect(): error in socket closing: %s", strerror(errno));
-	   return -1;
-	}
-     }
-     ssh_socket=0;
-  }
-
-  /*
-  // free engaged mem
-  free_string(sshhost);
-  free_string(sshuser);
-  free_string(sshpass);
-  free_string(sshkeys_pub);
-  free_string(sshkeys_priv);
-  free_string(sshpath);
-  */
+  socket.close();
 
   return 0;
 }
@@ -147,32 +158,6 @@ int SSH2Client::ssh_disconnect(int force = 0, ExceptionSink *xsink = 0) {
 
    return ssh_disconnect_unlocked(force, xsink);
 }
-
-
-/*
- * close session/connection
- * free ressources
- */
-SSH2Client::~SSH2Client() {
-  QORE_TRACE("SSH2Client::~SSH2Client()");
-  printd(5, "SSH2Client::~SSH2Client() this=%08p\n", this);
-
-  // close up
-
-  // disconnect
-  ssh_disconnect_unlocked(1);
-
-  // free
-  free_string(sshhost);
-  free_string(sshuser);
-  free_string(sshpass);
-  free_string(sshkeys_pub);
-  free_string(sshkeys_priv);
-
-  sshauthenticatedwith = 0;
-}
-
-
 
 /**
  * return 1 if we think we are connected
@@ -185,6 +170,13 @@ int SSH2Client::ssh_connected() {
    AutoLocker al(m);
 
    return ssh_connected_unlocked();
+}
+
+QoreObject *SSH2Client::register_channel(LIBSSH2_CHANNEL *channel) {
+   AutoLocker al(m);
+   SSH2Channel *chan = new SSH2Channel(channel, this);
+   channel_set.insert(chan);
+   return new QoreObject(QC_SSH2CHANNEL, getProgram(), chan);
 }
 
 const char *SSH2Client::getHost() {
@@ -208,7 +200,7 @@ void SSH2Client::deref(ExceptionSink *xsink) {
 int SSH2Client::setUser(const char *user) {
   AutoLocker al(m);
 
-  if (!ssh_connected_unlocked())
+  if (ssh_connected_unlocked())
     return -1;
 
   free_string(sshuser);
@@ -223,7 +215,7 @@ const char *SSH2Client::getUser() {
 int SSH2Client::setPassword(const char *pwd) {
   AutoLocker al(m);
 
-  if (!ssh_connected_unlocked())
+  if (ssh_connected_unlocked())
     return -1;
 
   free_string(sshpass);
@@ -238,7 +230,7 @@ const char *SSH2Client::getPassword() {
 int SSH2Client::setKeys(const char *priv, const char *pub) {
   AutoLocker al(m);
 
-  if (!ssh_connected_unlocked())
+  if (ssh_connected_unlocked())
     return -1;
 
   free_string(sshkeys_priv);
@@ -289,8 +281,7 @@ QoreStringNode *SSH2Client::fingerprint_unlocked() {
  * return the fingerprint given from the server as md5 string
  */
 QoreStringNode *SSH2Client::fingerprint() {
-   AutoLocker al(m);
-
+  AutoLocker al(m);
 
   return fingerprint_unlocked();
 }
@@ -326,78 +317,29 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
   // set to blocking
   // startup session with socket
 
-  //unsigned long hostaddr;
+  QORE_TRACE("SSH2Client::connect()");
+
+  printd(1, "SSH2Client::connect(%s:%s, %dms)\n", sshhost, sshport, timeout_ms);
+  
+  // sanity check of data
+  if (!sshuser) {
+    xsink && xsink->raiseException("SSH2CLIENT-CONNECT-ERROR", "ssh user must not be NOTHING");
+    return -1;
+  }
+
   int auth_pw = 0;
   char *userauthlist;
   int rc;
 
   int loggedin=0; // tells us if we are logged in (or at least think so)
 
-  QORE_TRACE("SSH2Client::connect()");
-
-  printd(1, "SSH2Client::connect(%s:%s, %dms)\n", sshhost, sshport, timeout_ms);
-  
-  // sanity check of data
-  if(!sshuser) {
-    xsink && xsink->raiseException("SSH2CLIENT-CONNECT-ERROR", "ssh user must not be NOTHING");
-    return -1;
-  }
-
-  struct sockaddr_in addr_p;
-
-  //do_resolve_event(sshhost);
-  
-  // use qores hostname resolution
-  if(q_gethostbyname(sshhost, &addr_p.sin_addr)) {
-    xsink && xsink->raiseException("SSH2CLIENT-CONNECT-ERROR", "cannot resolve hostname '%s'", sshhost);
-    return -1;
-  }
-
   // force disconnect session if already connected
   if (ssh_session)
      ssh_disconnect_unlocked(1);
   
-  //do_resolved_event(AF_INET, (const char *)&addr_p.sin_addr);
-
-  addr_p.sin_family = AF_INET;
-  uint32_t prt=sshport;
-  addr_p.sin_port = htons(prt); 
-
-  if ((ssh_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-    ssh_socket = 0;
-    xsink && xsink->raiseException("SSH2CLIENT-CONNECT-ERROR", "error in socket() call: %s", strerror(errno));
-    return -1;
-  }
-
-  // set non-blocking if a non-negative timeout was passed
-  // TODO: check this nonblocking stuff
-  if (timeout_ms >= 0) {
-    int arg;
-
-    // get socket descriptor status flags
-    if ((arg = fcntl(ssh_socket, F_GETFL, 0)) < 0) { 
-      ssh_disconnect_unlocked(1);
-      xsink && xsink->raiseException("SSH2CLIENT-CONNECT-ERROR", "error in fcntl() getting socket descriptor status flag: ", strerror(errno));
-      return -1;
-    } 
-    arg |= O_NONBLOCK; 
-    if (fcntl(ssh_socket, F_SETFL, arg) < 0) { 
-      ssh_disconnect_unlocked(1);
-      xsink && xsink->raiseException("SSH2CLIENT-CONNECT-ERROR", "error in fcntl() setting socket descriptor status flags: ", strerror(errno));
-      return -1;
-    } 
-  }
-
-  //do_connect_event(AF_INET, host, prt);
-
-  // now we have a socket. lets try to connect
-  if (connect(ssh_socket, (struct sockaddr*)(&addr_p), sizeof(struct sockaddr_in)) != 0) {
-    ssh_disconnect_unlocked(1); // clean up connection
-    xsink && xsink->raiseException("SSH2CLIENT-CONNECT-ERROR", "error in connect(): %s", strerror(errno));
-    return -1;
-  }
+  if (socket.connectINET(sshhost, sshport, timeout_ms, xsink))
+     return -1;
   
-
   // Create a session instance
   ssh_session = libssh2_session_init();
   if(!ssh_session) {
@@ -406,13 +348,12 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
     return -1;
   }
 
-  /* Since we have set non-blocking, tell libssh2 we are blocking */
+  // Since we have set non-blocking, tell libssh2 we are blocking
   libssh2_session_set_blocking(ssh_session, 1);
   
-  /* ... start it up. This will trade welcome banners, exchange keys,
-   * and setup crypto, compression, and MAC layers
-   */
-  rc = libssh2_session_startup(ssh_session, ssh_socket);
+  // ... start it up. This will trade welcome banners, exchange keys,
+  // and setup crypto, compression, and MAC layers
+  rc = libssh2_session_startup(ssh_session, socket.getSocket());
   if(rc) {
     ssh_disconnect_unlocked(1); // clean up connection
     xsink && xsink->raiseException("SSH2CLIENT-CONNECT-ERROR", "failure establishing SSH session: %d", rc);
@@ -583,21 +524,6 @@ class AbstractQoreNode *SSH2C_info(class QoreObject *self, class SSH2Client *mys
     return NULL;
   }
 
-  /*
-  QoreHashNode *ret=new QoreHashNode();
-  ret->setKeyValue("ssh2host", new QoreStringNode(myself->getHost()), xsink);
-  ret->setKeyValue("ssh2port", new QoreBigIntNode(myself->getPort()), xsink);
-  ret->setKeyValue("ssh2user", new QoreStringNode(myself->getUser()), xsink);
-  //ret->setKeyValue("ssh2pass", new QoreStringNode(myself->sshpass), xsink);
-  ret->setKeyValue("keyfile_priv", new QoreStringNode(myself->getKeyPriv()), xsink);
-  ret->setKeyValue("keyfile_pub", new QoreStringNode(myself->getKeyPub()), xsink);
-  ret->setKeyValue("fingerprint", myself->fingerprint(), xsink);
-  //  ret->setKeyValue("userauthlist", myself->sshauthlist? new QoreStringNode(myself->sshauthlist): NULL, xsink);
-  const char *str=myself->getAuthenticatedWith();
-  ret->setKeyValue("authenticated", str? new QoreStringNode(str): NULL, xsink);
-
-  return ret;
-  */
   return myself->ssh_info(xsink);
 }
 
@@ -703,10 +629,13 @@ class AbstractQoreNode *SSH2C_setKeys(class QoreObject *self, class SSH2Client *
   return NULL;
 }
 
+AbstractQoreNode *SSH2C_openSessionChannel(QoreObject *self, SSH2Client *c, const QoreListNode *params, ExceptionSink *xsink) {
+   LIBSSH2_CHANNEL *chan = c->openSessionChannel(xsink);
+   if (!chan)
+      return 0;
 
-
-
-
+   return c->register_channel(chan);
+}
 
 /**
  * class init
@@ -727,10 +656,9 @@ class QoreClass *initSSH2ClientClass() {
    QC_SSH2_CLIENT->addMethod("setPassword", (q_method_t)SSH2C_setPassword);
    QC_SSH2_CLIENT->addMethod("setKeys", (q_method_t)SSH2C_setKeys);
 
+   QC_SSH2_CLIENT->addMethod("openSessionChannel", (q_method_t)SSH2C_openSessionChannel);
+
    return QC_SSH2_CLIENT;
 }
-
-
-
 
 // EOF //

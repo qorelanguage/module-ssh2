@@ -1,6 +1,6 @@
 
 
-SSH2_SOURCES = ssh2-module.cc SSH2Client.cc SFTPClient.cc
+SSH2_SOURCES = ssh2-module.cc SSH2Client.cc SFTPClient.cc SSH2Channel.cc QC_SSH2Channel.cc
 
 
 lib_LTLIBRARIES = ssh2.la
