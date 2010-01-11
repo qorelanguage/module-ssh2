@@ -71,6 +71,7 @@ class SSH2Client : public AbstractPrivateData {
   DLLLOCAL const char *getKeyPriv();
   DLLLOCAL const char *getKeyPub();
   DLLLOCAL const char *getAuthenticatedWith();
+  DLLLOCAL QoreStringNode *fingerprint_unlocked();
 
   // to ensure thread-safe operations
   QoreThreadLock m;
@@ -79,19 +80,19 @@ class SSH2Client : public AbstractPrivateData {
  public:
   DLLLOCAL SSH2Client(const char*, const uint32_t);
   DLLLOCAL SSH2Client(QoreURL &url, const uint32_t = 0);
-  int setUser(const char *);
-  int setPassword(const char *);
-  int setKeys(const char *, const char *);
-  QoreStringNode *fingerprint();
+  DLLLOCAL int setUser(const char *);
+  DLLLOCAL int setPassword(const char *);
+  DLLLOCAL int setKeys(const char *, const char *);
+  DLLLOCAL QoreStringNode *fingerprint();
 
-  int ssh_disconnect(int, ExceptionSink *);
-  int ssh_connect(int timeout_ms, ExceptionSink *xsink);
+  DLLLOCAL int ssh_disconnect(int, ExceptionSink *);
+  DLLLOCAL int ssh_connect(int timeout_ms, ExceptionSink *xsink);
 
-  int ssh_connected();
+  DLLLOCAL int ssh_connected();
 
   //QoreStringNode *exec(const char *dir, ExceptionSink *xsink);
 
-  QoreHashNode *ssh_info(ExceptionSink *xsink);
+  DLLLOCAL QoreHashNode *ssh_info(ExceptionSink *xsink);
 
 };
 

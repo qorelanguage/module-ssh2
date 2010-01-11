@@ -208,6 +208,9 @@ void SSH2Client::deref(ExceptionSink *xsink) {
 int SSH2Client::setUser(const char *user) {
   AutoLocker al(m);
 
+  if (!ssh_connected_unlocked())
+    return -1;
+
   free_string(sshuser);
   sshuser=strdup(user);
   return 0;
@@ -220,6 +223,9 @@ const char *SSH2Client::getUser() {
 int SSH2Client::setPassword(const char *pwd) {
   AutoLocker al(m);
 
+  if (!ssh_connected_unlocked())
+    return -1;
+
   free_string(sshpass);
   sshpass=strdup(pwd);
   return 0;
@@ -231,6 +237,9 @@ const char *SSH2Client::getPassword() {
 
 int SSH2Client::setKeys(const char *priv, const char *pub) {
   AutoLocker al(m);
+
+  if (!ssh_connected_unlocked())
+    return -1;
 
   free_string(sshkeys_priv);
   free_string(sshkeys_pub);
@@ -257,12 +266,7 @@ const char *SSH2Client::getKeyPub() {
   return sshkeys_pub;
 }
 
-/**
- * return the fingerprint given from the server as md5 string
- */
-QoreStringNode *SSH2Client::fingerprint() {
-   AutoLocker al(m);
-
+QoreStringNode *SSH2Client::fingerprint_unlocked() {
   if(!ssh_connected_unlocked()) {
     return NULL;
   }
@@ -279,6 +283,16 @@ QoreStringNode *SSH2Client::fingerprint() {
     fpstr->sprintf(":%02X", (unsigned char)fingerprint[i]);
   }
   return fpstr;
+}
+
+/**
+ * return the fingerprint given from the server as md5 string
+ */
+QoreStringNode *SSH2Client::fingerprint() {
+   AutoLocker al(m);
+
+
+  return fingerprint_unlocked();
 }
 
 static void kbd_callback(const char *name, int name_len,
@@ -481,6 +495,7 @@ int SSH2Client::ssh_connect(int timeout_ms, ExceptionSink *xsink = 0) {
 }
 
 QoreHashNode *SSH2Client::ssh_info(ExceptionSink *xsink = 0) {
+   AutoLocker al(m);
 
   QoreHashNode *ret=new QoreHashNode();
   ret->setKeyValue("ssh2host", new QoreStringNode(getHost()), xsink);
@@ -489,10 +504,11 @@ QoreHashNode *SSH2Client::ssh_info(ExceptionSink *xsink = 0) {
   //ret->setKeyValue("ssh2pass", new QoreStringNode(myself->sshpass), xsink);
   ret->setKeyValue("keyfile_priv", new QoreStringNode(getKeyPriv()), xsink);
   ret->setKeyValue("keyfile_pub", new QoreStringNode(getKeyPub()), xsink);
-  ret->setKeyValue("fingerprint", fingerprint(), xsink);
+  ret->setKeyValue("fingerprint", fingerprint_unlocked(), xsink);
   //  ret->setKeyValue("userauthlist", myself->sshauthlist? new QoreStringNode(myself->sshauthlist): NULL, xsink);
   const char *str=getAuthenticatedWith();
   ret->setKeyValue("authenticated", str? new QoreStringNode(str): NULL, xsink);
+  ret->setKeyValue("connected", get_bool_node(ssh_connected_unlocked()), xsink);
 
   return ret;
 }
@@ -632,12 +648,10 @@ class AbstractQoreNode *SSH2C_setUser(class QoreObject *self, class SSH2Client *
     return NULL;
   }
 
-  if(myself->ssh_connected()) {
+  if (myself->setUser(p0->getBuffer())) {
     xsink->raiseException("SSH2CLIENT-STATUS-ERROR", "usage of setUser() is not allowed when connected");
     return NULL;
   }
-
-  myself->setUser(p0->getBuffer());
 
   // return error
   return NULL;
@@ -652,12 +666,10 @@ class AbstractQoreNode *SSH2C_setPassword(class QoreObject *self, class SSH2Clie
     return NULL;
   }
 
-  if(myself->ssh_connected()) {
+  if (myself->setPassword(p0->getBuffer())) {
     xsink->raiseException("SSH2CLIENT-STATUS-ERROR", "usage of setPassword() is not allowed when connected");
     return NULL;
   }
-
-  myself->setPassword(p0->getBuffer());
 
   // return error
   return NULL;
@@ -667,7 +679,7 @@ class AbstractQoreNode *SSH2C_setPassword(class QoreObject *self, class SSH2Clie
 class AbstractQoreNode *SSH2C_setKeys(class QoreObject *self, class SSH2Client *myself, const QoreListNode *params, class ExceptionSink *xsink) 
 {
   const QoreStringNode *p0, *p1;
-  const char* ex_param=(char*)"use setKeys(priv_key_file (string), [pub_key_file (string)]). if no pubkey it is priv_key_file.pub";
+  static const char* ex_param=(char*)"use setKeys(priv_key_file (string), [pub_key_file (string)]). if no pubkey it is priv_key_file.pub";
 
   if(num_params(params) > 2 || num_params(params) < 1) {
     xsink->raiseException("SSH2CLIENT-PARAMETER-ERROR", ex_param);
@@ -682,12 +694,10 @@ class AbstractQoreNode *SSH2C_setKeys(class QoreObject *self, class SSH2Client *
     return NULL;
   }
 
-  if(myself->ssh_connected()) {
+  if (myself->setKeys(p0->getBuffer(), p1? p1->getBuffer(): NULL)) {
     xsink->raiseException("SSH2CLIENT-STATUS-ERROR", "usage of setKeys() is not allowed when connected");
     return NULL;
   }
-
-  myself->setKeys(p0->getBuffer(), p1? p1->getBuffer(): NULL);
 
   // return error
   return NULL;
