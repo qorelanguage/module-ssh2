@@ -75,6 +75,51 @@ AbstractQoreNode *SSH2CHANNEL_eof(QoreObject *self, SSH2Channel *c, const QoreLi
    return *xsink ? get_bool_node(b) : 0;
 }
 
+AbstractQoreNode *SSH2CHANNEL_exec(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
+   const QoreStringNode *command = test_string_param(params, 0);
+   if (!command) {
+      xsink->raiseException("SSH2CHANNEL-EXEC-ERROR", "missing command string as sole argument to SSH2Channel::exec()");
+      return 0;
+   }
+
+   c->exec(command->getBuffer(), xsink);
+   return 0;
+}
+
+AbstractQoreNode *SSH2CHANNEL_read(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
+   return c->read(xsink);
+}
+
+AbstractQoreNode *SSH2CHANNEL_write(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
+   const void *buf = 0;
+   qore_size_t buflen;
+
+   const AbstractQoreNode *p = get_param(params, 0);
+   qore_type_t t = p ? p->getType() : NT_NOTHING;
+   if (t != NT_STRING && t != NT_BINARY) {
+      xsink->raiseException("SSH2CHANNEL-WRITE-ERROR", "missing string or binary argument as first argument to SSH2Channel::write() (got type '%s')", p ? p->getTypeName() : "NOTHING");
+      return 0;
+   }
+
+   if (t == NT_STRING) {
+      const QoreStringNode *str = reinterpret_cast<const QoreStringNode *>(p);
+      buf = str->getBuffer();
+      buflen = str->strlen();
+   }
+   else {
+      const BinaryNode *b = reinterpret_cast<const BinaryNode *>(p);
+      buf = b->getPtr();
+      buflen = b->size();
+   }
+
+   // ignore zero-length writes
+   if (!buflen)
+      return 0;
+
+   c->write(xsink, buf, buflen, get_int_param(params, 1));
+   return 0;
+}
+
 QoreClass *initSSH2ChannelClass() {
    QORE_TRACE("initSSH2Channel()");
 
@@ -89,6 +134,9 @@ QoreClass *initSSH2ChannelClass() {
    QC_SSH2CHANNEL->addMethod("requestPty", (q_method_t)SSH2CHANNEL_requestPty);
    QC_SSH2CHANNEL->addMethod("shell",      (q_method_t)SSH2CHANNEL_shell);
    QC_SSH2CHANNEL->addMethod("eof",        (q_method_t)SSH2CHANNEL_eof);
+   QC_SSH2CHANNEL->addMethod("exec",       (q_method_t)SSH2CHANNEL_exec);
+   QC_SSH2CHANNEL->addMethod("read",       (q_method_t)SSH2CHANNEL_read);
+   QC_SSH2CHANNEL->addMethod("write",      (q_method_t)SSH2CHANNEL_write);   
 
    return QC_SSH2CHANNEL;
 }

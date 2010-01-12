@@ -82,3 +82,63 @@ bool SSH2Channel::eof(ExceptionSink *xsink) {
 
    return (bool)libssh2_channel_eof(channel);
 }
+
+int SSH2Channel::exec(const char *command, ExceptionSink *xsink) {
+   AutoLocker al(parent->m);
+   if (check_open(xsink))
+      return -1;
+
+   int rc = libssh2_channel_exec(channel, command);
+   //printd(5, "SSH2Channel::exec() cmd=%s rc=%d\n", command, rc);
+   if (rc)
+      parent->do_session_err_unlocked(xsink);
+
+   return rc;
+}
+
+#define QSSH2_BUFSIZE 4096
+
+QoreStringNode *SSH2Channel::read(ExceptionSink *xsink) {
+   AutoLocker al(parent->m);
+   if (check_open(xsink))
+      return 0;
+
+   QoreStringNodeHolder str(new QoreStringNode);
+
+   BlockingHelper bh(parent);
+
+   qore_offset_t rc;
+   do {
+     loop0:
+      char buffer[QSSH2_BUFSIZE];
+      rc = libssh2_channel_read(channel, buffer, QSSH2_BUFSIZE);
+
+      //printd(5, "SSH2Channel::read() rc=%lld (EAGAIN=%d)\n", rc, LIBSSH2_ERROR_EAGAIN);
+      if (rc > 0)
+	 str->concat(buffer, rc);
+      else if (rc == LIBSSH2_ERROR_EAGAIN && !str->strlen()) {
+	 parent->waitsocket_unlocked();
+	 goto loop0;
+      }
+   }
+   while (rc > 0);
+
+   if (rc < 0 && rc != LIBSSH2_ERROR_EAGAIN) {
+      parent->do_session_err_unlocked(xsink);
+      return 0;
+   }
+
+   return str.release();
+}
+
+int SSH2Channel::write(ExceptionSink *xsink, const void *buf, qore_size_t buflen, int stream_id) {
+   AutoLocker al(parent->m);
+   if (check_open(xsink))
+      return 0;
+
+   int rc = libssh2_channel_write_ex(channel, stream_id, (char *)buf, buflen);
+   if (rc < 0)
+      parent->do_session_err_unlocked(xsink);
+
+   return rc;
+}

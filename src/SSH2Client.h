@@ -41,9 +41,11 @@
 #define QAUTH_PUBLICKEY            (1 << 2)
 
 class SSH2Channel;
+class BlockingHelper;
 
 class SSH2Client : public AbstractPrivateData {
    friend class SSH2Channel;
+   friend class BlockingHelper;
 
 private:
    typedef std::set<SSH2Channel *> channel_set_t;
@@ -103,6 +105,40 @@ private:
   DLLLOCAL void do_session_err_unlocked(ExceptionSink *xsink) {
      xsink->raiseException("SSH2-ERROR", get_session_err_unlocked());
   }
+  DLLLOCAL void set_blocking_unlocked(bool block) {
+     assert(ssh_session);
+     libssh2_session_set_blocking(ssh_session, (int)block);
+  }
+  DLLLOCAL int waitsocket_unlocked() {
+     assert(ssh_session);
+
+     struct timeval timeout;
+     int rc;
+     fd_set fd;
+     fd_set *writefd = 0;
+     fd_set *readfd = 0;
+     int dir;
+ 
+     timeout.tv_sec = 10;
+     timeout.tv_usec = 0;
+ 
+     FD_ZERO(&fd);
+ 
+     FD_SET(socket.getSocket(), &fd);
+ 
+     // now make sure we wait in the correct direction
+     dir = libssh2_session_block_directions(ssh_session);
+ 
+     if (dir & LIBSSH2_SESSION_BLOCK_INBOUND)
+	readfd = &fd;
+ 
+     if (dir & LIBSSH2_SESSION_BLOCK_OUTBOUND)
+	writefd = &fd;
+ 
+     rc = select(socket.getSocket() + 1, readfd, writefd, 0, &timeout);
+     
+     return rc;
+  }
 
   // to ensure thread-safe operations
   QoreThreadLock m;
@@ -137,6 +173,19 @@ private:
      return channel;
   }
 
+};
+
+class BlockingHelper {
+protected:
+   SSH2Client *client;
+
+public:
+   DLLLOCAL BlockingHelper(SSH2Client *n_client) : client(n_client) {
+      client->set_blocking_unlocked(false);
+   }
+   DLLLOCAL ~BlockingHelper() {
+      client->set_blocking_unlocked(true);
+   }
 };
 
 #endif // _QORE_SSH2CLIENT_H

@@ -54,25 +54,12 @@ static void setup_namespace() {
   ssh2ns=new QoreNamespace("SSH2");
 
   // all classes belonging to here
-  //  amqns->addSystemClass(initActiveMQSessionClass());
   ssh2ns->addSystemClass(initSSH2ClientClass());
   ssh2ns->addSystemClass(initSFTPClientClass());
+  ssh2ns->addSystemClass(initSSH2ChannelClass());
 
-  /*
   // delivery modes
-  amqns->addConstant("AMQ_DEL_PERSISTENT", new QoreBigIntNode(AMQ_DEL_PERSISTENT));
-  amqns->addConstant("AMQ_DEL_NONPERSISTENT", new QoreBigIntNode(AMQ_DEL_NONPERSISTENT));
-
-  // session constants
-  amqns->addConstant("AMQ_ACK_AUTO", new QoreBigIntNode(AMQ_ACK_AUTO));
-  amqns->addConstant("AMQ_ACK_DUPOK", new QoreBigIntNode(AMQ_ACK_DUPOK));
-  amqns->addConstant("AMQ_ACK_CLIENT", new QoreBigIntNode(AMQ_ACK_CLIENT));
-  amqns->addConstant("AMQ_ACK_SESSION", new QoreBigIntNode(AMQ_ACK_SESSION));
-
-  // destination type constants
-  amqns->addConstant("AMQ_QUEUE", new QoreBigIntNode(AMQ_QUEUE));
-  amqns->addConstant("AMQ_TOPIC", new QoreBigIntNode(AMQ_TOPIC));
-  */
+  //ssh2ns->addConstant("xxx", new QoreBigIntNode(xxx));
 }
 
 class QoreStringNode *ssh2_module_init() {
@@ -93,4 +80,3 @@ void ssh2_module_delete() {
    QORE_TRACE("ssh2_module_delete()");
    delete ssh2ns;
 }
-

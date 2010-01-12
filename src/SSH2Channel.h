@@ -72,7 +72,9 @@ public:
 			   int height_px = LIBSSH2_TERM_HEIGHT_PX);
    DLLLOCAL int shell(ExceptionSink *xsink);
    DLLLOCAL bool eof(ExceptionSink *xsink);
+   DLLLOCAL int exec(const char *command, ExceptionSink *xsink);
+   DLLLOCAL QoreStringNode *read(ExceptionSink *xsink);
+   DLLLOCAL int write(ExceptionSink *xsink, const void *buf, qore_size_t buflen, int stream_id = 0);
 };
-
 
 #endif _QORE_SSH2CHANNEL_H

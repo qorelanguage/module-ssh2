@@ -348,8 +348,8 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
     return -1;
   }
 
-  // Since we have set non-blocking, tell libssh2 we are blocking
-  libssh2_session_set_blocking(ssh_session, 1);
+  // make sure we are in blocking mode
+  set_blocking_unlocked(true);
   
   // ... start it up. This will trade welcome banners, exchange keys,
   // and setup crypto, compression, and MAC layers

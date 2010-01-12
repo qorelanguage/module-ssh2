@@ -28,6 +28,7 @@
 #include "ssh2.h"
 #include "SSH2Client.h"
 #include "SFTPClient.h"
+#include "SSH2Channel.h"
 
 // module def
 QoreStringNode *ssh2_module_init();
