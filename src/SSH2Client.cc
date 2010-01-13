@@ -319,7 +319,7 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
 
   QORE_TRACE("SSH2Client::connect()");
 
-  printd(1, "SSH2Client::connect(%s:%s, %dms)\n", sshhost, sshport, timeout_ms);
+  printd(1, "SSH2Client::connect(%s:%d, %dms)\n", sshhost, sshport, timeout_ms);
   
   // sanity check of data
   if (!sshuser) {
