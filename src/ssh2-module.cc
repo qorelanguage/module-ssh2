@@ -33,7 +33,10 @@ TLKeyboardPassword keyboardPassword;
 
 // maybe needed for the hidden classes...
 
-static class QoreNamespace *ssh2ns; // namespace
+static QoreNamespace ssh2ns("SSH2"); // namespace
+
+// for verifying the minimum required version of the library
+static const char *qore_libssh2_version = 0;
 
 #ifndef QORE_MONOLITHIC
 DLLEXPORT char qore_module_name[] = "ssh2";
@@ -51,18 +54,25 @@ DLLEXPORT qore_license_t qore_module_license = QL_LGPL;
 
 static void setup_namespace() {
   // setup static "master" namespace
-  ssh2ns=new QoreNamespace("SSH2");
 
   // all classes belonging to here
-  ssh2ns->addSystemClass(initSSH2ClientClass());
-  ssh2ns->addSystemClass(initSFTPClientClass());
-  ssh2ns->addSystemClass(initSSH2ChannelClass());
+  ssh2ns.addSystemClass(initSSH2ClientClass());
+  ssh2ns.addSystemClass(initSFTPClientClass());
+  ssh2ns.addSystemClass(initSSH2ChannelClass());
 
-  // delivery modes
-  //ssh2ns->addConstant("xxx", new QoreBigIntNode(xxx));
+  // constants
+  ssh2ns.addConstant("Version", new QoreStringNode(qore_libssh2_version));
 }
 
-class QoreStringNode *ssh2_module_init() {
+QoreStringNode *ssh2_module_init() {
+   qore_libssh2_version = libssh2_version(LIBSSH2_VERSION_NUM);
+   if (!qore_libssh2_version) {
+      QoreStringNode *err = new QoreStringNode("the runtime version of the library is too old; got '%s', expecting minimum version '");
+      err->concat(LIBSSH2_VERSION);
+      err->concat('\'');
+      return err;
+   }
+
    setup_namespace();
 
    // add builtin functions
@@ -73,10 +83,9 @@ class QoreStringNode *ssh2_module_init() {
 void ssh2_module_ns_init(class QoreNamespace *rns, class QoreNamespace *qns) {
    QORE_TRACE("ssh2_module_ns_init()");
 
-   qns->addInitialNamespace(ssh2ns->copy());
+   qns->addInitialNamespace(ssh2ns.copy());
 }
 
 void ssh2_module_delete() {
    QORE_TRACE("ssh2_module_delete()");
-   delete ssh2ns;
 }

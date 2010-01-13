@@ -109,25 +109,23 @@ private:
      assert(ssh_session);
      libssh2_session_set_blocking(ssh_session, (int)block);
   }
-  DLLLOCAL int waitsocket_unlocked() {
+  DLLLOCAL int waitsocket_unlocked(int sec = 10, int usec = 0) {
      assert(ssh_session);
 
      struct timeval timeout;
-     int rc;
      fd_set fd;
      fd_set *writefd = 0;
      fd_set *readfd = 0;
-     int dir;
  
-     timeout.tv_sec = 10;
-     timeout.tv_usec = 0;
+     timeout.tv_sec = sec;
+     timeout.tv_usec = usec;
  
      FD_ZERO(&fd);
  
      FD_SET(socket.getSocket(), &fd);
  
      // now make sure we wait in the correct direction
-     dir = libssh2_session_block_directions(ssh_session);
+     int dir = libssh2_session_block_directions(ssh_session);
  
      if (dir & LIBSSH2_SESSION_BLOCK_INBOUND)
 	readfd = &fd;
@@ -135,9 +133,7 @@ private:
      if (dir & LIBSSH2_SESSION_BLOCK_OUTBOUND)
 	writefd = &fd;
  
-     rc = select(socket.getSocket() + 1, readfd, writefd, 0, &timeout);
-     
-     return rc;
+     return select(socket.getSocket() + 1, readfd, writefd, 0, &timeout);
   }
 
   // to ensure thread-safe operations

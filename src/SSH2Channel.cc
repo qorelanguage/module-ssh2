@@ -83,6 +83,30 @@ bool SSH2Channel::eof(ExceptionSink *xsink) {
    return (bool)libssh2_channel_eof(channel);
 }
 
+int SSH2Channel::waitEof(ExceptionSink *xsink) {
+   AutoLocker al(parent->m);
+   if (check_open(xsink))
+      return 0;
+
+   int rc = libssh2_channel_wait_eof(channel);
+   if (rc < 0)
+      parent->do_session_err_unlocked(xsink);
+
+   return rc;
+}
+
+int SSH2Channel::sendEof(ExceptionSink *xsink) {
+   AutoLocker al(parent->m);
+   if (check_open(xsink))
+      return -1;
+
+   int rc = libssh2_channel_send_eof(channel);
+   if (rc)
+      parent->do_session_err_unlocked(xsink);
+
+   return rc;
+}
+
 int SSH2Channel::exec(const char *command, ExceptionSink *xsink) {
    AutoLocker al(parent->m);
    if (check_open(xsink))
@@ -141,4 +165,36 @@ int SSH2Channel::write(ExceptionSink *xsink, const void *buf, qore_size_t buflen
       parent->do_session_err_unlocked(xsink);
 
    return rc;
+}
+
+int SSH2Channel::close(ExceptionSink *xsink) {
+   AutoLocker al(parent->m);
+   if (check_open(xsink))
+      return 0;
+
+   int rc = libssh2_channel_close(channel);
+   if (rc < 0)
+      parent->do_session_err_unlocked(xsink);
+
+   return rc;
+}
+
+int SSH2Channel::waitClosed(ExceptionSink *xsink) {
+   AutoLocker al(parent->m);
+   if (check_open(xsink))
+      return 0;
+
+   int rc = libssh2_channel_wait_closed(channel);
+   if (rc < 0)
+      parent->do_session_err_unlocked(xsink);
+
+   return rc;
+}
+
+int SSH2Channel::getExitStatus(ExceptionSink *xsink) {
+   AutoLocker al(parent->m);
+   if (check_open(xsink))
+      return 0;
+
+   return libssh2_channel_get_exit_status(channel);
 }
