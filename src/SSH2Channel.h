@@ -76,8 +76,12 @@ public:
    DLLLOCAL int waitEof(ExceptionSink *xsink);
    DLLLOCAL int exec(const char *command, ExceptionSink *xsink);
    DLLLOCAL QoreStringNode *read(ExceptionSink *xsink);
+   // read a block of a particular size, timeout_ms mandatory
+   DLLLOCAL QoreStringNode *read(qore_size_t size, int timeout_ms, ExceptionSink *xsink);
    DLLLOCAL BinaryNode *readBinary(ExceptionSink *xsink);
-   DLLLOCAL int write(ExceptionSink *xsink, const void *buf, qore_size_t buflen, int stream_id = 0);
+   // read a block of a particular size, timeout_ms mandatory
+   DLLLOCAL BinaryNode *readBinary(qore_size_t size, int timeout_ms, ExceptionSink *xsink);
+   DLLLOCAL int write(ExceptionSink *xsink, const void *buf, qore_size_t buflen, int stream_id = 0, int timeout_ms = -1);
    DLLLOCAL int close(ExceptionSink *xsink);
    DLLLOCAL int waitClosed(ExceptionSink *xsink);
    DLLLOCAL int getExitStatus(ExceptionSink *xsink);
