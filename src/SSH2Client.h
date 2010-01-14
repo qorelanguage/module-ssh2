@@ -36,6 +36,11 @@
 
 #define DEFAULT_SSH_PORT 22
 
+#ifndef DEFAULT_TIMEOUT_MS
+// default 10 second I/O timeout
+#define DEFAULT_TIMEOUT_MS 10000
+#endif
+
 #define QAUTH_PASSWORD             (1 << 0)
 #define QAUTH_KEYBOARD_INTERACTIVE (1 << 1)
 #define QAUTH_PUBLICKEY            (1 << 2)
@@ -109,7 +114,7 @@ private:
      assert(ssh_session);
      libssh2_session_set_blocking(ssh_session, (int)block);
   }
-  DLLLOCAL int waitsocket_unlocked(int sec = 10, int usec = 0) {
+   DLLLOCAL int waitsocket_unlocked(int timeout_ms = DEFAULT_TIMEOUT_MS) {
      assert(ssh_session);
 
      struct timeval timeout;
@@ -117,8 +122,8 @@ private:
      fd_set *writefd = 0;
      fd_set *readfd = 0;
  
-     timeout.tv_sec = sec;
-     timeout.tv_usec = usec;
+     timeout.tv_sec = timeout_ms / 1000;
+     timeout.tv_usec = (timeout_ms % 1000) * 1000;
  
      FD_ZERO(&fd);
  
@@ -135,7 +140,7 @@ private:
  
      return select(socket.getSocket() + 1, readfd, writefd, 0, &timeout);
   }
-  DLLLOCAL QoreObject *register_channel(LIBSSH2_CHANNEL *channel);
+  DLLLOCAL QoreObject *register_channel_unlocked(LIBSSH2_CHANNEL *channel);
 
   // to ensure thread-safe operations
   QoreThreadLock m;
@@ -170,7 +175,7 @@ private:
 	return 0;
      }
 
-     return register_channel(channel);
+     return register_channel_unlocked(channel);
   }
 
    DLLLOCAL QoreObject *openDirectTcpipChannel(ExceptionSink *xsink, const char *host, int port, const char *shost = "127.0.0.1", int sport = 22) {
@@ -187,7 +192,7 @@ private:
 	 return 0;
       }
 
-      return register_channel(channel);
+      return register_channel_unlocked(channel);
    }
 };
 

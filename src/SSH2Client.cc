@@ -172,8 +172,7 @@ int SSH2Client::ssh_connected() {
    return ssh_connected_unlocked();
 }
 
-QoreObject *SSH2Client::register_channel(LIBSSH2_CHANNEL *channel) {
-   AutoLocker al(m);
+QoreObject *SSH2Client::register_channel_unlocked(LIBSSH2_CHANNEL *channel) {
    SSH2Channel *chan = new SSH2Channel(channel, this);
    channel_set.insert(chan);
    return new QoreObject(QC_SSH2CHANNEL, getProgram(), chan);

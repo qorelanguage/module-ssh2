@@ -132,6 +132,7 @@ QoreStringNode *SSH2Channel::read(ExceptionSink *xsink) {
    BlockingHelper bh(parent);
 
    qore_offset_t rc;
+   bool first = true;
    do {
      loop0:
       char buffer[QSSH2_BUFSIZE];
@@ -140,7 +141,8 @@ QoreStringNode *SSH2Channel::read(ExceptionSink *xsink) {
       //printd(5, "SSH2Channel::read() rc=%lld (EAGAIN=%d)\n", rc, LIBSSH2_ERROR_EAGAIN);
       if (rc > 0)
 	 str->concat(buffer, rc);
-      else if (rc == LIBSSH2_ERROR_EAGAIN && !str->strlen()) {
+      else if (rc == LIBSSH2_ERROR_EAGAIN && !str->strlen() && first) {
+	 first = false;
 	 parent->waitsocket_unlocked();
 	 goto loop0;
       }
@@ -165,6 +167,7 @@ BinaryNode *SSH2Channel::readBinary(ExceptionSink *xsink) {
    BlockingHelper bh(parent);
 
    qore_offset_t rc;
+   bool first = true;
    do {
      loop0:
       char buffer[QSSH2_BUFSIZE];
@@ -173,7 +176,8 @@ BinaryNode *SSH2Channel::readBinary(ExceptionSink *xsink) {
       //printd(5, "SSH2Channel::read() rc=%lld (EAGAIN=%d)\n", rc, LIBSSH2_ERROR_EAGAIN);
       if (rc > 0)
 	 bin->append(buffer, rc);
-      else if (rc == LIBSSH2_ERROR_EAGAIN && !bin->size()) {
+      else if (rc == LIBSSH2_ERROR_EAGAIN && !bin->size() && first) {
+	 first = false;
 	 parent->waitsocket_unlocked();
 	 goto loop0;
       }
