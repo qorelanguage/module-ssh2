@@ -76,6 +76,7 @@ public:
    DLLLOCAL int waitEof(ExceptionSink *xsink);
    DLLLOCAL int exec(const char *command, ExceptionSink *xsink);
    DLLLOCAL QoreStringNode *read(ExceptionSink *xsink);
+   DLLLOCAL BinaryNode *readBinary(ExceptionSink *xsink);
    DLLLOCAL int write(ExceptionSink *xsink, const void *buf, qore_size_t buflen, int stream_id = 0);
    DLLLOCAL int close(ExceptionSink *xsink);
    DLLLOCAL int waitClosed(ExceptionSink *xsink);

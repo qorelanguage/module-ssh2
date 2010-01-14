@@ -155,6 +155,39 @@ QoreStringNode *SSH2Channel::read(ExceptionSink *xsink) {
    return str.release();
 }
 
+BinaryNode *SSH2Channel::readBinary(ExceptionSink *xsink) {
+   AutoLocker al(parent->m);
+   if (check_open(xsink))
+      return 0;
+
+   SimpleRefHolder<BinaryNode> bin(new BinaryNode);
+
+   BlockingHelper bh(parent);
+
+   qore_offset_t rc;
+   do {
+     loop0:
+      char buffer[QSSH2_BUFSIZE];
+      rc = libssh2_channel_read(channel, buffer, QSSH2_BUFSIZE);
+
+      //printd(5, "SSH2Channel::read() rc=%lld (EAGAIN=%d)\n", rc, LIBSSH2_ERROR_EAGAIN);
+      if (rc > 0)
+	 bin->append(buffer, rc);
+      else if (rc == LIBSSH2_ERROR_EAGAIN && !bin->size()) {
+	 parent->waitsocket_unlocked();
+	 goto loop0;
+      }
+   }
+   while (rc > 0);
+
+   if (rc < 0 && rc != LIBSSH2_ERROR_EAGAIN) {
+      parent->do_session_err_unlocked(xsink);
+      return 0;
+   }
+
+   return bin.release();
+}
+
 int SSH2Channel::write(ExceptionSink *xsink, const void *buf, qore_size_t buflen, int stream_id) {
    AutoLocker al(parent->m);
    if (check_open(xsink))

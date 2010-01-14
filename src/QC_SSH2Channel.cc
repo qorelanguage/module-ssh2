@@ -100,6 +100,10 @@ AbstractQoreNode *SSH2CHANNEL_read(QoreObject *self, SSH2Channel *c, const QoreL
    return c->read(xsink);
 }
 
+AbstractQoreNode *SSH2CHANNEL_readBinary(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
+   return c->readBinary(xsink);
+}
+
 AbstractQoreNode *SSH2CHANNEL_write(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
    const void *buf = 0;
    qore_size_t buflen;
@@ -163,6 +167,7 @@ QoreClass *initSSH2ChannelClass() {
    QC_SSH2CHANNEL->addMethod("waitEof",        (q_method_t)SSH2CHANNEL_waitEof);
    QC_SSH2CHANNEL->addMethod("exec",           (q_method_t)SSH2CHANNEL_exec);
    QC_SSH2CHANNEL->addMethod("read",           (q_method_t)SSH2CHANNEL_read);
+   QC_SSH2CHANNEL->addMethod("readBinary",     (q_method_t)SSH2CHANNEL_readBinary);
    QC_SSH2CHANNEL->addMethod("write",          (q_method_t)SSH2CHANNEL_write);
    QC_SSH2CHANNEL->addMethod("close",          (q_method_t)SSH2CHANNEL_close);
    QC_SSH2CHANNEL->addMethod("waitClosed",     (q_method_t)SSH2CHANNEL_waitClosed);

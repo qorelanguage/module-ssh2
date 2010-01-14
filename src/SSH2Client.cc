@@ -630,11 +630,28 @@ class AbstractQoreNode *SSH2C_setKeys(class QoreObject *self, class SSH2Client *
 }
 
 AbstractQoreNode *SSH2C_openSessionChannel(QoreObject *self, SSH2Client *c, const QoreListNode *params, ExceptionSink *xsink) {
-   LIBSSH2_CHANNEL *chan = c->openSessionChannel(xsink);
-   if (!chan)
-      return 0;
+   return c->openSessionChannel(xsink);
+}
 
-   return c->register_channel(chan);
+AbstractQoreNode *SSH2C_openDirectTcpipChannel(QoreObject *self, SSH2Client *c, const QoreListNode *params, ExceptionSink *xsink) {
+   static const char *SSH2CLIENT_OPENDIRECTTCPIPCHANNEL_ERR = "SSH2CLIENT-OPENDIRECTTCPIPCHANNEL-ERROR";
+   
+   const QoreStringNode *host = test_string_param(params, 0);
+   if (!host) {
+      xsink->raiseException(SSH2CLIENT_OPENDIRECTTCPIPCHANNEL_ERR, "missing host name for forwarded channel as first argument to SSH2Client::openDirectTcpipChannel()");
+      return 0;
+   }
+
+   int port = get_int_param(params, 1);
+   if (!port) {
+      xsink->raiseException(SSH2CLIENT_OPENDIRECTTCPIPCHANNEL_ERR, "missing port number for forwarded channel as second argument to SSH2Client::openDirectTcpipChannel()");
+      return 0;
+   }
+
+   const QoreStringNode *shost = test_string_param(params, 2);
+   int sport = get_int_param(params, 3);
+
+   return c->openDirectTcpipChannel(xsink, host->getBuffer(), port, shost ? shost->getBuffer() : "127.0.0.1", sport ? sport : 22);
 }
 
 /**
@@ -648,15 +665,16 @@ class QoreClass *initSSH2ClientClass() {
    QC_SSH2_CLIENT->setConstructor(SSH2C_constructor);
    QC_SSH2_CLIENT->setCopy((q_copy_t)SSH2C_copy);
 
-   QC_SSH2_CLIENT->addMethod("connect", (q_method_t)SSH2C_connect);
-   QC_SSH2_CLIENT->addMethod("disconnect", (q_method_t)SSH2C_disconnect);
-   QC_SSH2_CLIENT->addMethod("info", (q_method_t)SSH2C_info);
+   QC_SSH2_CLIENT->addMethod("connect",                (q_method_t)SSH2C_connect);
+   QC_SSH2_CLIENT->addMethod("disconnect",             (q_method_t)SSH2C_disconnect);
+   QC_SSH2_CLIENT->addMethod("info",                   (q_method_t)SSH2C_info);
 
-   QC_SSH2_CLIENT->addMethod("setUser", (q_method_t)SSH2C_setUser);
-   QC_SSH2_CLIENT->addMethod("setPassword", (q_method_t)SSH2C_setPassword);
-   QC_SSH2_CLIENT->addMethod("setKeys", (q_method_t)SSH2C_setKeys);
+   QC_SSH2_CLIENT->addMethod("setUser",                (q_method_t)SSH2C_setUser);
+   QC_SSH2_CLIENT->addMethod("setPassword",            (q_method_t)SSH2C_setPassword);
+   QC_SSH2_CLIENT->addMethod("setKeys",                (q_method_t)SSH2C_setKeys);
 
-   QC_SSH2_CLIENT->addMethod("openSessionChannel", (q_method_t)SSH2C_openSessionChannel);
+   QC_SSH2_CLIENT->addMethod("openSessionChannel",     (q_method_t)SSH2C_openSessionChannel);
+   QC_SSH2_CLIENT->addMethod("openDirectTcpipChannel", (q_method_t)SSH2C_openSessionChannel);
 
    return QC_SSH2_CLIENT;
 }

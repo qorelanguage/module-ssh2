@@ -135,6 +135,7 @@ private:
  
      return select(socket.getSocket() + 1, readfd, writefd, 0, &timeout);
   }
+  DLLLOCAL QoreObject *register_channel(LIBSSH2_CHANNEL *channel);
 
   // to ensure thread-safe operations
   QoreThreadLock m;
@@ -153,22 +154,41 @@ private:
 
   DLLLOCAL int ssh_connected();
 
-  DLLLOCAL QoreObject *register_channel(LIBSSH2_CHANNEL *channel);
-
-  //QoreStringNode *exec(const char *dir, ExceptionSink *xsink);
-
   DLLLOCAL QoreHashNode *ssh_info(ExceptionSink *xsink);
 
-  DLLLOCAL LIBSSH2_CHANNEL *openSessionChannel(ExceptionSink *xsink) {
+  DLLLOCAL QoreObject *openSessionChannel(ExceptionSink *xsink) {
      AutoLocker al(m);
 
-     LIBSSH2_CHANNEL *channel = libssh2_channel_open_session(ssh_session);
-     if (!channel)
-	do_session_err_unlocked(xsink);
+     if (!ssh_connected_unlocked()) {
+	xsink->raiseException("SSH2CLIENT-OPENSESSIONCHANNEL-ERROR", "cannot call SSH2Client::openSessionChannel() while client is not connected");
+	return 0;
+     }
 
-     return channel;
+     LIBSSH2_CHANNEL *channel = libssh2_channel_open_session(ssh_session);
+     if (!channel) {
+	do_session_err_unlocked(xsink);
+	return 0;
+     }
+
+     return register_channel(channel);
   }
 
+   DLLLOCAL QoreObject *openDirectTcpipChannel(ExceptionSink *xsink, const char *host, int port, const char *shost = "127.0.0.1", int sport = 22) {
+      AutoLocker al(m);
+
+      if (!ssh_connected_unlocked()) {
+	 xsink->raiseException("SSH2CLIENT-OPENSESSIONCHANNEL-ERROR", "cannot call SSH2Client::openDirectTcpipChannel() while client is not connected");
+	 return 0;
+      }
+
+      LIBSSH2_CHANNEL *channel = libssh2_channel_direct_tcpip_ex(ssh_session, host, port, shost, sport);
+      if (!channel) {
+	 do_session_err_unlocked(xsink);
+	 return 0;
+      }
+
+      return register_channel(channel);
+   }
 };
 
 class BlockingHelper {
