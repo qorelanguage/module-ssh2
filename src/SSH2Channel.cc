@@ -34,21 +34,32 @@ void SSH2Channel::destructor() {
    }
 }
 
-int SSH2Channel::setenv(const char *name, const char *value, ExceptionSink *xsink) {
+int SSH2Channel::setenv(const char *name, const char *value, int timeout_ms, ExceptionSink *xsink) {
    AutoLocker al(parent->m);
    if (check_open(xsink))
       return -1;
 
+   BlockingHelper bh(parent);
+
    int rc;
-   if ((rc = libssh2_channel_setenv(channel, (char *)name, value)))
-      parent->do_session_err_unlocked(xsink);
+   while (true) {
+      rc = libssh2_channel_setenv(channel, (char *)name, value);
+      if (rc == LIBSSH2_ERROR_EAGAIN) {
+	 if ((rc = parent->check_timeout(timeout_ms, "SSH2CHANNEL-SETENV-TIMEOUT", "SSH2CHANNEL-SETENV-ERROR", xsink)))
+	    break;
+	 continue;
+      }
+      if (rc)
+	 parent->do_session_err_unlocked(xsink);
+      break;
+   }
 
    return rc;
 }
 
 static QoreString vanilla("vanilla");
 
-int SSH2Channel::requestPty(ExceptionSink *xsink, const QoreString *term, const QoreString *modes, int width, int height, int width_px, int height_px) {
+int SSH2Channel::requestPty(ExceptionSink *xsink, const QoreString *term, const QoreString *modes, int width, int height, int width_px, int height_px, int timeout_ms) {
    AutoLocker al(parent->m);
    if (check_open(xsink))
       return -1;
@@ -56,21 +67,43 @@ int SSH2Channel::requestPty(ExceptionSink *xsink, const QoreString *term, const 
    if (!term)
       term = &vanilla;
 
-   int rc = libssh2_channel_request_pty_ex(channel, term->getBuffer(), term->strlen(), modes ? modes->getBuffer() : 0, modes ? modes->strlen() : 0, width, height, width_px, height_px);
-   if (rc)
-      parent->do_session_err_unlocked(xsink);
+   BlockingHelper bh(parent);
+
+   int rc;
+   while (true) {
+      rc = libssh2_channel_request_pty_ex(channel, term->getBuffer(), term->strlen(), modes ? modes->getBuffer() : 0, modes ? modes->strlen() : 0, width, height, width_px, height_px);
+      if (rc == LIBSSH2_ERROR_EAGAIN) {
+	 if ((rc = parent->check_timeout(timeout_ms, "SSH2CHANNEL-REQUESTPTY-TIMEOUT", "SSH2CHANNEL-REQUESTPTY-ERROR", xsink)))
+	    break;
+	 continue;
+      }
+      if (rc)
+	 parent->do_session_err_unlocked(xsink);
+      break;
+   }
 
    return rc;
 }
 
-int SSH2Channel::shell(ExceptionSink *xsink) {
+int SSH2Channel::shell(ExceptionSink *xsink, int timeout_ms) {
    AutoLocker al(parent->m);
    if (check_open(xsink))
       return -1;
 
-   int rc = libssh2_channel_shell(channel);
-   if (rc)
-      parent->do_session_err_unlocked(xsink);
+   BlockingHelper bh(parent);
+
+   int rc;
+   while (true) {
+      rc = libssh2_channel_shell(channel);
+      if (rc == LIBSSH2_ERROR_EAGAIN) {
+	 if ((rc = parent->check_timeout(timeout_ms, "SSH2CHANNEL-SHELL-TIMEOUT", "SSH2CHANNEL-SHELL-ERROR", xsink)))
+	    break;
+	 continue;
+      }
+      if (rc)
+	 parent->do_session_err_unlocked(xsink);
+      break;
+   }
 
    return rc;
 }
@@ -83,46 +116,79 @@ bool SSH2Channel::eof(ExceptionSink *xsink) {
    return (bool)libssh2_channel_eof(channel);
 }
 
-int SSH2Channel::waitEof(ExceptionSink *xsink) {
+int SSH2Channel::waitEof(ExceptionSink *xsink, int timeout_ms) {
    AutoLocker al(parent->m);
    if (check_open(xsink))
       return 0;
 
-   int rc = libssh2_channel_wait_eof(channel);
-   if (rc < 0)
-      parent->do_session_err_unlocked(xsink);
+   BlockingHelper bh(parent);
+
+   int rc;
+   while (true) {
+      rc = libssh2_channel_wait_eof(channel);
+      if (rc == LIBSSH2_ERROR_EAGAIN) {
+	 if ((rc = parent->check_timeout(timeout_ms, "SSH2CHANNEL-WAITEOF-TIMEOUT", "SSH2CHANNEL-WAITEOF-ERROR", xsink)))
+	    break;
+	 continue;
+      }
+      if (rc)
+	 parent->do_session_err_unlocked(xsink);
+      break;
+   }
 
    return rc;
 }
 
-int SSH2Channel::sendEof(ExceptionSink *xsink) {
+int SSH2Channel::sendEof(ExceptionSink *xsink, int timeout_ms) {
    AutoLocker al(parent->m);
    if (check_open(xsink))
       return -1;
 
-   int rc = libssh2_channel_send_eof(channel);
-   if (rc)
-      parent->do_session_err_unlocked(xsink);
+   BlockingHelper bh(parent);
+
+   int rc;
+   while (true) {
+      rc = libssh2_channel_send_eof(channel);
+      if (rc == LIBSSH2_ERROR_EAGAIN) {
+	 if ((rc = parent->check_timeout(timeout_ms, "SSH2CHANNEL-SENDEOF-TIMEOUT", "SSH2CHANNEL-SENDEOF-ERROR", xsink)))
+	    break;
+	 continue;
+      }
+      if (rc)
+	 parent->do_session_err_unlocked(xsink);
+      break;
+   }
 
    return rc;
 }
 
-int SSH2Channel::exec(const char *command, ExceptionSink *xsink) {
+int SSH2Channel::exec(const char *command, int timeout_ms, ExceptionSink *xsink) {
    AutoLocker al(parent->m);
    if (check_open(xsink))
       return -1;
 
-   int rc = libssh2_channel_exec(channel, command);
-   //printd(5, "SSH2Channel::exec() cmd=%s rc=%d\n", command, rc);
-   if (rc)
-      parent->do_session_err_unlocked(xsink);
+   BlockingHelper bh(parent);
+
+   int rc;
+   while (true) {
+      rc = libssh2_channel_exec(channel, command);
+      //printd(5, "SSH2Channel::exec() cmd=%s rc=%d\n", command, rc);
+      if (rc == LIBSSH2_ERROR_EAGAIN) {
+	 if ((rc = parent->check_timeout(timeout_ms, "SSH2CHANNEL-EXEC-TIMEOUT", "SSH2CHANNEL-EXEC-ERROR", xsink)))
+	    break;
+	 continue;
+      }
+      if (rc)
+	 parent->do_session_err_unlocked(xsink);
+      break;
+   }
 
    return rc;
 }
 
 #define QSSH2_BUFSIZE 4096
 
-QoreStringNode *SSH2Channel::read(ExceptionSink *xsink) {
+QoreStringNode *SSH2Channel::read(ExceptionSink *xsink, int timeout_ms) {
    AutoLocker al(parent->m);
    if (check_open(xsink))
       return 0;
@@ -143,7 +209,8 @@ QoreStringNode *SSH2Channel::read(ExceptionSink *xsink) {
 	 str->concat(buffer, rc);
       else if (rc == LIBSSH2_ERROR_EAGAIN && !str->strlen() && first) {
 	 first = false;
-	 parent->waitsocket_unlocked();
+	 if ((rc = parent->check_timeout(timeout_ms, "SSH2CHANNEL-READ-TIMEOUT", "SSH2CHANNEL-READ-ERROR", xsink)))
+	    return 0;
 	 goto loop0;
       }
    }
@@ -189,11 +256,11 @@ QoreStringNode *SSH2Channel::read(qore_size_t size, int timeout_ms, ExceptionSin
       if (!rc || rc == LIBSSH2_ERROR_EAGAIN) {
 	 rc = parent->waitsocket_unlocked(timeout_ms);
 	 if (!rc) {
-	    xsink->raiseException("SSH2-READ-TIMEOUT", "read timeout after %dms reading %lld byte%s of %lld requested", timeout_ms, b_read, b_read == 1 ? "" : "s", size);
+	    xsink->raiseException("SSH2CHANNEL-READ-TIMEOUT", "read timeout after %dms reading %lld byte%s of %lld requested", timeout_ms, b_read, b_read == 1 ? "" : "s", size);
 	    return 0;
 	 }
 	 if (rc < 0) {
-	    xsink->raiseException("SSH2-READ-TIMEOUT", strerror(errno));
+	    xsink->raiseException("SSH2CHANNEL-READ-TIMEOUT", strerror(errno));
 	    return 0;
 	 }
       }
@@ -207,7 +274,7 @@ QoreStringNode *SSH2Channel::read(qore_size_t size, int timeout_ms, ExceptionSin
    return str.release();
 }
 
-BinaryNode *SSH2Channel::readBinary(ExceptionSink *xsink) {
+BinaryNode *SSH2Channel::readBinary(ExceptionSink *xsink, int timeout_ms) {
    AutoLocker al(parent->m);
    if (check_open(xsink))
       return 0;
@@ -228,7 +295,8 @@ BinaryNode *SSH2Channel::readBinary(ExceptionSink *xsink) {
 	 bin->append(buffer, rc);
       else if (rc == LIBSSH2_ERROR_EAGAIN && !bin->size() && first) {
 	 first = false;
-	 parent->waitsocket_unlocked();
+	 if ((rc = parent->check_timeout(timeout_ms, "SSH2CHANNEL-READBINARY-TIMEOUT", "SSH2CHANNEL-READBINARY-ERROR", xsink)))
+	    return 0;
 	 goto loop0;
       }
    }
@@ -274,11 +342,11 @@ BinaryNode *SSH2Channel::readBinary(qore_size_t size, int timeout_ms, ExceptionS
       if (!rc || rc == LIBSSH2_ERROR_EAGAIN) {
 	 rc = parent->waitsocket_unlocked(timeout_ms);
 	 if (!rc) {
-	    xsink->raiseException("SSH2-READBINARY-TIMEOUT", "read timeout after %dms reading %lld byte%s of %lld requested", timeout_ms, b_read, b_read == 1 ? "" : "s", size);
+	    xsink->raiseException("SSH2CHANNEL-READBINARY-TIMEOUT", "read timeout after %dms reading %lld byte%s of %lld requested", timeout_ms, b_read, b_read == 1 ? "" : "s", size);
 	    return 0;
 	 }
 	 if (rc < 0) {
-	    xsink->raiseException("SSH2-READBINARY-TIMEOUT", strerror(errno));
+	    xsink->raiseException("SSH2CHANNEL-READBINARY-TIMEOUT", strerror(errno));
 	    return 0;
 	 }
       }
@@ -313,11 +381,11 @@ int SSH2Channel::write(ExceptionSink *xsink, const void *buf, qore_size_t buflen
 
 	 rc = parent->waitsocket_unlocked(timeout_ms);
 	 if (!rc) {
-	    xsink->raiseException("SSH2-WRITE-TIMEOUT", "write timeout after %dms writing %lld byte%s of %lld", timeout_ms, b_sent, b_sent == 1 ? "" : "s", buflen);
+	    xsink->raiseException("SSH2CHANNEL-WRITE-TIMEOUT", "write timeout after %dms writing %lld byte%s of %lld", timeout_ms, b_sent, b_sent == 1 ? "" : "s", buflen);
 	    return -1;
 	 }
 	 if (rc < 0) {
-	    xsink->raiseException("SSH2-WRITE-ERROR", strerror(errno));
+	    xsink->raiseException("SSH2CHANNEL-WRITE-ERROR", strerror(errno));
 	    return -1;
 	 }
       }
@@ -333,26 +401,48 @@ int SSH2Channel::write(ExceptionSink *xsink, const void *buf, qore_size_t buflen
    return b_sent;
 }
 
-int SSH2Channel::close(ExceptionSink *xsink) {
+int SSH2Channel::close(ExceptionSink *xsink, int timeout_ms) {
    AutoLocker al(parent->m);
    if (check_open(xsink))
       return 0;
 
-   int rc = libssh2_channel_close(channel);
-   if (rc < 0)
-      parent->do_session_err_unlocked(xsink);
+   BlockingHelper bh(parent);
+
+   int rc;
+   while (true) {
+      rc = libssh2_channel_close(channel);
+      if (rc == LIBSSH2_ERROR_EAGAIN) {
+	 if ((rc = parent->check_timeout(timeout_ms, "SSH2CHANNEL-CLOSE-TIMEOUT", "SSH2CHANNEL-CLOSE-ERROR", xsink)))
+	    break;
+	 continue;
+      }
+      if (rc < 0)
+	 parent->do_session_err_unlocked(xsink);
+      break;
+   }
 
    return rc;
 }
 
-int SSH2Channel::waitClosed(ExceptionSink *xsink) {
+int SSH2Channel::waitClosed(ExceptionSink *xsink, int timeout_ms) {
    AutoLocker al(parent->m);
    if (check_open(xsink))
       return 0;
 
-   int rc = libssh2_channel_wait_closed(channel);
-   if (rc < 0)
-      parent->do_session_err_unlocked(xsink);
+   BlockingHelper bh(parent);
+
+   int rc;
+   while (true) {
+      rc = libssh2_channel_wait_closed(channel);
+      if (rc == LIBSSH2_ERROR_EAGAIN) {
+	 if ((rc = parent->check_timeout(timeout_ms, "SSH2CHANNEL-WAITCLOSED-TIMEOUT", "SSH2CHANNEL-WAITCLOSED-ERROR", xsink)))
+	    break;
+	 continue;
+      }
+      if (rc < 0)
+	 parent->do_session_err_unlocked(xsink);
+      break;
+   }
 
    return rc;
 }
@@ -365,15 +455,25 @@ int SSH2Channel::getExitStatus(ExceptionSink *xsink) {
    return libssh2_channel_get_exit_status(channel);
 }
 
-int SSH2Channel::requestX11Forwarding(ExceptionSink *xsink, int screen_number, bool single_connection, const char *auth_proto, const char *auth_cookie) {
+int SSH2Channel::requestX11Forwarding(ExceptionSink *xsink, int screen_number, bool single_connection, const char *auth_proto, const char *auth_cookie, int timeout_ms) {
    AutoLocker al(parent->m);
    if (check_open(xsink))
       return 0;
 
-   //printd(5, "SSH2Channel::requestX11Forwarding() screen_no=%d, single=%s, ap=%s, ac=%s\n", screen_number, single_connection ? "true" : "false", auth_proto ? auth_proto : "n/a", auth_cookie ? auth_cookie : "n/a");
-   int rc = libssh2_channel_x11_req_ex(channel, (int)single_connection, auth_proto, auth_cookie, screen_number);
-   if (rc < 0)
-      parent->do_session_err_unlocked(xsink);
+   BlockingHelper bh(parent);
 
+   //printd(5, "SSH2Channel::requestX11Forwarding() screen_no=%d, single=%s, ap=%s, ac=%s\n", screen_number, single_connection ? "true" : "false", auth_proto ? auth_proto : "n/a", auth_cookie ? auth_cookie : "n/a");
+   int rc; 
+   while (true) {
+      rc = libssh2_channel_x11_req_ex(channel, (int)single_connection, auth_proto, auth_cookie, screen_number);
+      if (rc == LIBSSH2_ERROR_EAGAIN) {
+	 if ((rc = parent->check_timeout(timeout_ms, "SSH2CHANNEL-REQUESTX11FORWARDING-TIMEOUT", "SSH2CHANNEL-REQUESTX11FORWARDING-ERROR", xsink)))
+	    break;
+	 continue;
+      }
+      if (rc < 0)
+	 parent->do_session_err_unlocked(xsink);
+      break;
+   }
    return rc;
 }

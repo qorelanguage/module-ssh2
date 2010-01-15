@@ -453,12 +453,66 @@ QoreHashNode *SSH2Client::ssh_info(ExceptionSink *xsink = 0) {
   return ret;
 }
 
+QoreObject *SSH2Client::openSessionChannel(ExceptionSink *xsink, int timeout_ms) {
+   static const char *SSH2CLIENT_OPENSESSIONCHANNEL_ERROR = "SSH2CLIENT-OPENSESSIONCHANNEL-ERROR";
 
+   AutoLocker al(m);
+   
+   if (!ssh_connected_unlocked()) {
+      xsink->raiseException(SSH2CLIENT_OPENSESSIONCHANNEL_ERROR, "cannot call SSH2Client::openSessionChannel() while client is not connected");
+      return 0;
+   }
 
+   BlockingHelper bh(this);
 
+   LIBSSH2_CHANNEL *channel;
+   while (true) {
+      channel = libssh2_channel_open_session(ssh_session);
+      //printd(0, "SSH2Client::openSessionChannel(timeout_ms = %d) channel=%p rc=%d\n", timeout_ms, channel, libssh2_session_last_errno(ssh_session));
+      if (!channel) {
+	 if (libssh2_session_last_error(ssh_session, 0, 0, 0) == LIBSSH2_ERROR_EAGAIN) {
+	    if (check_timeout(timeout_ms, "SSH2CLIENT-OPENSESSIONCHANNEL-TIMEOUT", SSH2CLIENT_OPENSESSIONCHANNEL_ERROR, xsink))
+	       return 0;
+	    continue;
+	 }
+	 do_session_err_unlocked(xsink);
+	 return 0;
+      }
+      break;
+   }
+   
+   return register_channel_unlocked(channel);
+}
 
+QoreObject *SSH2Client::openDirectTcpipChannel(ExceptionSink *xsink, const char *host, int port, const char *shost, int sport, int timeout_ms) {
+   static const char *SSH2CLIENT_OPENDIRECTTCPIPCHANNEL_ERROR = "SSH2CLIENT-OPENDIRECTTCPIPCHANNEL-ERROR";
 
+   AutoLocker al(m);
+   
+   if (!ssh_connected_unlocked()) {
+      xsink->raiseException(SSH2CLIENT_OPENDIRECTTCPIPCHANNEL_ERROR, "cannot call SSH2Client::openDirectTcpipChannel() while client is not connected");
+      return 0;
+   }
+   
+   BlockingHelper bh(this);
 
+   LIBSSH2_CHANNEL *channel;
+   while (true) {
+      channel = libssh2_channel_direct_tcpip_ex(ssh_session, host, port, shost, sport);
+      if (!channel) {
+	 if (libssh2_session_last_error(ssh_session, 0, 0, 0) == LIBSSH2_ERROR_EAGAIN) {
+	    if (check_timeout(timeout_ms, "SSH2CLIENT-OPENDIRECTTCPIPCHANNEL-TIMEOUT", SSH2CLIENT_OPENDIRECTTCPIPCHANNEL_ERROR, xsink))
+	       return 0;
+	    continue;
+	 }
+	 do_session_err_unlocked(xsink);
+	 return 0;
+      }
+      break;
+   }
+
+   return register_channel_unlocked(channel);
+}
 
 
 
@@ -629,7 +683,7 @@ class AbstractQoreNode *SSH2C_setKeys(class QoreObject *self, class SSH2Client *
 }
 
 AbstractQoreNode *SSH2C_openSessionChannel(QoreObject *self, SSH2Client *c, const QoreListNode *params, ExceptionSink *xsink) {
-   return c->openSessionChannel(xsink);
+   return c->openSessionChannel(xsink, getMsMinusOneInt(get_param(params, 0)));
 }
 
 AbstractQoreNode *SSH2C_openDirectTcpipChannel(QoreObject *self, SSH2Client *c, const QoreListNode *params, ExceptionSink *xsink) {
@@ -650,7 +704,7 @@ AbstractQoreNode *SSH2C_openDirectTcpipChannel(QoreObject *self, SSH2Client *c, 
    const QoreStringNode *shost = test_string_param(params, 2);
    int sport = get_int_param(params, 3);
 
-   return c->openDirectTcpipChannel(xsink, host->getBuffer(), port, shost ? shost->getBuffer() : "127.0.0.1", sport ? sport : 22);
+   return c->openDirectTcpipChannel(xsink, host->getBuffer(), port, shost ? shost->getBuffer() : "127.0.0.1", sport ? sport : 22, getMsMinusOneInt(get_param(params, 0)));
 }
 
 /**

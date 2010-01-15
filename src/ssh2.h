@@ -55,12 +55,29 @@
 #define PATH_MAX 4096
 #endif
 
+#define DEFAULT_SSH_PORT 22
+
+#ifndef DEFAULT_TIMEOUT_MS
+// default 10 second I/O timeout
+#define DEFAULT_TIMEOUT_MS 10000
+#endif
+
 // free a char* if it is not set to NULL, and set to NULL
 static inline void free_string(char *&str) {
   if(str) {
     free(str);
   }
   str=(char*)NULL;
+}
+
+static inline int getMsTimeoutWithDefault(const AbstractQoreNode *a, int def) {
+   if (is_nothing(a))
+      return def;
+
+   if (a->getType() == NT_DATE)
+      return reinterpret_cast<const DateTimeNode *>(a)->getRelativeMilliseconds();
+
+   return a->getAsInt();
 }
 
 // thread-local storage type for faked keyboard-interactive authentication

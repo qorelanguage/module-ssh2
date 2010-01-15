@@ -56,7 +56,7 @@ protected:
       xsink->raiseException("SSH2-CHANNEL-ERROR", "The SSH2 channel has already been closed");
       return -1;
    }
-
+   
 public:
    // channel is already registered with parent when it's created
    DLLLOCAL SSH2Channel(LIBSSH2_CHANNEL *n_channel, SSH2Client *n_parent) : channel(n_channel), parent(n_parent) {
@@ -66,26 +66,26 @@ public:
       assert(!channel);
    }
    DLLLOCAL void destructor();
-   DLLLOCAL int setenv(const char *name, const char *value, ExceptionSink *xsink);
+   DLLLOCAL int setenv(const char *name, const char *value, int timeout_ms, ExceptionSink *xsink);
    DLLLOCAL int requestPty(ExceptionSink *xsink, const QoreString *term = 0, const QoreString *modes = 0, int width = LIBSSH2_TERM_WIDTH, 
 			   int height = LIBSSH2_TERM_HEIGHT, int width_px = LIBSSH2_TERM_WIDTH_PX, 
-			   int height_px = LIBSSH2_TERM_HEIGHT_PX);
-   DLLLOCAL int shell(ExceptionSink *xsink);
+			   int height_px = LIBSSH2_TERM_HEIGHT_PX, int timeout_ms = -1);
+   DLLLOCAL int shell(ExceptionSink *xsink, int timeout_ms = -1);
    DLLLOCAL bool eof(ExceptionSink *xsink);
-   DLLLOCAL int sendEof(ExceptionSink *xsink);
-   DLLLOCAL int waitEof(ExceptionSink *xsink);
-   DLLLOCAL int exec(const char *command, ExceptionSink *xsink);
-   DLLLOCAL QoreStringNode *read(ExceptionSink *xsink);
+   DLLLOCAL int sendEof(ExceptionSink *xsink, int timeout_ms = -1);
+   DLLLOCAL int waitEof(ExceptionSink *xsink, int timeout_ms = -1);
+   DLLLOCAL int exec(const char *command, int timeout_ms, ExceptionSink *xsink);
+   DLLLOCAL QoreStringNode *read(ExceptionSink *xsink, int timeout_ms = DEFAULT_TIMEOUT_MS);
    // read a block of a particular size, timeout_ms mandatory
    DLLLOCAL QoreStringNode *read(qore_size_t size, int timeout_ms, ExceptionSink *xsink);
-   DLLLOCAL BinaryNode *readBinary(ExceptionSink *xsink);
+   DLLLOCAL BinaryNode *readBinary(ExceptionSink *xsink, int timeout_ms = DEFAULT_TIMEOUT_MS);
    // read a block of a particular size, timeout_ms mandatory
    DLLLOCAL BinaryNode *readBinary(qore_size_t size, int timeout_ms, ExceptionSink *xsink);
    DLLLOCAL int write(ExceptionSink *xsink, const void *buf, qore_size_t buflen, int stream_id = 0, int timeout_ms = -1);
-   DLLLOCAL int close(ExceptionSink *xsink);
-   DLLLOCAL int waitClosed(ExceptionSink *xsink);
+   DLLLOCAL int close(ExceptionSink *xsink, int timeout_ms = -1);
+   DLLLOCAL int waitClosed(ExceptionSink *xsink, int timeout_ms = -1);
    DLLLOCAL int getExitStatus(ExceptionSink *xsink);
-   DLLLOCAL int requestX11Forwarding(ExceptionSink *xsink, int screen_number, bool single_connection = false, const char *auth_proto = 0, const char *auth_cookie = 0);
+   DLLLOCAL int requestX11Forwarding(ExceptionSink *xsink, int screen_number, bool single_connection = false, const char *auth_proto = 0, const char *auth_cookie = 0, int timeout_ms = -1);
 };
 
 #endif _QORE_SSH2CHANNEL_H

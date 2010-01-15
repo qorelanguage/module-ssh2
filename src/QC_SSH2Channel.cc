@@ -39,6 +39,7 @@ static void SSH2CHANNEL_destructor(QoreObject *self, SSH2Channel *c, ExceptionSi
    c->deref();
 }
 
+// SSH2Channel::setenv(var, value, [timeout_ms = -1])
 AbstractQoreNode *SSH2CHANNEL_setenv(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
    static const char *SSH2CHANNEL_SETENV_ERR = "SSH2CHANNEL-SETENV-ERROR";
 
@@ -54,19 +55,46 @@ AbstractQoreNode *SSH2CHANNEL_setenv(QoreObject *self, SSH2Channel *c, const Qor
       return 0;
    }
 
-   c->setenv(name->getBuffer(), value->getBuffer(), xsink);
+   c->setenv(name->getBuffer(), value->getBuffer(), getMsMinusOneInt(get_param(params, 2)), xsink);
    return 0;
 }
 
+// SSH2Channel::requestPty([term = "vanilla"], [timeout_ms = -1])
 AbstractQoreNode *SSH2CHANNEL_requestPty(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
-   const QoreStringNode *term = test_string_param(params, 0);
+   static const char *SSH2CHANNEL_REQUESTPTY_ERR = "SSH2CHANNEL-REQUESTPTY-ERROR";
 
-   c->requestPty(xsink, term);
+   const QoreStringNode *term = test_string_param(params, 0);
+   const QoreStringNode *modes = test_string_param(params, 1);
+   int width = get_int_param(params, 2);
+   if (width < 0) {
+      xsink->raiseException(SSH2CHANNEL_REQUESTPTY_ERR, "terminal width given as the optional third argument to SSH2Channel::requestPty() must be non-negative; value given: %d", width);
+      return 0;
+   }
+   int height = get_int_param(params, 3);
+   if (height < 0) {
+      xsink->raiseException(SSH2CHANNEL_REQUESTPTY_ERR, "terminal height given as the optional fourth argument to SSH2Channel::requestPty() must be non-negative; value given: %d", height);
+      return 0;
+   }
+   int width_px = get_int_param(params, 2);
+   if (width_px < 0) {
+      xsink->raiseException(SSH2CHANNEL_REQUESTPTY_ERR, "terminal pixel width given as the optional fifth argument to SSH2Channel::requestPty() must be non-negative; value given: %d", width_px);
+      return 0;
+   }
+   int height_px = get_int_param(params, 3);
+   if (height_px < 0) {
+      xsink->raiseException(SSH2CHANNEL_REQUESTPTY_ERR, "terminal pixel height given as the optional sixth argument to SSH2Channel::requestPty() must be non-negative; value given: %d", height_px);
+      return 0;
+   }
+
+   c->requestPty(xsink, term, modes, width ? width : LIBSSH2_TERM_WIDTH, height ? height : LIBSSH2_TERM_HEIGHT,
+		 width_px ? width_px : LIBSSH2_TERM_WIDTH_PX, height_px ? height_px : LIBSSH2_TERM_HEIGHT_PX,
+		 getMsMinusOneInt(get_param(params, 1)));
    return 0;
 }
 
+// SSH2Channel::shell([timeout_ms = -1])
 AbstractQoreNode *SSH2CHANNEL_shell(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
-   c->shell(xsink);
+   c->shell(xsink, getMsMinusOneInt(get_param(params, 0)));
    return 0;
 }
 
@@ -75,16 +103,19 @@ AbstractQoreNode *SSH2CHANNEL_eof(QoreObject *self, SSH2Channel *c, const QoreLi
    return *xsink ? get_bool_node(b) : 0;
 }
 
+// SSH2Channel::sendEof([timeout_ms = -1])
 AbstractQoreNode *SSH2CHANNEL_sendEof(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
-   c->sendEof(xsink);
+   c->sendEof(xsink, getMsMinusOneInt(get_param(params, 0)));
    return 0;
 }
 
+// SSH2Channel::waitEof([timeout_ms = -1])
 AbstractQoreNode *SSH2CHANNEL_waitEof(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
-   c->waitEof(xsink);
+   c->waitEof(xsink, getMsMinusOneInt(get_param(params, 0)));
    return 0;
 }
 
+// SSH2Channel::exec(command, [timeout_ms = -1])
 AbstractQoreNode *SSH2CHANNEL_exec(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
    const QoreStringNode *command = test_string_param(params, 0);
    if (!command) {
@@ -92,18 +123,21 @@ AbstractQoreNode *SSH2CHANNEL_exec(QoreObject *self, SSH2Channel *c, const QoreL
       return 0;
    }
 
-   c->exec(command->getBuffer(), xsink);
+   c->exec(command->getBuffer(), getMsMinusOneInt(get_param(params, 1)), xsink);
    return 0;
 }
 
+// SSH2Channel::read([timeout_ms = 10s])
 AbstractQoreNode *SSH2CHANNEL_read(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
-   return c->read(xsink);
+   return c->read(xsink, getMsTimeoutWithDefault(get_param(params, 0), DEFAULT_TIMEOUT_MS));
 }
 
+// SSH2Channel::read([timeout_ms = 10s])
 AbstractQoreNode *SSH2CHANNEL_readBinary(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
-   return c->readBinary(xsink);
+   return c->readBinary(xsink, getMsTimeoutWithDefault(get_param(params, 0), DEFAULT_TIMEOUT_MS));
 }
 
+// SSH2Channel::readBlock(blocksize, [timeout_ms = -1])
 AbstractQoreNode *SSH2CHANNEL_readBlock(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
    int64 size = get_bigint_param(params, 0);
    if (size <= 0) {
@@ -113,6 +147,7 @@ AbstractQoreNode *SSH2CHANNEL_readBlock(QoreObject *self, SSH2Channel *c, const 
    return c->read(size, getMsMinusOneInt(get_param(params, 1)), xsink);
 }
 
+// SSH2Channel::readBinaryBlock(blocksize, [timeout_ms = -1])
 AbstractQoreNode *SSH2CHANNEL_readBinaryBlock(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
    int64 size = get_bigint_param(params, 0);
    if (size <= 0) {
@@ -122,6 +157,7 @@ AbstractQoreNode *SSH2CHANNEL_readBinaryBlock(QoreObject *self, SSH2Channel *c, 
    return c->readBinary(size, getMsMinusOneInt(get_param(params, 1)), xsink);
 }
 
+// SSHChannel::write(binary | string, [stream_id = 0], [timeout_ms = -1])
 AbstractQoreNode *SSH2CHANNEL_write(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
    static const char *SSH2CHANNEL_WRITE_ERROR = "SSH2CHANNEL-WRITE-ERROR";
    const void *buf = 0;
@@ -160,12 +196,13 @@ AbstractQoreNode *SSH2CHANNEL_write(QoreObject *self, SSH2Channel *c, const Qore
 }
 
 AbstractQoreNode *SSH2CHANNEL_close(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
-   c->close(xsink);
+   c->close(xsink, getMsMinusOneInt(get_param(params, 0)));
    return 0;
 }
 
+// SSHChannel::waitClosed([timeout_ms = -1])
 AbstractQoreNode *SSH2CHANNEL_waitClosed(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
-   c->waitClosed(xsink);
+   c->waitClosed(xsink, getMsMinusOneInt(get_param(params, 0)));
    return 0;
 }
 
@@ -174,12 +211,13 @@ AbstractQoreNode *SSH2CHANNEL_getExitStatus(QoreObject *self, SSH2Channel *c, co
    return *xsink ? 0 : new QoreBigIntNode(rc);
 }
 
+// SSH2Channel::requestX11Forwarding(screen_no, [single_connection = False], [auth_protocol = NOTHING], [auth_cookie = NOTHING], [timeout_ms = -1])
 AbstractQoreNode *SSH2CHANNEL_requestX11Forwarding(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
    int screen_no = get_int_param(params, 0);
    bool single_connection = get_bool_param(params, 1);
    const QoreStringNode *ap = test_string_param(params, 2);
    const QoreStringNode *ac = test_string_param(params, 3);
-   c->requestX11Forwarding(xsink, screen_no, single_connection, ap ? ap->getBuffer() : 0, ac ? ac->getBuffer() : 0);
+   c->requestX11Forwarding(xsink, screen_no, single_connection, ap ? ap->getBuffer() : 0, ac ? ac->getBuffer() : 0, getMsMinusOneInt(get_param(params, 4)));
    return 0;
 }
 
