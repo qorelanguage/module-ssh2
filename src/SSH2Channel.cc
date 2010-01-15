@@ -364,3 +364,16 @@ int SSH2Channel::getExitStatus(ExceptionSink *xsink) {
 
    return libssh2_channel_get_exit_status(channel);
 }
+
+int SSH2Channel::requestX11Forwarding(ExceptionSink *xsink, int screen_number, bool single_connection, const char *auth_proto, const char *auth_cookie) {
+   AutoLocker al(parent->m);
+   if (check_open(xsink))
+      return 0;
+
+   //printd(5, "SSH2Channel::requestX11Forwarding() screen_no=%d, single=%s, ap=%s, ac=%s\n", screen_number, single_connection ? "true" : "false", auth_proto ? auth_proto : "n/a", auth_cookie ? auth_cookie : "n/a");
+   int rc = libssh2_channel_x11_req_ex(channel, (int)single_connection, auth_proto, auth_cookie, screen_number);
+   if (rc < 0)
+      parent->do_session_err_unlocked(xsink);
+
+   return rc;
+}

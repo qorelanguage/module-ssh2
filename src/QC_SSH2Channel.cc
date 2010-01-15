@@ -174,6 +174,15 @@ AbstractQoreNode *SSH2CHANNEL_getExitStatus(QoreObject *self, SSH2Channel *c, co
    return *xsink ? 0 : new QoreBigIntNode(rc);
 }
 
+AbstractQoreNode *SSH2CHANNEL_requestX11Forwarding(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
+   int screen_no = get_int_param(params, 0);
+   bool single_connection = get_bool_param(params, 1);
+   const QoreStringNode *ap = test_string_param(params, 2);
+   const QoreStringNode *ac = test_string_param(params, 3);
+   c->requestX11Forwarding(xsink, screen_no, single_connection, ap ? ap->getBuffer() : 0, ac ? ac->getBuffer() : 0);
+   return 0;
+}
+
 QoreClass *initSSH2ChannelClass() {
    QORE_TRACE("initSSH2Channel()");
 
@@ -184,21 +193,22 @@ QoreClass *initSSH2ChannelClass() {
    QC_SSH2CHANNEL->setCopy((q_copy_t)SSH2CHANNEL_copy);
    QC_SSH2CHANNEL->setDestructor((q_destructor_t)SSH2CHANNEL_destructor);
 
-   QC_SSH2CHANNEL->addMethod("setenv",          (q_method_t)SSH2CHANNEL_setenv);
-   QC_SSH2CHANNEL->addMethod("requestPty",      (q_method_t)SSH2CHANNEL_requestPty);
-   QC_SSH2CHANNEL->addMethod("shell",           (q_method_t)SSH2CHANNEL_shell);
-   QC_SSH2CHANNEL->addMethod("eof",             (q_method_t)SSH2CHANNEL_eof);
-   QC_SSH2CHANNEL->addMethod("sendEof",         (q_method_t)SSH2CHANNEL_sendEof);
-   QC_SSH2CHANNEL->addMethod("waitEof",         (q_method_t)SSH2CHANNEL_waitEof);
-   QC_SSH2CHANNEL->addMethod("exec",            (q_method_t)SSH2CHANNEL_exec);
-   QC_SSH2CHANNEL->addMethod("read",            (q_method_t)SSH2CHANNEL_read);
-   QC_SSH2CHANNEL->addMethod("readBlock",       (q_method_t)SSH2CHANNEL_readBlock);
-   QC_SSH2CHANNEL->addMethod("readBinary",      (q_method_t)SSH2CHANNEL_readBinary);
-   QC_SSH2CHANNEL->addMethod("readBinaryBlock", (q_method_t)SSH2CHANNEL_readBinaryBlock);
-   QC_SSH2CHANNEL->addMethod("write",           (q_method_t)SSH2CHANNEL_write);
-   QC_SSH2CHANNEL->addMethod("close",           (q_method_t)SSH2CHANNEL_close);
-   QC_SSH2CHANNEL->addMethod("waitClosed",      (q_method_t)SSH2CHANNEL_waitClosed);
-   QC_SSH2CHANNEL->addMethod("getExitStatus",   (q_method_t)SSH2CHANNEL_getExitStatus);
+   QC_SSH2CHANNEL->addMethod("setenv",               (q_method_t)SSH2CHANNEL_setenv);
+   QC_SSH2CHANNEL->addMethod("requestPty",           (q_method_t)SSH2CHANNEL_requestPty);
+   QC_SSH2CHANNEL->addMethod("shell",                (q_method_t)SSH2CHANNEL_shell);
+   QC_SSH2CHANNEL->addMethod("eof",                  (q_method_t)SSH2CHANNEL_eof);
+   QC_SSH2CHANNEL->addMethod("sendEof",              (q_method_t)SSH2CHANNEL_sendEof);
+   QC_SSH2CHANNEL->addMethod("waitEof",              (q_method_t)SSH2CHANNEL_waitEof);
+   QC_SSH2CHANNEL->addMethod("exec",                 (q_method_t)SSH2CHANNEL_exec);
+   QC_SSH2CHANNEL->addMethod("read",                 (q_method_t)SSH2CHANNEL_read);
+   QC_SSH2CHANNEL->addMethod("readBlock",            (q_method_t)SSH2CHANNEL_readBlock);
+   QC_SSH2CHANNEL->addMethod("readBinary",           (q_method_t)SSH2CHANNEL_readBinary);
+   QC_SSH2CHANNEL->addMethod("readBinaryBlock",      (q_method_t)SSH2CHANNEL_readBinaryBlock);
+   QC_SSH2CHANNEL->addMethod("write",                (q_method_t)SSH2CHANNEL_write);
+   QC_SSH2CHANNEL->addMethod("close",                (q_method_t)SSH2CHANNEL_close);
+   QC_SSH2CHANNEL->addMethod("waitClosed",           (q_method_t)SSH2CHANNEL_waitClosed);
+   QC_SSH2CHANNEL->addMethod("getExitStatus",        (q_method_t)SSH2CHANNEL_getExitStatus);
+   QC_SSH2CHANNEL->addMethod("requestX11Forwarding", (q_method_t)SSH2CHANNEL_requestX11Forwarding);
 
    return QC_SSH2CHANNEL;
 }

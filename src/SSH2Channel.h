@@ -85,6 +85,7 @@ public:
    DLLLOCAL int close(ExceptionSink *xsink);
    DLLLOCAL int waitClosed(ExceptionSink *xsink);
    DLLLOCAL int getExitStatus(ExceptionSink *xsink);
+   DLLLOCAL int requestX11Forwarding(ExceptionSink *xsink, int screen_number, bool single_connection = false, const char *auth_proto = 0, const char *auth_cookie = 0);
 };
 
 #endif _QORE_SSH2CHANNEL_H
