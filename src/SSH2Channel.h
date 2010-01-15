@@ -43,6 +43,7 @@ class SSH2Channel : public AbstractPrivateData {
 protected:
    LIBSSH2_CHANNEL *channel;
    SSH2Client *parent;
+   const QoreEncoding *enc;
 
    void close_unlocked() {
       libssh2_channel_free(channel);
@@ -59,13 +60,19 @@ protected:
    
 public:
    // channel is already registered with parent when it's created
-   DLLLOCAL SSH2Channel(LIBSSH2_CHANNEL *n_channel, SSH2Client *n_parent) : channel(n_channel), parent(n_parent) {
+   DLLLOCAL SSH2Channel(LIBSSH2_CHANNEL *n_channel, SSH2Client *n_parent) : channel(n_channel), parent(n_parent), enc(QCS_DEFAULT) {
    }
    DLLLOCAL ~SSH2Channel() {
       // channel must be closed before object is destroyed
       assert(!channel);
    }
    DLLLOCAL void destructor();
+   DLLLOCAL void setEncoding(const QoreEncoding *n_enc) {
+      enc = n_enc;
+   }
+   DLLLOCAL const QoreEncoding *getEncoding() const {
+      return enc;
+   }
    DLLLOCAL int setenv(const char *name, const char *value, int timeout_ms, ExceptionSink *xsink);
    DLLLOCAL int requestPty(ExceptionSink *xsink, const QoreString *term = 0, const QoreString *modes = 0, int width = LIBSSH2_TERM_WIDTH, 
 			   int height = LIBSSH2_TERM_HEIGHT, int width_px = LIBSSH2_TERM_WIDTH_PX, 

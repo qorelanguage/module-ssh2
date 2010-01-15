@@ -193,7 +193,7 @@ QoreStringNode *SSH2Channel::read(ExceptionSink *xsink, int timeout_ms) {
    if (check_open(xsink))
       return 0;
 
-   QoreStringNodeHolder str(new QoreStringNode);
+   QoreStringNodeHolder str(new QoreStringNode(enc));
 
    BlockingHelper bh(parent);
 
@@ -229,7 +229,7 @@ QoreStringNode *SSH2Channel::read(qore_size_t size, int timeout_ms, ExceptionSin
    if (check_open(xsink))
       return 0;
 
-   QoreStringNodeHolder str(new QoreStringNode);
+   QoreStringNodeHolder str(new QoreStringNode(enc));
 
    BlockingHelper bh(parent);
 

@@ -170,10 +170,14 @@ AbstractQoreNode *SSH2CHANNEL_write(QoreObject *self, SSH2Channel *c, const Qore
       return 0;
    }
 
+   TempEncodingHelper tmp;
    if (t == NT_STRING) {
       const QoreStringNode *str = reinterpret_cast<const QoreStringNode *>(p);
-      buf = str->getBuffer();
-      buflen = str->strlen();
+      if (tmp.set(str, c->getEncoding(), xsink))
+	 return 0;
+
+      buf = tmp->getBuffer();
+      buflen = tmp->strlen();
    }
    else {
       const BinaryNode *b = reinterpret_cast<const BinaryNode *>(p);
@@ -221,6 +225,22 @@ AbstractQoreNode *SSH2CHANNEL_requestX11Forwarding(QoreObject *self, SSH2Channel
    return 0;
 }
 
+static AbstractQoreNode *SSH2CHANNEL_setEncoding(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
+   const QoreStringNode *p0;
+
+   if (!(p0 = test_string_param(params, 0))) {
+      xsink->raiseException("SSH2CHANNEL-SETENCODING-ERROR", "expecting character encoding name (string) as sole argument of SSH2Channel::setEncoding() call");
+      return 0;
+   }
+
+   c->setEncoding(QEM.findCreate(p0));
+   return 0; 
+}
+
+static AbstractQoreNode *SSH2CHANNEL_getEncoding(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
+   return new QoreStringNode(c->getEncoding()->getCode());
+}
+
 QoreClass *initSSH2ChannelClass() {
    QORE_TRACE("initSSH2Channel()");
 
@@ -247,6 +267,8 @@ QoreClass *initSSH2ChannelClass() {
    QC_SSH2CHANNEL->addMethod("waitClosed",           (q_method_t)SSH2CHANNEL_waitClosed);
    QC_SSH2CHANNEL->addMethod("getExitStatus",        (q_method_t)SSH2CHANNEL_getExitStatus);
    QC_SSH2CHANNEL->addMethod("requestX11Forwarding", (q_method_t)SSH2CHANNEL_requestX11Forwarding);
+   QC_SSH2CHANNEL->addMethod("setEncoding",          (q_method_t)SSH2CHANNEL_setEncoding);
+   QC_SSH2CHANNEL->addMethod("getEncoding",          (q_method_t)SSH2CHANNEL_getEncoding);
 
    return QC_SSH2CHANNEL;
 }
