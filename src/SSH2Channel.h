@@ -82,17 +82,20 @@ public:
    DLLLOCAL int sendEof(ExceptionSink *xsink, int timeout_ms = -1);
    DLLLOCAL int waitEof(ExceptionSink *xsink, int timeout_ms = -1);
    DLLLOCAL int exec(const char *command, int timeout_ms, ExceptionSink *xsink);
-   DLLLOCAL QoreStringNode *read(ExceptionSink *xsink, int timeout_ms = DEFAULT_TIMEOUT_MS);
+   DLLLOCAL QoreStringNode *read(ExceptionSink *xsink, int stream_id, int timeout_ms = DEFAULT_TIMEOUT_MS);
    // read a block of a particular size, timeout_ms mandatory
-   DLLLOCAL QoreStringNode *read(qore_size_t size, int timeout_ms, ExceptionSink *xsink);
-   DLLLOCAL BinaryNode *readBinary(ExceptionSink *xsink, int timeout_ms = DEFAULT_TIMEOUT_MS);
+   DLLLOCAL QoreStringNode *read(qore_size_t size, int stream_id, int timeout_ms, ExceptionSink *xsink);
+   DLLLOCAL BinaryNode *readBinary(ExceptionSink *xsink, int stream_id, int timeout_ms = DEFAULT_TIMEOUT_MS);
    // read a block of a particular size, timeout_ms mandatory
-   DLLLOCAL BinaryNode *readBinary(qore_size_t size, int timeout_ms, ExceptionSink *xsink);
+   DLLLOCAL BinaryNode *readBinary(qore_size_t size, int stream_id, int timeout_ms, ExceptionSink *xsink);
    DLLLOCAL int write(ExceptionSink *xsink, const void *buf, qore_size_t buflen, int stream_id = 0, int timeout_ms = -1);
    DLLLOCAL int close(ExceptionSink *xsink, int timeout_ms = -1);
    DLLLOCAL int waitClosed(ExceptionSink *xsink, int timeout_ms = -1);
    DLLLOCAL int getExitStatus(ExceptionSink *xsink);
    DLLLOCAL int requestX11Forwarding(ExceptionSink *xsink, int screen_number, bool single_connection = false, const char *auth_proto = 0, const char *auth_cookie = 0, int timeout_ms = -1);
+   DLLLOCAL int extendedDataNormal(ExceptionSink *xsink, int timeout_ms = -1);
+   DLLLOCAL int extendedDataMerge(ExceptionSink *xsink, int timeout_ms = -1);
+   DLLLOCAL int extendedDataIgnore(ExceptionSink *xsink, int timeout_ms = -1);
 };
 
 #endif _QORE_SSH2CHANNEL_H

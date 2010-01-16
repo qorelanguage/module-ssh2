@@ -127,34 +127,57 @@ AbstractQoreNode *SSH2CHANNEL_exec(QoreObject *self, SSH2Channel *c, const QoreL
    return 0;
 }
 
-// SSH2Channel::read([timeout_ms = 10s])
+// SSH2Channel::read([stream_id = 0], [timeout_ms = 10s])
 AbstractQoreNode *SSH2CHANNEL_read(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
-   return c->read(xsink, getMsTimeoutWithDefault(get_param(params, 0), DEFAULT_TIMEOUT_MS));
+   int stream = get_int_param(params, 0);
+   if (stream < 0) {
+      xsink->raiseException("SSH2CHANNEL-READ-ERROR", "expecting non-negative integer for stream id as optional first argument to SSH2Channel::read([streamid], [timeout_ms]), got %d instead; use 0 for stdin, 1 for stderr");
+      return 0;
+   }
+   return c->read(xsink, stream, getMsTimeoutWithDefault(get_param(params, 1), DEFAULT_TIMEOUT_MS));
 }
 
-// SSH2Channel::read([timeout_ms = 10s])
+// SSH2Channel::readBinary([stream_id = 0], [timeout_ms = 10s])
 AbstractQoreNode *SSH2CHANNEL_readBinary(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
-   return c->readBinary(xsink, getMsTimeoutWithDefault(get_param(params, 0), DEFAULT_TIMEOUT_MS));
+   int stream = get_int_param(params, 0);
+   if (stream < 0) {
+      xsink->raiseException("SSH2CHANNEL-READBINARY-ERROR", "expecting non-negative integer for stream id as optional first argument to SSH2Channel::readBinary([streamid], [timeout_ms]), got %d instead; use 0 for stdin, 1 for stderr");
+      return 0;
+   }
+   return c->readBinary(xsink, stream, getMsTimeoutWithDefault(get_param(params, 1), DEFAULT_TIMEOUT_MS));
 }
 
-// SSH2Channel::readBlock(blocksize, [timeout_ms = -1])
+// SSH2Channel::readBlock(blocksize, [stream_id = 0], [timeout_ms = -1])
 AbstractQoreNode *SSH2CHANNEL_readBlock(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
+   static const char *SSH2CHANNEL_READBLOCK_ERROR = "SSH2CHANNEL-READBLOCK-ERROR";
    int64 size = get_bigint_param(params, 0);
    if (size <= 0) {
-      xsink->raiseException("SSH2CHANNEL-READBLOCK-ERROR", "expecting a positive size for the block size to read, got %lld instead; use SSH2Channel::read() to read available data without a block size", size);
+      xsink->raiseException(SSH2CHANNEL_READBLOCK_ERROR, "expecting a positive size for the block size to read, got %lld instead; use SSH2Channel::read() to read available data without a block size", size);
       return 0;
    }
-   return c->read(size, getMsMinusOneInt(get_param(params, 1)), xsink);
+   int stream = get_int_param(params, 1);
+   if (stream < 0) {
+      xsink->raiseException(SSH2CHANNEL_READBLOCK_ERROR, "expecting non-negative integer for stream id as optional second argument to SSH2Channel::readBlock(blocksize, [streamid], [timeout_ms]), got %d instead; use 0 for stdin, 1 for stderr");
+      return 0;
+   }
+
+   return c->read(size, stream, getMsMinusOneInt(get_param(params, 2)), xsink);
 }
 
-// SSH2Channel::readBinaryBlock(blocksize, [timeout_ms = -1])
+// SSH2Channel::readBinaryBlock(blocksize, [stream_id = 0], [timeout_ms = -1])
 AbstractQoreNode *SSH2CHANNEL_readBinaryBlock(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
+   static const char *SSH2CHANNEL_READBINARYBLOCK_ERROR = "SSH2CHANNEL-READBINARYBLOCK-ERROR";
    int64 size = get_bigint_param(params, 0);
    if (size <= 0) {
-      xsink->raiseException("SSH2CHANNEL-READBINARYBLOCK-ERROR", "expecting a positive size for the block size to read, got %lld instead; use SSH2Channel::readBinary() to read available data without a block size", size);
+      xsink->raiseException(SSH2CHANNEL_READBINARYBLOCK_ERROR, "expecting a positive size for the block size to read, got %lld instead; use SSH2Channel::readBinary() to read available data without a block size", size);
       return 0;
    }
-   return c->readBinary(size, getMsMinusOneInt(get_param(params, 1)), xsink);
+   int stream = get_int_param(params, 1);
+   if (stream < 0) {
+      xsink->raiseException(SSH2CHANNEL_READBINARYBLOCK_ERROR, "expecting non-negative integer for stream id as optional second argument to SSH2Channel::readBinaryBlock(blocksize, [streamid], [timeout_ms]), got %d instead; use 0 for stdin, 1 for stderr");
+      return 0;
+   }
+   return c->readBinary(size, stream, getMsMinusOneInt(get_param(params, 2)), xsink);
 }
 
 // SSHChannel::write(binary | string, [stream_id = 0], [timeout_ms = -1])
@@ -242,6 +265,21 @@ static AbstractQoreNode *SSH2CHANNEL_getEncoding(QoreObject *self, SSH2Channel *
    return new QoreStringNode(c->getEncoding()->getCode());
 }
 
+static AbstractQoreNode *SSH2CHANNEL_extendedDataNormal(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
+   c->extendedDataNormal(xsink, getMsMinusOneInt(get_param(params, 0)));
+   return 0;
+}
+
+static AbstractQoreNode *SSH2CHANNEL_extendedDataMerge(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
+   c->extendedDataMerge(xsink, getMsMinusOneInt(get_param(params, 0)));
+   return 0;
+}
+
+static AbstractQoreNode *SSH2CHANNEL_extendedDataIgnore(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
+   c->extendedDataIgnore(xsink, getMsMinusOneInt(get_param(params, 0)));
+   return 0;
+}
+
 QoreClass *initSSH2ChannelClass() {
    QORE_TRACE("initSSH2Channel()");
 
@@ -252,24 +290,27 @@ QoreClass *initSSH2ChannelClass() {
    QC_SSH2CHANNEL->setCopy((q_copy_t)SSH2CHANNEL_copy);
    QC_SSH2CHANNEL->setDestructor((q_destructor_t)SSH2CHANNEL_destructor);
 
-   QC_SSH2CHANNEL->addMethod("setenv",               (q_method_t)SSH2CHANNEL_setenv);
-   QC_SSH2CHANNEL->addMethod("requestPty",           (q_method_t)SSH2CHANNEL_requestPty);
-   QC_SSH2CHANNEL->addMethod("shell",                (q_method_t)SSH2CHANNEL_shell);
-   QC_SSH2CHANNEL->addMethod("eof",                  (q_method_t)SSH2CHANNEL_eof);
-   QC_SSH2CHANNEL->addMethod("sendEof",              (q_method_t)SSH2CHANNEL_sendEof);
-   QC_SSH2CHANNEL->addMethod("waitEof",              (q_method_t)SSH2CHANNEL_waitEof);
-   QC_SSH2CHANNEL->addMethod("exec",                 (q_method_t)SSH2CHANNEL_exec);
-   QC_SSH2CHANNEL->addMethod("read",                 (q_method_t)SSH2CHANNEL_read);
-   QC_SSH2CHANNEL->addMethod("readBlock",            (q_method_t)SSH2CHANNEL_readBlock);
-   QC_SSH2CHANNEL->addMethod("readBinary",           (q_method_t)SSH2CHANNEL_readBinary);
-   QC_SSH2CHANNEL->addMethod("readBinaryBlock",      (q_method_t)SSH2CHANNEL_readBinaryBlock);
-   QC_SSH2CHANNEL->addMethod("write",                (q_method_t)SSH2CHANNEL_write);
-   QC_SSH2CHANNEL->addMethod("close",                (q_method_t)SSH2CHANNEL_close);
-   QC_SSH2CHANNEL->addMethod("waitClosed",           (q_method_t)SSH2CHANNEL_waitClosed);
-   QC_SSH2CHANNEL->addMethod("getExitStatus",        (q_method_t)SSH2CHANNEL_getExitStatus);
-   QC_SSH2CHANNEL->addMethod("requestX11Forwarding", (q_method_t)SSH2CHANNEL_requestX11Forwarding);
-   QC_SSH2CHANNEL->addMethod("setEncoding",          (q_method_t)SSH2CHANNEL_setEncoding);
-   QC_SSH2CHANNEL->addMethod("getEncoding",          (q_method_t)SSH2CHANNEL_getEncoding);
+   QC_SSH2CHANNEL->addMethod("setenv",                (q_method_t)SSH2CHANNEL_setenv);
+   QC_SSH2CHANNEL->addMethod("requestPty",            (q_method_t)SSH2CHANNEL_requestPty);
+   QC_SSH2CHANNEL->addMethod("shell",                 (q_method_t)SSH2CHANNEL_shell);
+   QC_SSH2CHANNEL->addMethod("eof",                   (q_method_t)SSH2CHANNEL_eof);
+   QC_SSH2CHANNEL->addMethod("sendEof",               (q_method_t)SSH2CHANNEL_sendEof);
+   QC_SSH2CHANNEL->addMethod("waitEof",               (q_method_t)SSH2CHANNEL_waitEof);
+   QC_SSH2CHANNEL->addMethod("exec",                  (q_method_t)SSH2CHANNEL_exec);
+   QC_SSH2CHANNEL->addMethod("read",                  (q_method_t)SSH2CHANNEL_read);
+   QC_SSH2CHANNEL->addMethod("readBlock",             (q_method_t)SSH2CHANNEL_readBlock);
+   QC_SSH2CHANNEL->addMethod("readBinary",            (q_method_t)SSH2CHANNEL_readBinary);
+   QC_SSH2CHANNEL->addMethod("readBinaryBlock",       (q_method_t)SSH2CHANNEL_readBinaryBlock);
+   QC_SSH2CHANNEL->addMethod("write",                 (q_method_t)SSH2CHANNEL_write);
+   QC_SSH2CHANNEL->addMethod("close",                 (q_method_t)SSH2CHANNEL_close);
+   QC_SSH2CHANNEL->addMethod("waitClosed",            (q_method_t)SSH2CHANNEL_waitClosed);
+   QC_SSH2CHANNEL->addMethod("getExitStatus",         (q_method_t)SSH2CHANNEL_getExitStatus);
+   QC_SSH2CHANNEL->addMethod("requestX11Forwarding",  (q_method_t)SSH2CHANNEL_requestX11Forwarding);
+   QC_SSH2CHANNEL->addMethod("setEncoding",           (q_method_t)SSH2CHANNEL_setEncoding);
+   QC_SSH2CHANNEL->addMethod("getEncoding",           (q_method_t)SSH2CHANNEL_getEncoding);
+   QC_SSH2CHANNEL->addMethod("extendedDataNormal",    (q_method_t)SSH2CHANNEL_extendedDataNormal);
+   QC_SSH2CHANNEL->addMethod("extendedDataMerge",     (q_method_t)SSH2CHANNEL_extendedDataMerge);
+   QC_SSH2CHANNEL->addMethod("extendedDataIgnore",    (q_method_t)SSH2CHANNEL_extendedDataIgnore);
 
    return QC_SSH2CHANNEL;
 }
