@@ -82,6 +82,7 @@ public:
    DLLLOCAL int sendEof(ExceptionSink *xsink, int timeout_ms = -1);
    DLLLOCAL int waitEof(ExceptionSink *xsink, int timeout_ms = -1);
    DLLLOCAL int exec(const char *command, int timeout_ms, ExceptionSink *xsink);
+   DLLLOCAL int subsystem(const char *command, int timeout_ms, ExceptionSink *xsink);
    DLLLOCAL QoreStringNode *read(ExceptionSink *xsink, int stream_id, int timeout_ms = DEFAULT_TIMEOUT_MS);
    // read a block of a particular size, timeout_ms mandatory
    DLLLOCAL QoreStringNode *read(qore_size_t size, int stream_id, int timeout_ms, ExceptionSink *xsink);

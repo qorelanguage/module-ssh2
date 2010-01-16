@@ -186,6 +186,30 @@ int SSH2Channel::exec(const char *command, int timeout_ms, ExceptionSink *xsink)
    return rc;
 }
 
+int SSH2Channel::subsystem(const char *command, int timeout_ms, ExceptionSink *xsink) {
+   AutoLocker al(parent->m);
+   if (check_open(xsink))
+      return -1;
+
+   BlockingHelper bh(parent);
+
+   int rc;
+   while (true) {
+      rc = libssh2_channel_subsystem(channel, command);
+      //printd(5, "SSH2Channel::subsystem() cmd=%s rc=%d\n", command, rc);
+      if (rc == LIBSSH2_ERROR_EAGAIN) {
+	 if ((rc = parent->check_timeout(timeout_ms, "SSH2CHANNEL-SUBSYSTEM-TIMEOUT", "SSH2CHANNEL-SUBSYSTEM-ERROR", xsink)))
+	    break;
+	 continue;
+      }
+      if (rc)
+	 parent->do_session_err_unlocked(xsink);
+      break;
+   }
+
+   return rc;
+}
+
 #define QSSH2_BUFSIZE 4096
 
 QoreStringNode *SSH2Channel::read(ExceptionSink *xsink, int stream_id, int timeout_ms) {

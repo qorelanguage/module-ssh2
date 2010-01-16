@@ -127,6 +127,18 @@ AbstractQoreNode *SSH2CHANNEL_exec(QoreObject *self, SSH2Channel *c, const QoreL
    return 0;
 }
 
+// SSH2Channel::subsystem(command, [timeout_ms = -1])
+AbstractQoreNode *SSH2CHANNEL_subsystem(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
+   const QoreStringNode *command = test_string_param(params, 0);
+   if (!command) {
+      xsink->raiseException("SSH2CHANNEL-SUBSYSTEM-ERROR", "missing command string as sole argument to SSH2Channel::subsystem()");
+      return 0;
+   }
+
+   c->subsystem(command->getBuffer(), getMsMinusOneInt(get_param(params, 1)), xsink);
+   return 0;
+}
+
 // SSH2Channel::read([stream_id = 0], [timeout_ms = 10s])
 AbstractQoreNode *SSH2CHANNEL_read(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
    int stream = get_int_param(params, 0);
@@ -297,6 +309,7 @@ QoreClass *initSSH2ChannelClass() {
    QC_SSH2CHANNEL->addMethod("sendEof",               (q_method_t)SSH2CHANNEL_sendEof);
    QC_SSH2CHANNEL->addMethod("waitEof",               (q_method_t)SSH2CHANNEL_waitEof);
    QC_SSH2CHANNEL->addMethod("exec",                  (q_method_t)SSH2CHANNEL_exec);
+   QC_SSH2CHANNEL->addMethod("subsystem",             (q_method_t)SSH2CHANNEL_subsystem);
    QC_SSH2CHANNEL->addMethod("read",                  (q_method_t)SSH2CHANNEL_read);
    QC_SSH2CHANNEL->addMethod("readBlock",             (q_method_t)SSH2CHANNEL_readBlock);
    QC_SSH2CHANNEL->addMethod("readBinary",            (q_method_t)SSH2CHANNEL_readBinary);
