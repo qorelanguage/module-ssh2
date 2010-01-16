@@ -173,7 +173,8 @@ AbstractQoreNode *SSH2CHANNEL_write(QoreObject *self, SSH2Channel *c, const Qore
    TempEncodingHelper tmp;
    if (t == NT_STRING) {
       const QoreStringNode *str = reinterpret_cast<const QoreStringNode *>(p);
-      if (tmp.set(str, c->getEncoding(), xsink))
+      tmp.set(str, c->getEncoding(), xsink);
+      if (*xsink)
 	 return 0;
 
       buf = tmp->getBuffer();

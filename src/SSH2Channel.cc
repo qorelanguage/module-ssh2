@@ -374,7 +374,7 @@ int SSH2Channel::write(ExceptionSink *xsink, const void *buf, qore_size_t buflen
       qore_offset_t rc;
       while (true) {
 	 rc = libssh2_channel_write_ex(channel, stream_id, (char *)buf + b_sent, buflen - b_sent);
-	 //printd(5, "SSH2Channel::write() buf=%p buflen=%lld stream_id=%d timeout_ms=%d rc=%lld b_sent=%lld\n", buf, buflen, stream_id, timeout_ms, rc, b_sent);
+	 //printd(0, "SSH2Channel::write() buf=%p buflen=%lld stream_id=%d timeout_ms=%d rc=%lld b_sent=%lld\n", buf, buflen, stream_id, timeout_ms, rc, b_sent);
 
 	 if (rc && rc != LIBSSH2_ERROR_EAGAIN)
 	    break;
