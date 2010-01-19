@@ -31,11 +31,22 @@
 #include <pwd.h>
 #include <errno.h>
 #include <strings.h>
+#include <sys/stat.h>
 
 #include <assert.h>
 #include <unistd.h>
 
 qore_classid_t CID_SSH2_CLIENT;
+
+static void map_ssh2_sbuf_to_hash(QoreHashNode *h, struct stat *sbuf) {
+   // note that dev_t on Linux is an unsigned 64-bit integer, so we could lose precision here
+   h->setKeyValue("mode",    new QoreBigIntNode(sbuf->st_mode), 0);
+   h->setKeyValue("size",    new QoreBigIntNode(sbuf->st_size), 0);
+   
+   struct tm tms;
+   h->setKeyValue("atime",   new DateTimeNode(q_localtime(&sbuf->st_atime, &tms)), 0);
+   h->setKeyValue("mtime",   new DateTimeNode(q_localtime(&sbuf->st_mtime, &tms)), 0);
+}
 
 /**
  * SSH2Client constructor
@@ -570,9 +581,68 @@ QoreObject *SSH2Client::openDirectTcpipChannel(ExceptionSink *xsink, const char 
    return register_channel_unlocked(channel);
 }
 
+QoreObject *SSH2Client::scpGet(ExceptionSink *xsink, const char *path, int timeout_ms, QoreHashNode *statinfo) {
+   static const char *SSH2CLIENT_SCPGET_ERROR = "SSH2CLIENT-SCPGET-ERROR";
 
+   AutoLocker al(m);
+   
+   if (!ssh_connected_unlocked()) {
+      xsink->raiseException(SSH2CLIENT_SCPGET_ERROR, "cannot call SSH2Client::scpGet() while client is not connected");
+      return 0;
+   }
+   
+   struct stat sb;
+   LIBSSH2_CHANNEL *channel;
 
+   while (true) {
+      channel = libssh2_scp_recv(ssh_session, path, &sb);
+      if (!channel) {
+	 if (libssh2_session_last_error(ssh_session, 0, 0, 0) == LIBSSH2_ERROR_EAGAIN) {
+	    if (check_timeout(timeout_ms, "SSH2CLIENT-SCPGET-TIMEOUT", SSH2CLIENT_SCPGET_ERROR, xsink))
+	       return 0;
+	    continue;
+	 }
+	 do_session_err_unlocked(xsink);
+	 return 0;
+      }
+      break;
+   }
 
+   // write file status info to statinfo if available
+   if (statinfo)
+      map_ssh2_sbuf_to_hash(statinfo, &sb);
+
+   return register_channel_unlocked(channel);   
+}
+
+QoreObject *SSH2Client::scpPut(ExceptionSink *xsink, const char *path, size_t size, int mode, long mtime, long atime, int timeout_ms) {
+   static const char *SSH2CLIENT_SCPPUT_ERROR = "SSH2CLIENT-SCPPUT-ERROR";
+
+   AutoLocker al(m);
+   
+   if (!ssh_connected_unlocked()) {
+      xsink->raiseException(SSH2CLIENT_SCPPUT_ERROR, "cannot call SSH2Client::scpPut() while client is not connected");
+      return 0;
+   }
+   
+   LIBSSH2_CHANNEL *channel;
+
+   while (true) {
+      channel = libssh2_scp_send_ex(ssh_session, path, mode, size, mtime, atime);
+      if (!channel) {
+	 if (libssh2_session_last_error(ssh_session, 0, 0, 0) == LIBSSH2_ERROR_EAGAIN) {
+	    if (check_timeout(timeout_ms, "SSH2CLIENT-SCPPUT-TIMEOUT", SSH2CLIENT_SCPPUT_ERROR, xsink))
+	       return 0;
+	    continue;
+	 }
+	 do_session_err_unlocked(xsink);
+	 return 0;
+      }
+      break;
+   }
+
+   return register_channel_unlocked(channel);   
+}
 
 /********************
  * qore class stuff *
@@ -763,6 +833,62 @@ AbstractQoreNode *SSH2C_openDirectTcpipChannel(QoreObject *self, SSH2Client *c, 
    return c->openDirectTcpipChannel(xsink, host->getBuffer(), port, shost ? shost->getBuffer() : "127.0.0.1", sport ? sport : 22, getMsMinusOneInt(get_param(params, 0)));
 }
 
+AbstractQoreNode *SSH2C_scpGet(QoreObject *self, SSH2Client *c, const QoreListNode *params, ExceptionSink *xsink) {
+   static const char *SSH2CLIENT_SCPGET_ERR = "SSH2CLIENT-SCPGET-ERROR";
+   
+   const QoreStringNode *path = test_string_param(params, 0);
+   if (!path) {
+      xsink->raiseException(SSH2CLIENT_SCPGET_ERR, "missing remote file path as first argument to SSH2Client::scpGet()");
+      return 0;
+   }
+
+   const AbstractQoreNode *p = get_param(params, 2);
+   if (!is_nothing(p) && p->getType() != NT_REFERENCE) {
+      xsink->raiseException(SSH2CLIENT_SCPGET_ERR, "expecting either NOTHING (no argument) or an lvalue reference as the third argument to SSH2Client::scpGet() to return the remote file's status information, got instead type '%s'", p->getTypeName());
+      return 0;
+   }
+   const ReferenceNode *ref = p ? reinterpret_cast<const ReferenceNode *>(p) : 0;   
+
+   ReferenceHolder<QoreHashNode> statinfo(ref ? new QoreHashNode : 0, xsink);
+
+   ReferenceHolder<QoreObject> o(c->scpGet(xsink, path->getBuffer(), getMsMinusOneInt(get_param(params, 1)), *statinfo), xsink);
+   if (o && ref) {
+      AutoVLock vl(xsink);
+      ReferenceHelper rh(ref, vl, xsink);
+      if (!rh || rh.assign(statinfo.release(), xsink))
+	 return 0;
+   }
+   return o.release();
+}
+
+AbstractQoreNode *SSH2C_scpPut(QoreObject *self, SSH2Client *c, const QoreListNode *params, ExceptionSink *xsink) {
+   static const char *SSH2CLIENT_SCPPUT_ERR = "SSH2CLIENT-SCPPUT-ERROR";
+   
+   const QoreStringNode *path = test_string_param(params, 0);
+   if (!path) {
+      xsink->raiseException(SSH2CLIENT_SCPPUT_ERR, "missing remote file path as first argument to SSH2Client::scpPut()");
+      return 0;
+   }
+
+   int64 size = get_bigint_param(params, 1);
+   if (size <= 0) {
+      xsink->raiseException(SSH2CLIENT_SCPPUT_ERR, "missing file size as mandatory second argument to SSH2Client::scpPut() (got invalid size %lld)", size);
+      return 0;
+   }
+
+   int mode = get_int_param(params, 2);
+   if (!mode)
+      mode = 0644;
+
+   const DateTimeNode *d = test_date_param(params, 3);
+   long mtime = d ? d->getEpochSeconds() : 0;
+   d = test_date_param(params, 4);
+   long atime = d ? d->getEpochSeconds() : 0;
+   //printd(5, "SSH2C_scpPut() mtime=%ld atime=%d\n", mtime, atime);
+
+   return c->scpPut(xsink, path->getBuffer(), size, mode, mtime, atime, getMsMinusOneInt(get_param(params, 5)));
+}
+
 /**
  * class init
  */
@@ -784,6 +910,8 @@ class QoreClass *initSSH2ClientClass() {
 
    QC_SSH2_CLIENT->addMethod("openSessionChannel",     (q_method_t)SSH2C_openSessionChannel);
    QC_SSH2_CLIENT->addMethod("openDirectTcpipChannel", (q_method_t)SSH2C_openSessionChannel);
+   QC_SSH2_CLIENT->addMethod("scpGet",                 (q_method_t)SSH2C_scpGet);
+   QC_SSH2_CLIENT->addMethod("scpPut",                 (q_method_t)SSH2C_scpPut);
 
    return QC_SSH2_CLIENT;
 }
