@@ -54,7 +54,7 @@ case "${host_os}" in
 		AC_DEFINE(LINUX, 1, if compiling on Linux)
 		;;
      *solaris*) # set compile flags for Solaris
-		CPPFLAGS="${CPPFLAGS} -D_POSIX_C_SOURCE=199506L -D_XPG4_2 -D_XPG5 -D__EXTENSIONS__"
+		CPPFLAGS="${CPPFLAGS} -D_POSIX_C_SOURCE=199506L -D_XPG4_2 -D_XPG5 -D__EXTENSIONS__ -D_FILE_OFFSET_BITS=64"
 		# for checking for some network functions on Solaris
 		LDFLAGS="$LDFLAGS -lnsl"
 		# assume we are using CC if not using g++, add -norunpath to link flags in this case

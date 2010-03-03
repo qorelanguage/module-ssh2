@@ -24,9 +24,8 @@ sub ssh_test(string $url) {
     #$chan.requestX11Forwarding();
     $chan.exec("ls -l");
     stdout.printf("%s", $chan.read());
+    $chan.sendEof();
     $chan.close();
-    $chan.waitEof();
-    $chan.waitClosed();
     stdout.printf("exit status: %d\n", $chan.getExitStatus());
 
     $chan = $sc.openSessionChannel();

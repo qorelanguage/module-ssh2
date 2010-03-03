@@ -31,7 +31,7 @@
 #include <pwd.h>
 #include <errno.h>
 #include <strings.h>
-#include <sys/stat.h>
+#include <sys/stat.h> 
 
 #include <assert.h>
 #include <unistd.h>
@@ -593,6 +593,8 @@ QoreObject *SSH2Client::scpGet(ExceptionSink *xsink, const char *path, int timeo
    
    struct stat sb;
    LIBSSH2_CHANNEL *channel;
+
+   //printd(5, "sizeof(struct stat)=%d\n", sizeof(struct stat));
 
    while (true) {
       channel = libssh2_scp_recv(ssh_session, path, &sb);
