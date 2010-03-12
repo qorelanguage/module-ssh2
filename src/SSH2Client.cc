@@ -125,7 +125,7 @@ SSH2Client::~SSH2Client() {
    // close up
    
    // disconnect
-   ssh_disconnect_unlocked(1);
+   ssh_disconnect_unlocked(true);
    
    // free
    free_string(sshhost);
@@ -145,7 +145,7 @@ SSH2Client::~SSH2Client() {
  * return 0 on ok.
  * sets errno
  */
-int SSH2Client::ssh_disconnect_unlocked(int force, ExceptionSink *xsink) {
+int SSH2Client::ssh_disconnect_unlocked(bool force, ExceptionSink *xsink) {
   if(!ssh_session && !force) {
      errno=ENOTCONN;
      xsink && xsink->raiseException("SSH2CLIENT-DISCONNECT-ERROR", "disconnect(): %s", strerror(errno));
@@ -163,7 +163,7 @@ int SSH2Client::ssh_disconnect_unlocked(int force, ExceptionSink *xsink) {
   return 0;
 }
 
-int SSH2Client::ssh_disconnect(int force = 0, ExceptionSink *xsink = 0) {
+int SSH2Client::ssh_disconnect(bool force, ExceptionSink *xsink) {
    AutoLocker al(m);
 
    return ssh_disconnect_unlocked(force, xsink);
@@ -344,7 +344,7 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
 
   // force disconnect session if already connected
   if (ssh_session)
-     ssh_disconnect_unlocked(1);
+     ssh_disconnect_unlocked(true);
   
   if (socket.connectINET(sshhost, sshport, timeout_ms, xsink))
      return -1;
@@ -352,7 +352,7 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
   // Create a session instance
   ssh_session = libssh2_session_init();
   if(!ssh_session) {
-    ssh_disconnect_unlocked(1); // clean up connection
+    ssh_disconnect_unlocked(true); // clean up connection
     xsink && xsink->raiseException("SSH2CLIENT-CONNECT-ERROR", "error in libssh2_session_init(): ", strerror(errno));
     return -1;
   }
@@ -364,7 +364,7 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
   // and setup crypto, compression, and MAC layers
   rc = libssh2_session_startup(ssh_session, socket.getSocket());
   if(rc) {
-    ssh_disconnect_unlocked(1); // clean up connection
+    ssh_disconnect_unlocked(true); // clean up connection
     xsink && xsink->raiseException("SSH2CLIENT-CONNECT-ERROR", "failure establishing SSH session: %d", rc);
     return -1;
   }
@@ -430,7 +430,7 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
   
   // could we auth?
   if(!loggedin) {
-    ssh_disconnect_unlocked(1); // clean up connection
+    ssh_disconnect_unlocked(true); // clean up connection
     xsink && xsink->raiseException("SSH2CLIENT-AUTH-ERROR", "No proper authentication method found");
     return -1;
   }

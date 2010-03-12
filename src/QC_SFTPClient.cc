@@ -374,41 +374,6 @@ static AbstractQoreNode *SFTPC_chdir(QoreObject *self, SFTPClient *myself, const
    return ret;
 }
 
-static AbstractQoreNode *SFTPC_connect(QoreObject *self, SFTPClient *myself, const QoreListNode *params, ExceptionSink *xsink) {
-   const AbstractQoreNode *p0;
-   int to=-1; // default: no timeout
-
-   if (num_params(params) > 1) {
-      xsink->raiseException("SFTPCLIENT-PARAMETER-ERROR", "use connect([timeout ms (int)])");
-      return 0;
-   }
-
-   if ((p0=get_param(params, 0)) && p0->getType()!=NT_INT) {
-      xsink->raiseException("SFTPCLIENT-PARAMETER-ERROR", "use connect([timeout ms (int)])");
-      return 0;
-   }
-   to = (!p0 ? -1: p0->getAsInt());
-
-   // connect
-   myself->sftp_connect(to, xsink);
-
-   // return error
-   return 0;
-}
-
-static AbstractQoreNode *SFTPC_disconnect(QoreObject *self, SFTPClient *myself, const QoreListNode *params, ExceptionSink *xsink) {
-   if (num_params(params)) {
-      xsink->raiseException("SFTPCLIENT-PARAMETER-ERROR", "use disconnect()");
-      return 0;
-   }
-
-   // dis connect
-   myself->sftp_disconnect(0, xsink);
-
-   // return error
-   return 0;
-}
-
 /**
  * class init
  */
@@ -423,8 +388,6 @@ QoreClass *initSFTPClientClass(QoreClass *ssh2base) {
    QC_SFTP_CLIENT->setConstructor(SFTPC_constructor);
    QC_SFTP_CLIENT->setCopy((q_copy_t)SFTPC_copy);
 
-   QC_SFTP_CLIENT->addMethod("connect", (q_method_t)SFTPC_connect);
-   QC_SFTP_CLIENT->addMethod("disconnect", (q_method_t)SFTPC_disconnect);
    QC_SFTP_CLIENT->addMethod("info", (q_method_t)SFTPC_info);
 
    QC_SFTP_CLIENT->addMethod("path", (q_method_t)SFTPC_path);

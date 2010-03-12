@@ -71,41 +71,6 @@ static void SSH2C_copy(QoreObject *self, QoreObject *old, SSH2Client *myself, Ex
    xsink->raiseException("SSH2CLIENT-COPY-ERROR", "copying ssh2 connection objects is not allowed");
 }
 
-static AbstractQoreNode *SSH2C_connect(QoreObject *self, SSH2Client *myself, const QoreListNode *params, ExceptionSink *xsink) {
-   const AbstractQoreNode *p0;
-   int to=-1; // default: no timeout
-
-   if(num_params(params) > 1) {
-      xsink->raiseException("SSH2CLIENT-PARAMETER-ERROR", "use connect([timeout ms (int)])");
-      return 0;
-   }
-
-   if((p0=get_param(params, 0)) && p0->getType()!=NT_INT) {
-      xsink->raiseException("SSH2CLIENT-PARAMETER-ERROR", "use connect([timeout ms (int)])");
-      return 0;
-   }
-   to=(p0==NULL? -1: p0->getAsInt());
-
-   // connect
-   myself->ssh_connect(to, xsink);
-
-   // return error
-   return 0;
-}
-
-static AbstractQoreNode *SSH2C_disconnect(QoreObject *self, SSH2Client *myself, const QoreListNode *params, ExceptionSink *xsink) {
-   if(num_params(params)) {
-      xsink->raiseException("SSH2CLIENT-PARAMETER-ERROR", "use disconnect()");
-      return 0;
-   }
-
-   // connect
-   myself->ssh_disconnect(0, xsink);
-
-   // return error
-   return 0;
-}
-
 static AbstractQoreNode *SSH2C_info(QoreObject *self, SSH2Client *myself, const QoreListNode *params, ExceptionSink *xsink) {
    if(num_params(params)) {
       xsink->raiseException("SSH2CLIENT-PARAMETER-ERROR", "getInfo() does not take any parameter");
@@ -210,8 +175,6 @@ QoreClass *initSSH2ClientClass(QoreClass *ssh2base) {
    QC_SSH2_CLIENT->setConstructor(SSH2C_constructor);
    QC_SSH2_CLIENT->setCopy((q_copy_t)SSH2C_copy);
 
-   QC_SSH2_CLIENT->addMethod("connect",                (q_method_t)SSH2C_connect);
-   QC_SSH2_CLIENT->addMethod("disconnect",             (q_method_t)SSH2C_disconnect);
    QC_SSH2_CLIENT->addMethod("info",                   (q_method_t)SSH2C_info);
    QC_SSH2_CLIENT->addMethod("openSessionChannel",     (q_method_t)SSH2C_openSessionChannel);
    QC_SSH2_CLIENT->addMethod("openDirectTcpipChannel", (q_method_t)SSH2C_openDirectTcpipChannel);

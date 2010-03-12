@@ -87,7 +87,7 @@ int SFTPClient::sftp_connected() {
    return sftp_connected();
 }
 
-int SFTPClient::sftp_disconnect(int force = 0, ExceptionSink *xsink = 0) {
+int SFTPClient::sftp_disconnect(bool force, ExceptionSink *xsink) {
   int rc;
 
   // close sftp session if not null
@@ -426,7 +426,7 @@ int SFTPClient::sftp_connect(int timeout_ms, ExceptionSink *xsink = 0) {
   sftp_session = libssh2_sftp_init(ssh_session);
   
   if (!sftp_session) {
-    sftp_disconnect(1); // force shutdown
+    sftp_disconnect(true); // force shutdown
     xsink && xsink->raiseException("SFTPCLIENT-CONNECT-ERROR", "Unable to init SFTP session");
     return -1;
   }
@@ -440,7 +440,7 @@ int SFTPClient::sftp_connect(int timeout_ms, ExceptionSink *xsink = 0) {
   char buff[PATH_MAX];
   // returns the amount of chars
   if(!(rc=libssh2_sftp_realpath(sftp_session, ".", buff, sizeof(buff)-1))) {
-    sftp_disconnect(1); // force shutdown
+    sftp_disconnect(true); // force shutdown
     xsink && xsink->raiseException("SFTPCLIENT-CONNECT-ERROR", "error in getting actual path: %s", strerror(errno));
     return NULL;
   }

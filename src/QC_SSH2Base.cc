@@ -32,6 +32,41 @@ void SSH2BASE_constructor(QoreObject *self, const QoreListNode *params, Exceptio
    xsink->raiseException("SSH2BASE-CONSTRUCTOR-ERROR", "this class is an abstract class and cannot be instantiated directly");
 }
 
+static AbstractQoreNode *SSH2BASE_connect(QoreObject *self, SSH2Client *myself, const QoreListNode *params, ExceptionSink *xsink) {
+   const AbstractQoreNode *p0;
+   int to=-1; // default: no timeout
+
+   if (num_params(params) > 1) {
+      xsink->raiseException("SSH2BASE-PARAMETER-ERROR", "use connect([timeout ms (int)])");
+      return 0;
+   }
+
+   if ((p0=get_param(params, 0)) && p0->getType()!=NT_INT) {
+      xsink->raiseException("SSH2BASE-PARAMETER-ERROR", "use connect([timeout ms (int)])");
+      return 0;
+   }
+   to = (!p0 ? -1: p0->getAsInt());
+
+   // connect
+   myself->connect(to, xsink);
+
+   // return error
+   return 0;
+}
+
+static AbstractQoreNode *SSH2BASE_disconnect(QoreObject *self, SSH2Client *myself, const QoreListNode *params, ExceptionSink *xsink) {
+   if (num_params(params)) {
+      xsink->raiseException("SSH2BASE-PARAMETER-ERROR", "too many arguments to SSH2Base::disconnect(); this method takes no arguments");
+      return 0;
+   }
+
+   // dis connect
+   myself->disconnect(0, xsink);
+
+   // return error
+   return 0;
+}
+
 static AbstractQoreNode *SSH2BASE_setUser(QoreObject *self, SSH2Client *myself, const QoreListNode *params, ExceptionSink *xsink) {
    const QoreStringNode *p0;
 
@@ -99,6 +134,8 @@ QoreClass *initSSH2BaseClass() {
    CID_SSH2_BASE = QC_SSH2_BASE->getID();
    QC_SSH2_BASE->setConstructor(SSH2BASE_constructor);
 
+   QC_SSH2_BASE->addMethod("connect",                (q_method_t)SSH2BASE_connect);
+   QC_SSH2_BASE->addMethod("disconnect",             (q_method_t)SSH2BASE_disconnect);
    QC_SSH2_BASE->addMethod("setUser",                (q_method_t)SSH2BASE_setUser);
    QC_SSH2_BASE->addMethod("setPassword",            (q_method_t)SSH2BASE_setPassword);
    QC_SSH2_BASE->addMethod("setKeys",                (q_method_t)SSH2BASE_setKeys);
