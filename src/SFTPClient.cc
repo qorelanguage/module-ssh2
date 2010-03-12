@@ -87,7 +87,7 @@ int SFTPClient::sftp_connected() {
    return sftp_connected();
 }
 
-int SFTPClient::sftp_disconnect(bool force, ExceptionSink *xsink) {
+int SFTPClient::sftp_disconnect_unlocked(bool force, ExceptionSink *xsink) {
   int rc;
 
   // close sftp session if not null
@@ -101,6 +101,11 @@ int SFTPClient::sftp_disconnect(bool force, ExceptionSink *xsink) {
   rc=ssh_disconnect(force, xsink);
  
   return rc;
+}
+
+int SFTPClient::sftp_disconnect(bool force, ExceptionSink *xsink) {
+   AutoLocker al(m);
+   return sftp_disconnect_unlocked(force, xsink);
 }
 
 QoreHashNode *SFTPClient::sftp_list(const char *path, ExceptionSink *xsink) {
@@ -412,48 +417,55 @@ QoreStringNode *SFTPClient::sftp_path() {
  * 3	socket not created
  * 4	session init failure
  */
-int SFTPClient::sftp_connect(int timeout_ms, ExceptionSink *xsink = 0) {
-  int rc;
+int SFTPClient::sftp_connect_unlocked(int timeout_ms, ExceptionSink *xsink) {
+   if (sftp_session)
+      sftp_disconnect_unlocked(true);
 
-  rc=ssh_connect(timeout_ms, xsink);
-  if(rc!=0) {
-    return rc;
-  }
+   int rc;
 
-  QORE_TRACE("SFTPClient::connect()");
+   rc = ssh_connect_unlocked(timeout_ms, xsink);
+   if (rc)
+      return rc;
 
-  // init sftp session
-  sftp_session = libssh2_sftp_init(ssh_session);
-  
-  if (!sftp_session) {
-    sftp_disconnect(true); // force shutdown
-    xsink && xsink->raiseException("SFTPCLIENT-CONNECT-ERROR", "Unable to init SFTP session");
-    return -1;
-  }
-  
-  /* Since we have not set non-blocking, tell libssh2 we are blocking */
-  libssh2_session_set_blocking(ssh_session, 1);
+   QORE_TRACE("SFTPClient::connect()");
 
-  //      do_connected_event();
+   // init sftp session
+   sftp_session = libssh2_sftp_init(ssh_session);
   
-  // get the cwd for the path
-  char buff[PATH_MAX];
-  // returns the amount of chars
-  if(!(rc=libssh2_sftp_realpath(sftp_session, ".", buff, sizeof(buff)-1))) {
-    sftp_disconnect(true); // force shutdown
-    xsink && xsink->raiseException("SFTPCLIENT-CONNECT-ERROR", "error in getting actual path: %s", strerror(errno));
-    return NULL;
-  }
-  // for safety: do end string
-  *(buff+rc)='\0';
-  free_string(sftppath);
-  sftppath=strdup(buff);
+   if (!sftp_session) {
+      sftp_disconnect_unlocked(true); // force shutdown
+      xsink && xsink->raiseException("SFTPCLIENT-CONNECT-ERROR", "Unable to init SFTP session");
+      return -1;
+   }
   
-  return 0;
+   /* Since we have not set non-blocking, tell libssh2 we are blocking */
+   libssh2_session_set_blocking(ssh_session, 1);
+
+   //      do_connected_event();
+  
+   // get the cwd for the path
+   char buff[PATH_MAX];
+   // returns the amount of chars
+   if(!(rc = libssh2_sftp_realpath(sftp_session, ".", buff, sizeof(buff)-1))) {
+      sftp_disconnect_unlocked(true); // force shutdown
+      xsink && xsink->raiseException("SFTPCLIENT-CONNECT-ERROR", "error in getting actual path: %s", strerror(errno));
+      return -1;
+   }
+   // for safety: do end string
+   buff[rc] = '\0';
+   free_string(sftppath);
+   sftppath = strdup(buff);
+  
+   return 0;
 }
 
+int SFTPClient::sftp_connect(int timeout_ms, ExceptionSink *xsink) {
+   AutoLocker al(m);
 
-BinaryNode *SFTPClient::sftp_getFile(const char *file, ExceptionSink *xsink=0) {
+   return sftp_connect_unlocked(timeout_ms, xsink);
+}
+
+BinaryNode *SFTPClient::sftp_getFile(const char *file, ExceptionSink *xsink) {
   AutoLocker al(m);
 
   if(!sftp_connected_unlocked()) {

@@ -50,6 +50,8 @@ protected:
 
    DLLLOCAL int sftp_connected_unlocked();
    DLLLOCAL QoreStringNode *sftp_path_unlocked();
+   int sftp_connect_unlocked(int timeout_ms, ExceptionSink *xsink);
+   int sftp_disconnect_unlocked(bool force, ExceptionSink *xsink = 0);
 
 public:
    // session props
@@ -70,7 +72,7 @@ public:
    }
 
    int sftp_disconnect(bool force = false, ExceptionSink *xsink = 0);
-   int sftp_connect(int timeout_ms, ExceptionSink *xsink);
+   int sftp_connect(int timeout_ms, ExceptionSink *xsink = 0);
 
    int sftp_connected();
 
@@ -84,7 +86,7 @@ public:
    int sftp_unlink(const char *file, ExceptionSink *xsink);
    int sftp_chmod(const char *file, const int mode, ExceptionSink *xsink);
 
-   BinaryNode *sftp_getFile(const char *file, ExceptionSink *xsink);
+   BinaryNode *sftp_getFile(const char *file, ExceptionSink *xsink = 0);
    QoreStringNode *sftp_getTextFile(const char *file, ExceptionSink *xsink);
    int sftp_putFile(const BinaryNode *data, const char *fname, int mode, class ExceptionSink *xsink);
 

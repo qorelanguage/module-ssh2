@@ -57,19 +57,18 @@ sub ssh_test($url) {
     stdout.printf("exit\nexit status: %d\n", $chan.getExitStatus());
 }
 
-sub sftp_test($c, $sc) {
-    $c.waitForZero();
-    printf("%n\n", $sc.list());
-}
-
-sub test($url) {
+sub sftp_test($url) {
     my $sc = new SFTPClient($url);
     printf("%N\n", $sc.info());
     $sc.connect();
     my $c = new Counter(1);
-    for (my $i = 0; $i < 2; ++$i) {
-	background sftp_test($c, $sc);
-    }
+    my $test = sub($c, $sc) { 
+	$c.waitForZero();
+	printf("%n\n", $sc.list());
+    };
+    for (my $i = 0; $i < 2; ++$i)
+	background $test($c, $sc);
+
     $c.dec();
 }
 
@@ -81,8 +80,8 @@ sub main() {
     }
     printf("libssh2 version: %s\n", SSH2::Version);
 
-    ssh_test($url);
-    #test($url);
+    #ssh_test($url);
+    sftp_test($url);
 }
 
 main();

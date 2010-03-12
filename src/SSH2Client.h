@@ -78,7 +78,7 @@ protected:
 
    DLLLOCAL virtual void deref(ExceptionSink*);
    DLLLOCAL int ssh_connected_unlocked();
-   DLLLOCAL int ssh_disconnect_unlocked(bool force = false, ExceptionSink *xsink = 0);
+   DLLLOCAL int ssh_disconnect_unlocked(bool force, ExceptionSink *xsink = 0);
    DLLLOCAL int ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink);
    DLLLOCAL void channel_deleted_unlocked(SSH2Channel *channel) {
 #ifdef DEBUG
