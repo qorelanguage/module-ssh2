@@ -1,3 +1,4 @@
+/* -*- mode: c++; indent-tabs-mode: nil -*- */
 /*
   SSH2Client.h
 
@@ -26,13 +27,16 @@
 
 #define _QORE_SSH2CLIENT_H
 
-#include "ssh2.h"
+#include "ssh2-module.h"
 
 #include <qore/QoreSocket.h>
 
 #include <time.h>
 
 #include <set>
+
+DLLLOCAL QoreClass *initSSH2ClientClass(QoreClass *parent);
+DLLLOCAL extern qore_classid_t CID_SSH2_CLIENT;
 
 #define QAUTH_PASSWORD             (1 << 0)
 #define QAUTH_KEYBOARD_INTERACTIVE (1 << 1)
@@ -149,7 +153,6 @@ private:
      }
      return 0;
   }
-
 
   // to ensure thread-safe operations
   QoreThreadLock m;

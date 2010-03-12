@@ -25,6 +25,10 @@
 #include <qore/Qore.h>
 
 #include "ssh2-module.h"
+#include "QC_SSH2Base.h"
+#include "SSH2Client.h"
+#include "SFTPClient.h"
+#include "SSH2Channel.h"
 
 #include <string.h>
 
@@ -39,6 +43,10 @@ static QoreNamespace ssh2ns("SSH2"); // namespace
 static const char *qore_libssh2_version = 0;
 
 #ifndef QORE_MONOLITHIC
+static QoreStringNode *ssh2_module_init();
+static void ssh2_module_ns_init(QoreNamespace *rns, QoreNamespace *qns);
+static void ssh2_module_delete();
+
 DLLEXPORT char qore_module_name[] = "ssh2";
 DLLEXPORT char qore_module_version[] = "1.0.2";
 DLLEXPORT char qore_module_description[] = "SSH2/SFTP client module";
@@ -53,18 +61,21 @@ DLLEXPORT qore_license_t qore_module_license = QL_LGPL;
 #endif
 
 static void setup_namespace() {
-  // setup static "master" namespace
+   // setup static "master" namespace
+
+   QoreClass *SSH2Base;
 
   // all classes belonging to here
-  ssh2ns.addSystemClass(initSSH2ClientClass());
-  ssh2ns.addSystemClass(initSFTPClientClass());
-  ssh2ns.addSystemClass(initSSH2ChannelClass());
+   ssh2ns.addSystemClass((SSH2Base = initSSH2BaseClass()));
+   ssh2ns.addSystemClass(initSSH2ClientClass(SSH2Base));
+   ssh2ns.addSystemClass(initSFTPClientClass(SSH2Base));
+   ssh2ns.addSystemClass(initSSH2ChannelClass());
 
-  // constants
-  ssh2ns.addConstant("Version", new QoreStringNode(qore_libssh2_version));
+   // constants
+   ssh2ns.addConstant("Version", new QoreStringNode(qore_libssh2_version));
 }
 
-QoreStringNode *ssh2_module_init() {
+static QoreStringNode *ssh2_module_init() {
    qore_libssh2_version = libssh2_version(LIBSSH2_VERSION_NUM);
    if (!qore_libssh2_version) {
       QoreStringNode *err = new QoreStringNode("the runtime version of the library is too old; got '%s', expecting minimum version '");
@@ -80,12 +91,12 @@ QoreStringNode *ssh2_module_init() {
    return NULL;
 }
 
-void ssh2_module_ns_init(class QoreNamespace *rns, class QoreNamespace *qns) {
+static void ssh2_module_ns_init(QoreNamespace *rns, QoreNamespace *qns) {
    QORE_TRACE("ssh2_module_ns_init()");
 
    qns->addInitialNamespace(ssh2ns.copy());
 }
 
-void ssh2_module_delete() {
+static void ssh2_module_delete() {
    QORE_TRACE("ssh2_module_delete()");
 }

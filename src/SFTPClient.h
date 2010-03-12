@@ -1,3 +1,4 @@
+/* -*- mode: c++; indent-tabs-mode: nil -*- */
 /*
   SFTPClient.h
 
@@ -26,8 +27,7 @@
 
 #define _QORE_SFTPCLIENT_H
 
-#include "ssh2.h"
-
+#include "ssh2-module.h"
 #include "SSH2Client.h"
 
 #include <qore/Qore.h>
@@ -35,11 +35,13 @@
 
 #include <time.h>
 
+DLLLOCAL QoreClass *initSFTPClientClass(QoreClass *parent);
+DLLLOCAL extern qore_classid_t CID_SFTP_CLIENT;
+
 // the mask for user/group/other permissions
 #define SFTP_UGOMASK ((unsigned long)(LIBSSH2_SFTP_S_IRWXU | LIBSSH2_SFTP_S_IRWXG | LIBSSH2_SFTP_S_IRWXO))
 
 class SFTPClient : public SSH2Client {
-
  private:
 
  protected:
@@ -89,7 +91,6 @@ extern class AbstractQoreNode *SSH2C_setUser(class QoreObject *, class SSH2Clien
 extern class AbstractQoreNode *SSH2C_setPassword(class QoreObject *, class SSH2Client *, const QoreListNode *, class ExceptionSink *);
 extern class AbstractQoreNode *SSH2C_setKeys(class QoreObject *, class SSH2Client *, const QoreListNode *, class ExceptionSink *);
 
-
 static inline std::string absolute_filename(const SFTPClient *me, const char *f) {
   if(!f) {
     return NULL;
@@ -101,7 +102,6 @@ static inline std::string absolute_filename(const SFTPClient *me, const char *f)
   // all other cases: put the sftppath in front
   return std::string(me->sftppath)+"/"+std::string(f);
 }
-
 
 static inline int str2mode(const std::string perms) {
   int mode=0;

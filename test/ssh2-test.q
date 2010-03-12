@@ -1,23 +1,24 @@
 #!/usr/bin/env qore
+# -*- mode: qore; indent-tabs-mode: nil -*-
 
 %require-our
 %requires ssh2
 
-sub ssh_test(string $url) {
-    my SSH2Client $sc = new SSH2Client($url);
+sub ssh_test($url) {
+    my $sc = new SSH2Client($url);
 
     $sc.connect();
     stdout.printf("%N\n", $sc.info());
 
     # test SSHClient::scpPut()
-    my SSH2Channel $chan = $sc.scpPut("test.txt", 5, 0664, 1982-01-05, 2010-02-01);
+    my $chan = $sc.scpPut("test.txt", 5, 0664, 1982-01-05, 2010-02-01);
     $chan.write("hello");
     $chan.close();
 
-    my hash $info;
+    my $info;
     $chan = $sc.scpGet("test.txt", -1, \$info);
     stdout.printf("file info: %N\n", $info);
-    my string $str = $chan.read(0, -1);
+    my $str = $chan.read(0, -1);
     stdout.printf("file contents: %n\n", $str);
 
     $chan = $sc.openSessionChannel();
@@ -56,16 +57,16 @@ sub ssh_test(string $url) {
     stdout.printf("exit\nexit status: %d\n", $chan.getExitStatus());
 }
 
-sub sftp_test(Counter $c, SFTPClient $sc) {
+sub sftp_test($c, $sc) {
     $c.waitForZero();
     printf("%n\n", $sc.list());
 }
 
-sub test(string $url) {
-    my SFTPClient $sc = new SFTPClient($url);
+sub test($url) {
+    my $sc = new SFTPClient($url);
     printf("%N\n", $sc.info());
     $sc.connect();
-    my Counter $c = new Counter(1);
+    my $c = new Counter(1);
     for (my $i = 0; $i < 2; ++$i) {
 	background sftp_test($c, $sc);
     }

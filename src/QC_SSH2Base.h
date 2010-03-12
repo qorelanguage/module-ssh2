@@ -1,7 +1,10 @@
+/* -*- mode: c++; indent-tabs-mode: nil -*- */
 /*
-  modules/ssh2/ssh2-module.h
+  QC_SSH2Base.h
 
-  SSH2/SFTP integration to QORE
+  libssh2 ssh2 client integration in Qore
+
+  Qore Programming Language
 
   Copyright 2009 Wolfgang Ritzinger
 
@@ -20,18 +23,13 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#ifndef _QORE_SSH2_MODULE_H
+#ifndef _QORE_SSH2BASE_H
 
-#define _QORE_SSH2_MODULE_H
+#define _QORE_SSH2BASE_H
 
-// include configure defines first
-#include "../config.h"
+#include "ssh2-module.h"
 
-// include Qore API
-#include <qore/Qore.h>
-
-// include libssh2 API
-#include "ssh2.h"
+DLLLOCAL QoreClass *initSSH2BaseClass();
+DLLLOCAL extern qore_classid_t CID_SSH2_BASE;
 
 #endif
-
