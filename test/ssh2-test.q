@@ -2,6 +2,7 @@
 # -*- mode: qore; indent-tabs-mode: nil -*-
 
 %require-our
+%requires qore >= 0.7
 %requires ssh2
 
 sub ssh_test($url) {
@@ -59,8 +60,8 @@ sub ssh_test($url) {
 
 sub sftp_test($url) {
     my $sc = new SFTPClient($url);
-    printf("%N\n", $sc.info());
     $sc.connect();
+    printf("%N\n", $sc.info());
     my $c = new Counter(1);
     my $test = sub($c, $sc) { 
 	$c.waitForZero();
@@ -80,8 +81,10 @@ sub main() {
     }
     printf("libssh2 version: %s\n", SSH2::Version);
 
-    #ssh_test($url);
-    sftp_test($url);
+    if ($url =~ /^sftp/)
+	sftp_test($url);
+    else
+	ssh_test($url);
 }
 
 main();

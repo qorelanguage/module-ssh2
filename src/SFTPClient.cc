@@ -177,7 +177,6 @@ QoreHashNode *SFTPClient::sftp_list(const char *path, ExceptionSink *xsink) {
   return ret;
 }
 
-
 // return 0 if ok, -1 otherwise
 int SFTPClient::sftp_chmod(const char *file, const int mode, ExceptionSink *xsink) {
   int rc;
@@ -511,10 +510,7 @@ BinaryNode *SFTPClient::sftp_getFile(const char *file, ExceptionSink *xsink) {
   return bn.release();
 }
 
-
-
-
-QoreStringNode *SFTPClient::sftp_getTextFile(const char *file, ExceptionSink *xsink=0) {
+QoreStringNode *SFTPClient::sftp_getTextFile(const char *file, ExceptionSink *xsink = 0) {
   AutoLocker al(m);
 
   if(!sftp_connected_unlocked()) {
