@@ -99,4 +99,4 @@ public:
    DLLLOCAL int extendedDataIgnore(ExceptionSink *xsink, int timeout_ms = -1);
 };
 
-#endif _QORE_SSH2CHANNEL_H
+#endif //_QORE_SSH2CHANNEL_H
