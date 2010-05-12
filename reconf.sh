@@ -1,12 +1,14 @@
 #!/bin/sh
 # see if we need libtoolize or glibtoolize
-if [ -x "`which libtoolize`" ] ; then
+which libtoolize >/dev/null 2>/dev/null
+if [ $? -eq 0 ]; then
    lcmd=libtoolize
+else
+    which glibtoolize >/dev/null 2>/dev/null
+    if [ $? -eq 0 ]; then
+	lcmd=glibtoolize
+    fi
 fi
-if [ -x "`which glibtoolize`" ] ; then
-   lcmd=glibtoolize
-fi
-
 if [ -z "$lcmd" ]; then
     echo ERROR: please install libtoolize or glibtoolize before running this script
 fi

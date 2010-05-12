@@ -66,6 +66,7 @@ case "${host_os}" in
 		if test "${host_os}" = "solaris2.8"; then
 		   OTHER_LIBS="$OTHER_LIBS -ldl"
 		fi
+		solaris=yes
 	        ;;
      *darwin*)  SHLIB_SUFFIX=dylib
 		# libtool 1.5.* is creating modules on Darwin 8.* (OS/X 10.4.*) with a .so suffix for some reason
@@ -112,7 +113,14 @@ if test "$enable_64bit" = "auto"; then
                          enable_64bit=yes
                      fi
                      ;;
-      esac
+	  solaris*)  if test "${host_cpu}" = "i386"; then
+			 # if we are running on a 64-bit machine, then enable a 64-bit build
+			 if test -n "`isainfo -v 2>/dev/null| grep 64-bit`"; then
+			     enable_64bit=yes
+			 fi
+		     fi
+		     ;;
+       esac
       if test "$enable_64bit" = "auto"; then
           enable_64bit=no
       fi
@@ -178,7 +186,13 @@ else
 		        CXXFLAGS="$CXXFLAGS -m32"
 		    fi
 		else
-		    CXXFLAGS="$CXXFLAGS -xarch=generic"
+		    CC_MAJOR=`$CXX -V 2>&1 | head -1| cut -f1 -d.|cut -d\  -f4`
+		    CC_MINOR=`$CXX -V 2>&1 | head -1| cut -f2 -d.|cut -d\  -f1`
+		    if test "$CC_MAJOR" -gt 5 -o \( "$CC_MAJOR" -eq 5 -a "$CC_MINOR" -ge 10 \); then
+		        CXXFLAGS="$CXXFLAGS -m64"
+		    else
+			CXXFLAGS="$CXXFLAGS -xarch=generic64"
+		    fi
 		fi
 		;;
    esac
@@ -486,6 +500,11 @@ fi
 # turn on warnings if we know how
 if test "$GXX" = "yes"; then
    CXXFLAGS="$CXXFLAGS -Wall"  # gcc
+else
+   if test "$solaris" = yes; then
+      # turn on all warnings for the oracle sun studio compiler
+      CXXFLAGS="$CXXFLAGS +w"
+   fi
 fi
 
 AC_SUBST(OTHER_LIBS)
