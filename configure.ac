@@ -186,13 +186,7 @@ else
 		        CXXFLAGS="$CXXFLAGS -m32"
 		    fi
 		else
-		    CC_MAJOR=`$CXX -V 2>&1 | head -1| cut -f1 -d.|cut -d\  -f4`
-		    CC_MINOR=`$CXX -V 2>&1 | head -1| cut -f2 -d.|cut -d\  -f1`
-		    if test "$CC_MAJOR" -gt 5 -o \( "$CC_MAJOR" -eq 5 -a "$CC_MINOR" -ge 10 \); then
-		        CXXFLAGS="$CXXFLAGS -m64"
-		    else
-			CXXFLAGS="$CXXFLAGS -xarch=generic64"
-		    fi
+		    CXXFLAGS="$CXXFLAGS -xarch=generic"
 		fi
 		;;
    esac
