@@ -511,7 +511,7 @@ Also see AdvancedOptions</pre>
 [[Binding and Types]]
 </pre>
 </div>
-<div title="Introduction" modifier="Wolfgang Ritzinger" created="200808200719" modified="200903221948" changecount="52">
+<div title="Introduction" modifier="DavidNichols" created="200808200719" modified="201006141502" changecount="55">
 <pre>The sftp module provides Qore the possibility to connect to SFTP server and make there basic file and directory operations and upload and download files.
 
 This module is released under the [[LGPL 2.1|http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html]] and is tagged as such in the module's header (meaning it can be loaded unconditionally regardless of how the Qore library was initialized).
@@ -520,8 +520,22 @@ Note that this documentation is based on [[TittldyWiki|http://www.tiddlywiki.com
 
 Example of a basic sftp connection:
 {{{
-$sftp=new SFTPClient(&quot;somehost&quot;, 22);
+my $sftp = new SFTPClient(&quot;sftp://user:pass@host.com:22&quot;);
 $sftp.connect();
+}}}
+
+or, with Qore 0.8.0+:
+{{{
+my SFTPClient $sftp(&quot;sftp://user:pass@host.com:22&quot;);
+$sftp.connect();
+my SSH2Client $ssh2($url);
+$ssh2.connect();
+my SSH2Channel $chan = $sc.openSessionChannel();
+$chan.exec(&quot;ls -l&quot;);
+stdout.printf(&quot;%s&quot;, $chan.read());
+$chan.sendEof();
+$chan.close();
+stdout.printf(&quot;exit status: %d\n&quot;, $chan.getExitStatus());
 }}}
 
 When starting the connection the module will try to
@@ -530,7 +544,7 @@ When starting the connection the module will try to
 ** publickey authentification (keys can be modified with setKeys())
 ** password authentification (password can be set with setPassword())
 
-</pre>
+This module's documentation is unfortunately only a skeleton at the moment; to be continued...</pre>
 </div>
 <div title="MainMenu" modifier="YourName" created="200808200730" modified="201001071421" changecount="30">
 <pre>[[Introduction]]
