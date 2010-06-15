@@ -563,7 +563,7 @@ QoreStringNode *SFTPClient::sftp_getTextFile(const char *file, ExceptionSink *xs
 // putFile(binary to put, filename on server, mode of the created file)
 int SFTPClient::sftp_putFile(const BinaryNode *data, const char *fname, int mode, class ExceptionSink *xsink=0) {
   int rc;
-  int size;
+  int size = 0;
   LIBSSH2_SFTP_HANDLE *sftp_handle;
 
   AutoLocker al(m);
