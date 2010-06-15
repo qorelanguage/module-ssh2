@@ -8,6 +8,10 @@
 %else
 %if 0%{?suse_version}
 
+%if 0%{?suse_version} == 1130
+%define dist .opensuse11_3
+%endif
+
 %if 0%{?suse_version} == 1120
 %define dist .opensuse11_2
 %endif
@@ -55,7 +59,7 @@
 
 Summary: SSH2 module for Qore
 Name: qore-ssh2-module
-Version: 1.0
+Version: 0.9
 Release: 1%{dist}
 License: LGPL
 Group: Development/Languages

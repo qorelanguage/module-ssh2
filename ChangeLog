@@ -1,0 +1,216 @@
+2010-06-14 15:51  david_nichols
+
+	* docs/ssh2-module-doc.html: updated docs
+
+2010-06-09 15:07  david_nichols
+
+	* configure.ac: fixed configure to select 32-bit mode by default on
+	  sparc if --enable-64bit is not given
+
+2010-05-12 11:49  david_nichols
+
+	* configure.ac, reconf.sh: solaris and sun studio compile and
+	  warning fixes/enhancements
+
+2010-03-12 16:20  david_nichols
+
+	* src/SFTPClient.cc, test/ssh2-test.q: minor updates
+
+2010-03-12 16:16  david_nichols
+
+	* src/SFTPClient.cc, src/SFTPClient.h, src/SSH2Client.h,
+	  test/ssh2-test.q: fixed additional thread-safety issues in the
+	  SFTPClient class
+
+2010-03-12 15:25  david_nichols
+
+	* src/QC_SFTPClient.cc, src/QC_SSH2Base.cc, src/QC_SSH2Client.cc,
+	  src/SFTPClient.cc, src/SFTPClient.h, src/SSH2Client.cc,
+	  src/SSH2Client.h: moved ::connect() and ::disconnect() methods to
+	  SSH2Base class, cleaned up SSH2Client and SFTPClient headers a
+	  little
+
+2010-03-12 15:09  david_nichols
+
+	* Makefile.am, src/Makefile.am, src/QC_SFTPClient.cc,
+	  src/QC_SSH2Base.cc, src/QC_SSH2Base.h, src/QC_SSH2Client.cc,
+	  src/SFTPClient.cc, src/SFTPClient.h, src/SSH2Client.cc,
+	  src/SSH2Client.h, src/ssh2-module.cc, src/ssh2-module.h,
+	  test/ssh2-test.q: module updates; removed typing from test script
+	  (only supported in curerntly unreleased version of qore), made
+	  SSH2Base the base class of SSH2Client and SFTPClient so methods
+	  can be shared; source code cleanups, ensure module's config.h is
+	  the first file included so that configure options are respected
+	  (such as --enable-debug, etc)
+
+2010-03-12 12:34  david_nichols
+
+	* src/SSH2Channel.h: minor changes
+
+2010-03-03 10:13  david_nichols
+
+	* configure.ac, src/SSH2Client.cc, test/ssh2-test.q: fixed build on
+	  Solaris 32 - _FILE_OFFSET_BITS=64 must be set or the libssh2
+	  library will overwrite the stack in the libssh2_scp_recv()
+	  function because it assumes a larger struct stat size and zeros
+	  out the memory
+
+2010-02-23 09:42  david_nichols
+
+	* COPYING, configure.ac: updated version to 0.9 - prerelease, added
+	  LGPL COPYNIG file
+
+2010-01-23 07:40  david_nichols
+
+	* test, test/ssh2-test.q: added initial test script
+
+2010-01-19 15:44  david_nichols
+
+	* src/SSH2Client.cc, src/SSH2Client.h: added SSH2Client::scpGet()
+	  and SSH2Client::scpPut()
+
+2010-01-16 13:38  david_nichols
+
+	* src/QC_SSH2Channel.cc, src/SSH2Channel.cc, src/SSH2Channel.h:
+	  implemented the SSH2Channel::subsystem() method
+
+2010-01-16 13:23  david_nichols
+
+	* src/QC_SSH2Channel.cc, src/SSH2Channel.cc, src/SSH2Channel.h:
+	  fixed channel closed error reporting; added optional stream_id
+	  argument to all SSH2Channel::read*() methods, added
+	  SSH2Channel::extendedDataNormal(),
+	  SSH2Channel::extendedDataMerge(), and
+	  SSH2Channel::extendedDataIgnore() methods
+
+2010-01-16 12:53  david_nichols
+
+	* src/QC_SSH2Channel.cc, src/SSH2Channel.cc, src/SSH2Client.cc:
+	  fixed a bug in SSH2Channel::write() and added method info to info
+	  hash
+
+2010-01-15 15:03  david_nichols
+
+	* src/QC_SSH2Channel.cc, src/SSH2Channel.cc, src/SSH2Channel.h:
+	  implemented SSH2Channel::setEncoding() and
+	  SSH2Channel::getEncoding() to set and get the default character
+	  encoding for strings written to and read from the SSH2Channel
+	  object
+
+2010-01-15 14:42  david_nichols
+
+	* src/QC_SSH2Channel.cc, src/SSH2Channel.cc, src/SSH2Channel.h,
+	  src/SSH2Client.cc, src/SSH2Client.h, src/ssh2.h: implemented
+	  optional timeouts for all operations supporting non-blocking I/O;
+	  fixed waiting on socket I/O with a negative timeout
+
+2010-01-15 03:22  david_nichols
+
+	* src/QC_SSH2Channel.cc, src/SSH2Channel.cc, src/SSH2Channel.h:
+	  added SSH2Channel::requestX11Forwarding()
+
+2010-01-14 15:37  david_nichols
+
+	* src/QC_SSH2Channel.cc, src/SSH2Channel.cc, src/SSH2Channel.h: new
+	  methods SSH2Channel::readBlock() and
+	  SSH2Channel::readBinaryBlock() for block reading support with
+	  timeouts, added timeout support to SSH2Channel::write()
+
+2010-01-14 04:03  david_nichols
+
+	* src/SSH2Channel.cc, src/SSH2Client.cc, src/SSH2Client.h: various
+	  fixes
+
+2010-01-14 03:33  david_nichols
+
+	* src/QC_SSH2Channel.cc, src/SSH2Channel.cc, src/SSH2Channel.h,
+	  src/SSH2Client.cc, src/SSH2Client.h:
+	  SSH2Client::openDirectTcpipChannel() method
+	  SSH2Channel::readBinary() method
+
+2010-01-13 17:13  david_nichols
+
+	* src/SSH2Client.cc: fixed bug in debugging statement
+
+2010-01-13 14:46  david_nichols
+
+	* src/QC_SSH2Channel.cc, src/SSH2Channel.cc, src/SSH2Channel.h,
+	  src/SSH2Client.h, src/ssh2-module.cc: more SSH2Channel methods,
+	  runtime library version checking, new constant SSH2::Version
+	  giving the ssh2 library version
+
+2010-01-12 23:29  david_nichols
+
+	* src/QC_SSH2Channel.cc, src/SSH2Channel.cc, src/SSH2Channel.h,
+	  src/SSH2Client.cc, src/SSH2Client.h, src/ssh2-module.cc,
+	  src/ssh2-module.h: added new SSH2Channel methods
+
+2010-01-12 03:03  david_nichols
+
+	* docs, docs/sftp-module-doc.html, docs/ssh2-module-doc.html:
+	  updated doc dir
+
+2010-01-11 23:49  david_nichols
+
+	* Makefile.am, RELEASE-NOTES, doc, docs, docs/sftp-module-doc.html,
+	  docs/ssh2-module-doc.html, qore-ssh2-module.spec,
+	  src/Makefile.am, src/QC_SSH2Channel.cc, src/SSH2Channel.cc,
+	  src/SSH2Channel.h, src/SSH2Client.cc, src/SSH2Client.h,
+	  src/ssh2.h: initial SSH2Channel support, socket communication
+	  based on QoreSocket class, bug fixes
+
+2010-01-11 12:38  david_nichols
+
+	* src/SSH2Client.cc, src/SSH2Client.h: fixed some race conditions
+	  with some methods, added a "connected" key to the info hash
+
+2010-01-09 14:37  david_nichols
+
+	* src/SSH2Client.cc: reverted to original authentication logic
+	  (+fake keyboard-interactive)
+
+2010-01-09 14:12  david_nichols
+
+	* src/SSH2Client.cc, src/SSH2Client.h, src/ssh2-module.cc,
+	  src/ssh2.h: implemented fake keyboard-interactive authentication
+	  method so logins with passwords work; password and
+	  keyboard-interactive logins are only tried if a password is given
+
+2010-01-08 23:14  david_nichols
+
+	* src/SFTPClient.cc, src/SFTPClient.h, src/SSH2Client.cc,
+	  src/SSH2Client.h, src/ssh2.h: updates to allow the SSH2Client and
+	  SFTPClient class constructors to accept URLs instead of just a
+	  hostname
+
+2010-01-07 14:23  david_nichols
+
+	* doc/sftp-module-doc.html: updated documentation
+
+2010-01-07 14:17  david_nichols
+
+	* src/SFTPClient.cc, src/SFTPClient.h, src/SSH2Client.cc,
+	  src/SSH2Client.h: fixed some leaks and connection handling errors
+	  as well as estalished thread safety for the SFTPClient and
+	  SSH2Client classes in Qore
+
+2009-12-09 12:08  david_nichols
+
+	* src/SFTPClient.cc: patched memory leaks in exception handling
+
+2009-12-09 11:56  david_nichols
+
+	* configure.ac: added more search patchs for finding libssh2 for
+	  Solaris, Darwin, etc; fixes for compiling on Darwin Snow Leopard
+	  on x86_64, fixed qore version detection to use decimal instead of
+	  octal comparisons
+
+2009-12-09 11:23  david_nichols
+
+	* ., AUTHORS, ChangeLog, Makefile.am, NEWS, README, configure.ac,
+	  doc, doc/sftp-module-doc.html, m4, m4/acx_pthread.m4, reconf.sh,
+	  src, src/.cvsignore, src/Makefile.am, src/SFTPClient.cc,
+	  src/SFTPClient.h, src/SSH2Client.cc, src/SSH2Client.h,
+	  src/ssh2-module.cc, src/ssh2-module.h, src/ssh2.h: initial
+	  checkin of ssh2 module
+
