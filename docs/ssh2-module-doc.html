@@ -530,10 +530,8 @@ TertiaryDark: #666
 Error: #f88
 </pre>
 </div>
-<div title="DefaultTiddlers" modifier="DavidNichols" created="200808200745" modified="200809060801" changecount="4">
-<pre>[[Introduction]]
-[[Binding and Types]]
-</pre>
+<div title="DefaultTiddlers" modifier="DavidNichols" created="200808200745" modified="201006151632" changecount="6">
+<pre>[[Introduction]]</pre>
 </div>
 <div title="Examples" modifier="DavidNichols" created="201006151220" modified="201006151321" changecount="6">
 <pre>The following examples assume qore 0.8.0+.
@@ -731,10 +729,10 @@ printf(&quot;info: %n\n&quot;, $hash);
 :{{{SFTPCLIENT-TRANSFER-ERROR}}}: error stat()'ing file on server side
 </pre>
 </div>
-<div title="SSH2Channel" creator="DavidNichols" modifier="DavidNichols" created="201006151432" modified="201006151437" changecount="2">
+<div title="SSH2Channel" creator="DavidNichols" modifier="DavidNichols" created="201006151432" modified="201006151714" changecount="7">
 <pre>The ~SSH2Channel class allows Qore programs to send and receive data through channels opened by the SSH2Client class.
 
-|!Method|!Description|h
+|!@@display:block;width:10em;Method@@|!@@display:block;width:20em;Description@@|h
 |[[SSH2Channel::constructor()]]|The constructor cannot be called manually; objects of this class can only be returned by the appropriate methods of the SSH2Client class|
 |[[SSH2Channel::copy()]]|throws an exception; currently these object cannot be copied|
 |[[SSH2Channel::setenv(string $var, string $value, softint $timeout_ms = -1) returns nothing|SSH2Channel::setenv()]]&lt;br&gt;[[SSH2Channel::setenv(string $var, string $value, date $timeout) returns nothing|SSH2Channel::setenv()]]|sets an environment variable|
@@ -745,11 +743,20 @@ printf(&quot;info: %n\n&quot;, $hash);
 |[[SSH2Channel::waitEof(softint $timeout_ms = -1) returns nothing|SSH2Channel::waitEof()]]&lt;br&gt;[[SSH2Channel::waitEof(date $timeout) returns nothing|SSH2Channel::waitEof()]]|wait for the remote end to acknowledge an EOF request|
 |[[SSH2Channel::exec(string $command, softint $timeout_ms = -1) returns nothing|SSH2Channel::exec()]]&lt;br&gt;[[SSH2Channel::exec(string $command, date $timeout) returns nothing|SSH2Channel::exec()]]|executes a command on the channel|
 |[[SSH2Channel::subsystem(string $command, softint $timeout_ms = -1) returns nothing|SSH2Channel::subsystem()]]&lt;br&gt;[[SSH2Channel::subsystem(string $command, date $timeout) returns nothing|SSH2Channel::subsystem()]]|executes a command on the channel as a subsystem|
-|[[SSH2Channel::read(softint $stream = 0, softint $timeout_ms = -1) returns string|SSH2Channel::read()]]&lt;br&gt;[[SSH2Channel::read(softint $stream, date $timeout) returns string|SSH2Channel::read()]]|reads data on the given stream and returns it as a string|
-|[[SSH2Channel::readBinary(softint $stream = 0, softint $timeout_ms = -1) returns string|SSH2Channel::readBinary()]]&lt;br&gt;[[SSH2Channel::readBinary(softint $stream, date $timeout) returns string|SSH2Channel::readBinary()]]|reads data on the given stream and returns it as a binary|
-|[[SSH2Channel::readBlock(softint $size, softint $stream = 0, softint $timeout_ms = -1) returns string|SSH2Channel::readBlock()]]&lt;br&gt;[[SSH2Channel::readBlock(softint $stream, date $timeout) returns string|SSH2Channel::readBlock()]]|reads a block of data on the given stream and returns it as a string|
-|[[SSH2Channel::readBinaryBlock(softint $size, softint $stream = 0, softint $timeout_ms = -1) returns string|SSH2Channel::readBinaryBlock()]]&lt;br&gt;[[SSH2Channel::readBinaryBlock(softint $stream, date $timeout) returns string|SSH2Channel::readBinaryBlock()]]|reads data on the given stream and returns it as a binary|
-
+|[[SSH2Channel::read(softint $streamid = 0, softint $timeout_ms = -1) returns string|SSH2Channel::read()]]&lt;br&gt;[[SSH2Channel::read(softint $streamid = 0, date $timeout) returns string|SSH2Channel::read()]]|reads data on the given stream and returns it as a string|
+|[[SSH2Channel::readBinary(softint $streamid = 0, softint $timeout_ms = -1) returns string|SSH2Channel::readBinary()]]&lt;br&gt;[[SSH2Channel::readBinary(softint $streamid, date $timeout) returns string|SSH2Channel::readBinary()]]|reads data on the given stream and returns it as a binary|
+|[[SSH2Channel::readBlock(softint $size, softint $streamid = 0, softint $timeout_ms = -1) returns string|SSH2Channel::readBlock()]]&lt;br&gt;[[SSH2Channel::readBlock(softint $size, softint $streamid = 0, date $timeout) returns string|SSH2Channel::readBlock()]]|reads a block of data on the given stream and returns it as a string|
+|[[SSH2Channel::readBinaryBlock(softint $size, softint $streamid = 0, softint $timeout_ms = -1) returns string|SSH2Channel::readBinaryBlock()]]&lt;br&gt;[[SSH2Channel::readBinaryBlock(softint $size, softint $streamid = 0, date $timeout) returns string|SSH2Channel::readBinaryBlock()]]|reads data on the given stream and returns it as a binary|
+|[[SSH2Channel::write(data $data, softint $streamid = 0, softint $timeout_ms = -1) returns nothing|SSH2Channel::write()]]&lt;br&gt;[[SSH2Channel::write(data $data, softint $streamid = 0, date $timeout) returns nothing|SSH2Channel::write()]]|writes data to a stream|
+|[[SSH2Channel::close(softint $timeout_ms = 0) returns nothing|SSH2Channel::close()]]&lt;br&gt;[[SSH2Channel::close(date $timeout) returns nothing|SSH2Channel::close()]]|closes the channel|
+|[[SSH2Channel::waitClosed(softint $timeout_ms = 0) returns nothing|SSH2Channel::waitClosed()]]&lt;br&gt;[[SSH2Channel::waitClosed(date $timeout) returns nothing|SSH2Channel::waitClosed()]]|waits for the remote end to acknowledge the close request|
+|[[SSH2Channel::getExitStatus() returns int|SSH2Channel::getExitStatus()]]|Returns the exit code raised by the process running on the remote host at the other end of the named channel.  Note that the exit status may not be available if the remote end has not yet set its status to closed.|
+|[[SSH2Channel::requestX11Forwarding(softint $screen_no = 0, bool $single_connection = False, string $auth_proto = &quot;&quot;, string $auth_cookie = &quot;&quot;, softint $timeout_ms = -1) returns nothing|SSH2Channel::requestX11Forwarding()]]&lt;br&gt;[[SSH2Channel::requestX11Forwarding(softint $screen_no = 0, bool $single_connection = False, string $auth_proto = &quot;&quot;, string $auth_cookie = &quot;&quot;, date $timeout) returns nothing|SSH2Channel::requestX11Forwarding()]]|Request X11 forwarding on the channel|
+|[[SSH2Channel::setEncoding(string $encoding) returns nothing|SSH2Channel::setEncoding()]]|Sets the default string encoding for the channel; all string data read from the channel will be tagged with the encoding given|
+|[[SSH2Channel::getEncoding() returns string|SSH2Channel::getEncoding()]]|Returns the name of the default string encoding of the channel|
+|[[SSH2Channel::extendedDataNormal(softint $timeout_ms = -1) returns nothing|SSH2Channel::extendedDataNormal()]]&lt;br&gt;[[SSH2Channel::extendedDataNormal(date $timeout) returns nothing|SSH2Channel::extendedDataNormal()]]|Queue data in substreams (i.e. {{{stderr}}}) for eventual reading|
+|[[SSH2Channel::extendedDataMerge(softint $timeout_ms = -1) returns nothing|SSH2Channel::extendedDataMerge()]]&lt;br&gt;[[SSH2Channel::extendedDataMerge(date $timeout) returns nothing|SSH2Channel::extendedDataMerge()]]|Merge substreams (i.e. {{{stderr}}}) into stream 0 for reading|
+|[[SSH2Channel::extendedDataIgnore(softint $timeout_ms = -1) returns nothing|SSH2Channel::extendedDataIgnore()]]&lt;br&gt;[[SSH2Channel::extendedDataIgnore(date $timeout) returns nothing|SSH2Channel::extendedDataIgnore()]]|Discard all data in substreams (i.e. {{{stderr}}}) immediately when it arrives.|
 </pre>
 </div>
 <div title="SSH2Client" creator="DavidNichols" modifier="DavidNichols" created="201006151407" modified="201006151420" changecount="2">
