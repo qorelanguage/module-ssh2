@@ -651,7 +651,7 @@ $sftpclient.chmod(&quot;/tmp/new-dir&quot;, 0700);
 :{{{SSH2-ERROR}}}: socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
 :{{{SFTPCLIENT-CHMOD-ERROR}}}: the server does not support changing file permissions</pre>
 </div>
-<div title="SFTPClient::constructor()" modifier="DavidNichols" created="201006151235" modified="201006151336" changecount="11">
+<div title="SFTPClient::constructor()" modifier="DavidNichols" created="201006151235" modified="201006161838" changecount="12">
 <pre>!Synopsis
 :Creates the object with the given URL or the hostname and port number.  
 !Prototype
@@ -661,7 +661,7 @@ $sftpclient.chmod(&quot;/tmp/new-dir&quot;, 0700);
 :* {{{string $url}}}: The URL to use to connect to the remote server; if any protocol (URI scheme) is present, then it must be {{{sftp}}}; with this variant the username and password can be set as well as hostname and port
 :* {{{string $hostname, softint $port}}}: hostname and port of the remote server
 !Example:
-:{{{ my SFTPClient(&quot;sftp://user:pass@host.com:22&quot;); }}}
+:{{{ my SFTPClient $sftp(&quot;sftp://user:pass@host.com:22&quot;); }}}
 !Exceptions
 :{{{SFTPCLIENT-PARAMETER-ERROR}}}: unknown protocol passed in URL; no hostname in URL
 </pre>
@@ -1454,7 +1454,7 @@ Most methods require a connection to be already established; connections are est
 |[[SSH2Client::scpGet(string $remote_path, softint $timeout_ms = -1) returns SSH2Channel|SSH2Client::scpGet()]]&lt;br&gt;[[SSH2Client::scpGet(string $remote_path, date $timeout) returns SSH2Channel|SSH2Client::scpGet()]]&lt;br&gt;[[SSH2Client::scpGet(string $remote_path, softint $timeout_ms = -1, reference $statinfo) returns SSH2Channel|SSH2Client::scpGet()]]&lt;br&gt;[[SSH2Client::scpGet(string $remote_path, date $timeout, reference $statinfo) returns SSH2Channel|SSH2Client::scpGet()]]|opens a channel for retrieving a remote file with an optional timeout value and an optional reference for returning file status information; an SSH2Channel object is returned to use to retrieve the file's data|
 |[[SSH2Client::scpPut(string $remote_path, softint $size, softint $mode = 0644, date $mtime = date(), date $atime = date(), softint $timeout_ms = -1) returns SSH2Channel|SSH2Client::scpPut()]]&lt;br&gt;[[SSH2Client::scpPut(string $remote_path, softint $size, softint $mode = 0644, date $mtime = date(), date $atime = date(), date $timeout) returns SSH2Channel|SSH2Client::scpPut()]]|Opens a channel for sending a remote file; an SSH2Channel object is returned to use to send the file's data|</pre>
 </div>
-<div title="SSH2Client::constructor()" creator="DavidNichols" modifier="DavidNichols" created="201006151408" modified="201006160828" changecount="2">
+<div title="SSH2Client::constructor()" creator="DavidNichols" modifier="DavidNichols" created="201006151408" modified="201006161838" changecount="3">
 <pre>!Synopsis
 :Creates the object with the given URL or the hostname and port number.  
 !Prototype
@@ -1464,7 +1464,7 @@ Most methods require a connection to be already established; connections are est
 :* {{{string $url}}}: The URL to use to connect to the remote server; if any protocol (URI scheme) is present, then it must be {{{ssh}}} or {{{ssh2}}}; with this variant the username and password can be set as well as hostname and port
 :* {{{string $hostname, softint $port}}}: hostname and port of the remote server
 !Example:
-:{{{ my SSH2Client(&quot;sftp://user:pass@host.com:22&quot;); }}}
+:{{{ my SSH2Client $ssh(&quot;ssh2://user:pass@host.com:22&quot;); }}}
 !Exceptions
 :{{{SSH2CLIENT-PARAMETER-ERROR}}}: unknown protocol passed in URL; no hostname in URL
 </pre>
