@@ -1,3 +1,20 @@
+2010-06-15 18:48  david_nichols
+
+	* docs/ssh2-module-doc.html: added remaining methods to class
+	  tables
+
+2010-06-15 14:38  david_nichols
+
+	* docs/ssh2-module-doc.html: updated docs
+
+2010-06-15 12:15  david_nichols
+
+	* ChangeLog, Makefile.am, qore-ssh2-module.spec: module build fixes
+
+2010-06-15 12:14  david_nichols
+
+	* src/SFTPClient.cc: fixed warning
+
 2010-06-14 15:51  david_nichols
 
 	* docs/ssh2-module-doc.html: updated docs

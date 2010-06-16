@@ -74,7 +74,7 @@ public:
       return enc;
    }
    DLLLOCAL int setenv(const char *name, const char *value, int timeout_ms, ExceptionSink *xsink);
-   DLLLOCAL int requestPty(ExceptionSink *xsink, const QoreString *term = 0, const QoreString *modes = 0, int width = LIBSSH2_TERM_WIDTH, 
+   DLLLOCAL int requestPty(ExceptionSink *xsink, const QoreString &term, const QoreString &modes, int width = LIBSSH2_TERM_WIDTH, 
 			   int height = LIBSSH2_TERM_HEIGHT, int width_px = LIBSSH2_TERM_WIDTH_PX, 
 			   int height_px = LIBSSH2_TERM_HEIGHT_PX, int timeout_ms = -1);
    DLLLOCAL int shell(ExceptionSink *xsink, int timeout_ms = -1);
