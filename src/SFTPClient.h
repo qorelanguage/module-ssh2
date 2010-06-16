@@ -122,59 +122,5 @@ static inline int str2mode(const std::string perms) {
    return mode;
 }
 
-static inline std::string mode2str(const int mode) {
-   std::string ret=std::string("----------");
-   int tmode=mode;
-   for(int i=2; i>=0; i--) {
-      if(tmode & 001) {
-	 ret[1+2+i*3]='x';
-      }
-      if(tmode & 002) {
-	 ret[1+1+i*3]='w';
-      }
-      if(tmode & 004) {
-	 ret[1+0+i*3]='r';
-      }
-      tmode>>=3;
-   }
-#ifdef S_ISDIR
-   if(S_ISDIR(mode)) {
-      ret[0]='d';
-   }
-#endif
-#ifdef S_ISBLK
-   if(S_ISBLK(mode)) {
-      ret[0]='b';
-   }
-#endif
-#ifdef S_ISCHR
-   if(S_ISCHR(mode)) {
-      ret[0]='c';
-   }
-#endif
-//#ifdef S_ISREG
-//  if(S_ISREG(mode)) {
-//    ret[0]='r';
-//  }
-//#endif
-#ifdef S_ISFIFO
-   if(S_ISFIFO(mode)) {
-      ret[0]='p';
-   }
-#endif
-#ifdef S_ISLNK
-   if(S_ISLNK(mode)) {
-      ret[0]='l';
-   }
-#endif
-#ifdef S_ISSOCK
-   if(S_ISSOCK(mode)) {
-      ret[0]='s';
-   }
-#endif
-
-   return ret;
-}
-
 #endif // _QORE_SFTPCLIENT_H
 

@@ -1,7 +1,7 @@
 # Process this file with autoconf to produce a configure script.
 
 # AC_PREREQ(2.59)
-AC_INIT([qore-ssh2-module], [0.9],
+AC_INIT([qore-ssh2-module], [0.9.5],
         [Wolfgang Ritzinger <aargon(a)rat(dot)at>],
         [qore-ssh2-module])
 AM_INIT_AUTOMAKE
@@ -369,8 +369,8 @@ else
       AC_DEFINE_UNQUOTED([QORE_VERSION_CODE], $qvc, [define when missing in Qore headers])
    fi
 
-   if test $qvc -lt 701; then
-      AC_MSG_ERROR([found $qore_version; this module requires at least version 0.7.1])
+   if test $qvc -lt 800; then
+      AC_MSG_ERROR([found $qore_version; this module requires at least version 0.8.0])
    fi
 
    AC_MSG_RESULT([${qore_version} OK])

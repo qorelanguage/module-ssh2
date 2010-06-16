@@ -63,13 +63,13 @@ DLLEXPORT qore_license_t qore_module_license = QL_LGPL;
 static void setup_namespace() {
    // setup static "master" namespace
 
-   QoreClass *SSH2Base;
+   QoreClass *SSH2Base, *SSH2Channel;
 
   // all classes belonging to here
    ssh2ns.addSystemClass((SSH2Base = initSSH2BaseClass()));
-   ssh2ns.addSystemClass(initSSH2ClientClass(SSH2Base));
+   ssh2ns.addSystemClass((SSH2Channel = initSSH2ChannelClass()));
+   ssh2ns.addSystemClass(initSSH2ClientClass(SSH2Base, SSH2Channel));
    ssh2ns.addSystemClass(initSFTPClientClass(SSH2Base));
-   ssh2ns.addSystemClass(initSSH2ChannelClass());
 
    // constants
    ssh2ns.addConstant("Version", new QoreStringNode(qore_libssh2_version));

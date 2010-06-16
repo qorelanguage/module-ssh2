@@ -32,98 +32,48 @@ void SSH2BASE_constructor(QoreObject *self, const QoreListNode *params, Exceptio
    xsink->raiseException("SSH2BASE-CONSTRUCTOR-ERROR", "this class is an abstract class and cannot be instantiated directly");
 }
 
+// SSH2Client::connect(softint $timeout_ms = -1) returns nothing
+// SSH2Client::connect(date $timeout) returns nothing
 static AbstractQoreNode *SSH2BASE_connect(QoreObject *self, SSH2Client *myself, const QoreListNode *params, ExceptionSink *xsink) {
-   const AbstractQoreNode *p0;
-   int to=-1; // default: no timeout
-
-   if (num_params(params) > 1) {
-      xsink->raiseException("SSH2BASE-PARAMETER-ERROR", "use connect([timeout ms (int)])");
-      return 0;
-   }
-
-   if ((p0=get_param(params, 0)) && p0->getType()!=NT_INT) {
-      xsink->raiseException("SSH2BASE-PARAMETER-ERROR", "use connect([timeout ms (int)])");
-      return 0;
-   }
-   to = (!p0 ? -1: p0->getAsInt());
-
-   // connect
-   myself->connect(to, xsink);
-
-   // return error
+   myself->connect(getMsMinusOneInt(get_param(params, 0)), xsink);
    return 0;
 }
 
+// SSH2Base::disconnect() returns nothing
 static AbstractQoreNode *SSH2BASE_disconnect(QoreObject *self, SSH2Client *myself, const QoreListNode *params, ExceptionSink *xsink) {
-   if (num_params(params)) {
-      xsink->raiseException("SSH2BASE-PARAMETER-ERROR", "too many arguments to SSH2Base::disconnect(); this method takes no arguments");
-      return 0;
-   }
-
-   // dis connect
    myself->disconnect(0, xsink);
-
-   // return error
    return 0;
 }
 
+// SSH2Base::setUser(string $user) returns nothing
 static AbstractQoreNode *SSH2BASE_setUser(QoreObject *self, SSH2Client *myself, const QoreListNode *params, ExceptionSink *xsink) {
-   const QoreStringNode *p0;
+   const QoreStringNode *p0 = HARD_QORE_STRING(params, 0);
 
-   if(num_params(params) != 1 || !(p0=test_string_param(params, 0))) {
-      xsink->raiseException("SSH2BASE-PARAMETER-ERROR", "use setUser(username (string))");
-      return 0;
-   }
-
-   if (myself->setUser(p0->getBuffer())) {
+   if (myself->setUser(p0->getBuffer()))
       xsink->raiseException("SSH2BASE-STATUS-ERROR", "usage of setUser() is not allowed when connected");
-      return 0;
-   }
 
-   // return error
    return 0;
 }
 
+// SSH2Base::setPassword(string $pass) returns nothing
 static AbstractQoreNode *SSH2BASE_setPassword(QoreObject *self, SSH2Client *myself, const QoreListNode *params, ExceptionSink *xsink) {
-   const QoreStringNode *p0;
+   const QoreStringNode *p0 = HARD_QORE_STRING(params, 0);
 
-   if(num_params(params) != 1 || !(p0=test_string_param(params, 0))) {
-      xsink->raiseException("SSH2BASE-PARAMETER-ERROR", "use setPassword(password (string))");
-      return 0;
-   }
-
-   if (myself->setPassword(p0->getBuffer())) {
+   if (myself->setPassword(p0->getBuffer()))
       xsink->raiseException("SSH2BASE-STATUS-ERROR", "usage of setPassword() is not allowed when connected");
-      return 0;
-   }
 
-   // return error
    return 0;
 }
 
+// SSH2Base::setKeys(string $priv_key) returns nothing
+// SSH2Base::setKeys(string $priv_key, string $pub_key) returns nothing
 static AbstractQoreNode *SSH2BASE_setKeys(QoreObject *self, SSH2Client *myself, const QoreListNode *params, ExceptionSink *xsink) {
-   const QoreStringNode *p0, *p1;
-   static const char* ex_param=(char*)"use setKeys(priv_key_file (string), [pub_key_file (string)]). if no pubkey it is priv_key_file.pub";
+   const QoreStringNode *p0 = HARD_QORE_STRING(params, 0);
+   const QoreStringNode *p1 = test_string_param(params, 1);
 
-   if(num_params(params) > 2 || num_params(params) < 1) {
-      xsink->raiseException("SSH2BASE-PARAMETER-ERROR", ex_param);
-      return 0;
-   }
-
-   p0=test_string_param(params, 0);
-   p1=test_string_param(params, 1);
-
-   if(!p0) {
-      xsink->raiseException("SSH2BASE-PARAMETER-ERROR", ex_param);
-      return 0;
-   }
-
-   if (myself->setKeys(p0->getBuffer(), p1? p1->getBuffer(): NULL)) {
+   if (myself->setKeys(p0->getBuffer(), p1 ? p1->getBuffer() : 0))
       xsink->raiseException("SSH2BASE-STATUS-ERROR", "usage of setKeys() is not allowed when connected");
-      return 0;
-   }
 
-   // return error
    return 0;
 }
 
@@ -134,11 +84,24 @@ QoreClass *initSSH2BaseClass() {
    CID_SSH2_BASE = QC_SSH2_BASE->getID();
    QC_SSH2_BASE->setConstructor(SSH2BASE_constructor);
 
-   QC_SSH2_BASE->addMethod("connect",                (q_method_t)SSH2BASE_connect);
-   QC_SSH2_BASE->addMethod("disconnect",             (q_method_t)SSH2BASE_disconnect);
-   QC_SSH2_BASE->addMethod("setUser",                (q_method_t)SSH2BASE_setUser);
-   QC_SSH2_BASE->addMethod("setPassword",            (q_method_t)SSH2BASE_setPassword);
-   QC_SSH2_BASE->addMethod("setKeys",                (q_method_t)SSH2BASE_setKeys);
+   // SSH2Base::connect(softint $timeout_ms = -1) returns nothing
+   QC_SSH2_BASE->addMethodExtended("connect",      (q_method_t)SSH2BASE_connect, false, QC_NO_FLAGS, QDOM_DEFAULT, nothingTypeInfo, 1, softBigIntTypeInfo, new QoreBigIntNode(-1));
+   // SSH2Base::connect(date $timeout) returns nothing
+   QC_SSH2_BASE->addMethodExtended("connect",      (q_method_t)SSH2BASE_connect, false, QC_NO_FLAGS, QDOM_DEFAULT, nothingTypeInfo, 1, dateTypeInfo, QORE_PARAM_NO_ARG);
+
+   // SSH2Base::disconnect() returns nothing
+   QC_SSH2_BASE->addMethodExtended("disconnect",   (q_method_t)SSH2BASE_disconnect, false, QC_NO_FLAGS, QDOM_DEFAULT, nothingTypeInfo);
+
+   // SSH2Base::setUser(string $user) returns nothing
+   QC_SSH2_BASE->addMethodExtended("setUser",      (q_method_t)SSH2BASE_setUser, false, QC_NO_FLAGS, QDOM_DEFAULT, nothingTypeInfo, 1, stringTypeInfo, QORE_PARAM_NO_ARG);
+
+   // SSH2Base::setPassword(string $pass) returns nothing
+   QC_SSH2_BASE->addMethodExtended("setPassword",  (q_method_t)SSH2BASE_setPassword, false, QC_NO_FLAGS, QDOM_DEFAULT, nothingTypeInfo, 1, stringTypeInfo, QORE_PARAM_NO_ARG);
+
+   // SSH2Base::setKeys(string $priv_key) returns nothing
+   // SSH2Base::setKeys(string $priv_key, string $pub_key) returns nothing
+   QC_SSH2_BASE->addMethodExtended("setKeys",      (q_method_t)SSH2BASE_setKeys, false, QC_NO_FLAGS, QDOM_DEFAULT, nothingTypeInfo, 1, stringTypeInfo, QORE_PARAM_NO_ARG);
+   QC_SSH2_BASE->addMethodExtended("setKeys",      (q_method_t)SSH2BASE_setKeys, false, QC_NO_FLAGS, QDOM_DEFAULT, nothingTypeInfo, 2, stringTypeInfo, QORE_PARAM_NO_ARG, stringTypeInfo, QORE_PARAM_NO_ARG);
 
    return QC_SSH2_BASE;
 }

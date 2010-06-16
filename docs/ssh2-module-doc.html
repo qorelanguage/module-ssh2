@@ -565,7 +565,7 @@ $chan.close();
 stdout.printf(&quot;exit status: %d\n&quot;, $chan.getExitStatus());
 }}}</pre>
 </div>
-<div title="Introduction" modifier="DavidNichols" created="200808200719" modified="201006151407" changecount="59">
+<div title="Introduction" modifier="DavidNichols" created="200808200719" modified="201006160846" changecount="61">
 <pre>The sftp module provides Qore the possibility to connect to SFTP server and make there basic file and directory operations and upload and download files.
 
 This module is released under the [[LGPL 2.1|http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html]] and is tagged as such in the module's header (meaning it can be loaded unconditionally regardless of how the Qore library was initialized).
@@ -574,6 +574,7 @@ Note that this documentation is based on [[TittldyWiki|http://www.tiddlywiki.com
 
 This module provides the following classes:
 |!Class|!Description|h
+|SSH2Base|base class for SFTPClient and SSH2Client|
 |SFTPClient|allows Qore programs to use the sftp protocol|
 |SSH2Client|allows Qore programs to establish an ssh2 connection to a remote server|
 |SSH2Channel|allows Qore programs to send and receive data through an SSH2Channel|
@@ -588,15 +589,16 @@ See some examples here: [[Examples]]
 
 This module's documentation is still a work in progress; to be continued...</pre>
 </div>
-<div title="MainMenu" modifier="DavidNichols" created="200808200730" modified="201006151224" changecount="32">
+<div title="MainMenu" modifier="DavidNichols" created="200808200730" modified="201006160714" changecount="34">
 <pre>[[Introduction]]
-SFTPClient
-SSH2Client
-SSH2Channel
+[[SSH2Base Class|SSH2Base]]
+[[SFTPClient Class|SFTPClient]]
+[[SSH2Client Class|SSH2Client]]
+[[SSH2Channel Class|SSH2Channel]]
 [[Examples]]</pre>
 </div>
-<div title="SFTPClient" modifier="DavidNichols" created="201006151227" modified="201006151407" changecount="21">
-<pre>The ~SFTPClient class provides access to the sftp protocol.
+<div title="SFTPClient" modifier="DavidNichols" created="201006151227" modified="201006160739" changecount="23">
+<pre>The ~SFTPClient class provides access to the sftp protocol; this class inherits the SSH2Base class.
 
 |!Method|!Description|h
 |[[SFTPClient::constructor(string $url)|SFTPClient::constructor()]]&lt;br&gt;[[SFTPClient::constructor(string $hostname, softint $port)|SFTPClient::constructor()]]|creates the object with the given URL|
@@ -701,7 +703,7 @@ printf(&quot;current path: %s\n&quot;, exists $path ? $path : &quot;&lt;not set&
 : {{{NOTHING}}}: if no path is set, or 
 : {{{string}}}: the current path</pre>
 </div>
-<div title="SFTPClient::stat()" creator="DavidNichols" modifier="DavidNichols" created="201006151353" modified="201006151353" changecount="2">
+<div title="SFTPClient::stat()" creator="DavidNichols" modifier="DavidNichols" created="201006151353" modified="201006160854" changecount="4">
 <pre>!Synopsis
 :Returns a hash of information about a file or {{{NOTHING}}} if the file cannot be found
 !Prototype
@@ -715,7 +717,7 @@ printf(&quot;info: %n\n&quot;, $hash);
 }}}
 !Return Value
 : {{{NOTHING}}}: if the file cannot be read
-: {{{hash}}}: a hash with the following keys:
+: {{{hash}}}: a hash with the following format:
 |!Key|!Type|!Description|h
 |{{{size}}}|{{{int}}}|the size of the file in bytes|
 |{{{atime}}}|{{{date}}}|the date/time the file was last accessed|
@@ -729,7 +731,20 @@ printf(&quot;info: %n\n&quot;, $hash);
 :{{{SFTPCLIENT-TRANSFER-ERROR}}}: error stat()'ing file on server side
 </pre>
 </div>
-<div title="SSH2Channel" creator="DavidNichols" modifier="DavidNichols" created="201006151432" modified="201006151714" changecount="7">
+<div title="SSH2Base" creator="DavidNichols" modifier="DavidNichols" created="201006160712" modified="201006160738" changecount="2">
+<pre>The ~SSSH2Base class provides common methods to the SSH2Client and SFTPClient classes
+
+|!Method|!Description|h
+|[[SSH2Base::constructor()]]|The constructor cannot be called manually|
+|[[SSH2Base::connect(softint $timeout_ms = -1) returns nothing|SSH2Base::connect()]]&lt;br&gt;[[SSH2Base::connect(date $timeout) returns nothing|SSH2Base::connect()]]|connect to remote system|
+|[[SSH2Base::disconnect() returns nothing|SSH2Base::disconnect()]]|disconnects from the remote system|
+|[[SSH2Base::setUser(string $name) returns nothing|SSH2Base::setUser()]]|sets the user name for the next connection; can only be called when a connection is not established|
+|[[SSH2Base::setPassword(string $pass) returns nothing|SSH2Base::setPassword()]]|sets the password for the next connection; can only be called when a connection is not established|
+|[[SSH2Base::setKeys(string $priv_key) returns nothing|SSH2Base::setKeys()]]&lt;br&gt;[[SSH2Base::setKeys(string $priv_key, string $pub_key) returns nothing|SSH2Base::setKeys()]]|sets path to the private key and optionally the path to the public key to use for the next connection; can only be called when a connection is not established|
+
+</pre>
+</div>
+<div title="SSH2Channel" creator="DavidNichols" modifier="DavidNichols" created="201006151432" modified="201006160712" changecount="9">
 <pre>The ~SSH2Channel class allows Qore programs to send and receive data through channels opened by the SSH2Client class.
 
 |!@@display:block;width:10em;Method@@|!@@display:block;width:20em;Description@@|h
@@ -754,24 +769,24 @@ printf(&quot;info: %n\n&quot;, $hash);
 |[[SSH2Channel::requestX11Forwarding(softint $screen_no = 0, bool $single_connection = False, string $auth_proto = &quot;&quot;, string $auth_cookie = &quot;&quot;, softint $timeout_ms = -1) returns nothing|SSH2Channel::requestX11Forwarding()]]&lt;br&gt;[[SSH2Channel::requestX11Forwarding(softint $screen_no = 0, bool $single_connection = False, string $auth_proto = &quot;&quot;, string $auth_cookie = &quot;&quot;, date $timeout) returns nothing|SSH2Channel::requestX11Forwarding()]]|Request X11 forwarding on the channel|
 |[[SSH2Channel::setEncoding(string $encoding) returns nothing|SSH2Channel::setEncoding()]]|Sets the default string encoding for the channel; all string data read from the channel will be tagged with the encoding given|
 |[[SSH2Channel::getEncoding() returns string|SSH2Channel::getEncoding()]]|Returns the name of the default string encoding of the channel|
-|[[SSH2Channel::extendedDataNormal(softint $timeout_ms = -1) returns nothing|SSH2Channel::extendedDataNormal()]]&lt;br&gt;[[SSH2Channel::extendedDataNormal(date $timeout) returns nothing|SSH2Channel::extendedDataNormal()]]|Queue data in substreams (i.e. {{{stderr}}}) for eventual reading|
-|[[SSH2Channel::extendedDataMerge(softint $timeout_ms = -1) returns nothing|SSH2Channel::extendedDataMerge()]]&lt;br&gt;[[SSH2Channel::extendedDataMerge(date $timeout) returns nothing|SSH2Channel::extendedDataMerge()]]|Merge substreams (i.e. {{{stderr}}}) into stream 0 for reading|
-|[[SSH2Channel::extendedDataIgnore(softint $timeout_ms = -1) returns nothing|SSH2Channel::extendedDataIgnore()]]&lt;br&gt;[[SSH2Channel::extendedDataIgnore(date $timeout) returns nothing|SSH2Channel::extendedDataIgnore()]]|Discard all data in substreams (i.e. {{{stderr}}}) immediately when it arrives.|
+|[[SSH2Channel::extendedDataNormal(softint $timeout_ms = -1) returns nothing|SSH2Channel::extendedDataNormal()]]&lt;br&gt;[[SSH2Channel::extendedDataNormal(date $timeout) returns nothing|SSH2Channel::extendedDataNormal()]]|Queue data in substreams (i.e. {{{stderr}}}, etc) for eventual reading|
+|[[SSH2Channel::extendedDataMerge(softint $timeout_ms = -1) returns nothing|SSH2Channel::extendedDataMerge()]]&lt;br&gt;[[SSH2Channel::extendedDataMerge(date $timeout) returns nothing|SSH2Channel::extendedDataMerge()]]|Merge substreams (i.e. {{{stderr}}}, etc) into stream 0 for reading|
+|[[SSH2Channel::extendedDataIgnore(softint $timeout_ms = -1) returns nothing|SSH2Channel::extendedDataIgnore()]]&lt;br&gt;[[SSH2Channel::extendedDataIgnore(date $timeout) returns nothing|SSH2Channel::extendedDataIgnore()]]|Discard all data in substreams (i.e. {{{stderr}}}, etc) immediately when it arrives.|
 </pre>
 </div>
-<div title="SSH2Client" creator="DavidNichols" modifier="DavidNichols" created="201006151407" modified="201006151420" changecount="2">
-<pre>The ~SSH2Client class provides access to the ssh2 protocol, allowing qore programs to establish ssh2 connections to remote servers and execute commands and retrieve the terminal output.
+<div title="SSH2Client" creator="DavidNichols" modifier="DavidNichols" created="201006151407" modified="201006160838" changecount="10">
+<pre>The ~SSH2Client class provides access to the ssh2 protocol, allowing qore programs to establish ssh2 connections to remote servers and execute commands and retrieve the terminal output.  This class inherits the SSH2Base class
 
 |!Method|!Description|h
 |[[SSH2Client::constructor(string $url)|SSH2Client::constructor()]]&lt;br&gt;[[SSH2Client::constructor(string $hostname, softint $port)|SSH2Client::constructor()]]|creates the object with the given URL|
 |[[SSH2Client::copy()]]|throws an exception; currently these object cannot be copied|
-|[[SSH2Client::info()]]|returns a hash with information about the current connection or {{{NOTHING}}} if a connection is not currently established|
-|[[SSH2Client::openSessionChannel() returns SSH2Channel|SSH2Client::openSessionChannel()]]|Opens a login session and returns a SSH2Channel object for the session|
-|[[SSH2Client::openDirectTcpipChannel(string $host, softint $port) returns SSH2Channel|SSH2Client::openDirectTcpipChannel()]]|Opens a port forwarding channel and returns the corresponding SSH2Channel object for the new forwarded connection|
-|[[SSH2Client::scpGet(string $remote_path, softint $timeout_ms = -1) returns SSH2Channel|SSH2Client::scpGet()]]&lt;br&gt;[[SSH2Client::scpGet(string $remote_path, date $timeout) returns SSH2Channel|SSH2Client::scpGet()]]&lt;br&gt;[[SSH2Client::scpGet(string $remote_path, softint $timeout_ms, reference $statinfo) returns SSH2Channel|SSH2Client::scpGet()]]&lt;br&gt;[[SSH2Client::scpGet(string $remote_path, date $timeout, reference $statinfo) returns SSH2Channel|SSH2Client::scpGet()]]|opens a channel for retrieving a remote file with an optional timeout value and an optional reference for returning file status information; an SSH2Channel object is returned to use to retrieve the file's data|
-|[[SSH2Client::scpPut(string $remote_path, softint $size, softint $mode = 0644, date $mtime = date(), date $atime = date()) returns SSH2Channel|SSH2Client::scpPut()]]|Opens a channel for sending a remote file; an SSH2Channel object is returned to use to send the file's data|</pre>
+|[[SSH2Client::info() returns hash|SSH2Client::info()]]|returns a hash with information about the current connection or {{{NOTHING}}} if a connection is not currently established|
+|[[SSH2Client::openSessionChannel(softint $timeout_ms = -1) returns SSH2Channel|SSH2Client::openSessionChannel()]]&lt;br&gt;[[SSH2Client::openSessionChannel(date $timeout) returns SSH2Channel|SSH2Client::openSessionChannel()]]|Opens a login session and returns a SSH2Channel object for the session|
+|[[SSH2Client::openDirectTcpipChannel(string $host, softint $port, string $source_host = &quot;127.0.0.1&quot;, softint $source_port = 22, softint $timeout_ms = -1) returns SSH2Channel|SSH2Client::openDirectTcpipChannel()]]&lt;br&gt;[[SSH2Client::openDirectTcpipChannel(string $host, softint $port, string $source_host = &quot;127.0.0.1&quot;, softint $source_port = 22, date $timeout) returns SSH2Channel|SSH2Client::openDirectTcpipChannel()]]|Opens a port forwarding channel and returns the corresponding SSH2Channel object for the new forwarded connection|
+|[[SSH2Client::scpGet(string $remote_path, softint $timeout_ms = -1) returns SSH2Channel|SSH2Client::scpGet()]]&lt;br&gt;[[SSH2Client::scpGet(string $remote_path, date $timeout) returns SSH2Channel|SSH2Client::scpGet()]]&lt;br&gt;[[SSH2Client::scpGet(string $remote_path, softint $timeout_ms = -1, reference $statinfo) returns SSH2Channel|SSH2Client::scpGet()]]&lt;br&gt;[[SSH2Client::scpGet(string $remote_path, date $timeout, reference $statinfo) returns SSH2Channel|SSH2Client::scpGet()]]|opens a channel for retrieving a remote file with an optional timeout value and an optional reference for returning file status information; an SSH2Channel object is returned to use to retrieve the file's data|
+|[[SSH2Client::scpPut(string $remote_path, softint $size, softint $mode = 0644, date $mtime = date(), date $atime = date(), softint $timeout_ms = -1) returns SSH2Channel|SSH2Client::scpPut()]]&lt;br&gt;[[SSH2Client::scpPut(string $remote_path, softint $size, softint $mode = 0644, date $mtime = date(), date $atime = date(), date $timeout) returns SSH2Channel|SSH2Client::scpPut()]]|Opens a channel for sending a remote file; an SSH2Channel object is returned to use to send the file's data|</pre>
 </div>
-<div title="SSH2Client::constructor()" creator="DavidNichols" modifier="DavidNichols" created="201006151408" changecount="1">
+<div title="SSH2Client::constructor()" creator="DavidNichols" modifier="DavidNichols" created="201006151408" modified="201006160828" changecount="2">
 <pre>!Synopsis
 :Creates the object with the given URL or the hostname and port number.  
 !Usage
@@ -792,7 +807,7 @@ printf(&quot;info: %n\n&quot;, $hash);
 !Exceptions
 :{{{SSH2CLIENT-COPY-ERROR}}}: copying SSH2Client objects is currently not supported</pre>
 </div>
-<div title="SSH2Client::info()" creator="DavidNichols" modifier="DavidNichols" created="201006151409" changecount="1">
+<div title="SSH2Client::info()" creator="DavidNichols" modifier="DavidNichols" created="201006151409" modified="201006160829" changecount="2">
 <pre>!Synopsis
 :Creates the object with the given URL or the hostname and port number.  
 !Usage
@@ -818,6 +833,87 @@ else
 |{{{authenticated}}}|{{{string}}}|a string giving the authentication mechanism used: {{{publickey}}}, {{{password}}}, or {{{keyboard-interactive}}}|
 |{{{connected}}}|{{{bool}}}|Tells if the connection is currently active or not|
 |{{{methods}}}|{{{hash}}}|a hash of strings giving the crytographic methods used for the connection|
+</pre>
+</div>
+<div title="SSH2Client::openDirectTcpipChannel()" creator="DavidNichols" modifier="DavidNichols" created="201006160845" modified="201006160848" changecount="6">
+<pre>!Synopsis
+:Opens a port forwarding channel and returns the corresponding SSH2Channel object for the new forwarded connection
+!Usage
+:{{{SSH2Client::openDirectTcpipChannel(string $host, softint $port, string $source_host = &quot;127.0.0.1&quot;, softint $source_port = 22, softint $timeout_ms = -1) returns SSH2Channel}}}
+:{{{SSH2Client::openDirectTcpipChannel(string $host, softint $port, string $source_host = &quot;127.0.0.1&quot;, softint $source_port = 22, date $timeout) returns SSH2Channel}}}
+!Arguments
+:* {{{string $host}}}: the remote host to connect to
+:* {{{softint $port}}}: the port number on the remote host to connect to
+:* {{{string $source_host = &quot;127.0.0.1&quot;}}}: the host name to report as the source of the connection
+:* {{{softint $source_port = 22}}}: the port number to report as the source of the connection
+:** {{{softint $timeout_ms = -1}}}: timeout value to open the channel; -1 is the default, meaning do not time out
+:** {{{date $timeout}}}: a relative date/time value to use as the timeout (ex: {{{10s}}} = 10 seconds)
+!Return Value
+: SSH2Channel: the forwarded data channel
+!Example:
+{{{
+# open a session channel with a 15 second timeout; source values used with defaults
+my SSH2Channel $chan = $ssh2.openDirectTcpipChannel(&quot;remotehost&quot;, 8001, NOTHING, NOTHING, 15s);
+}}}
+!Exceptions
+:{{{SSH2CLIENT-NOT-CONNECTED}}}: client is not connected
+:{{{SSH2CLIENT-TIMEOUT}}}: timeout opening channel
+:{{{SSH2-ERROR}}}: error opening channel
+</pre>
+</div>
+<div title="SSH2Client::openSessionChannel()" creator="DavidNichols" modifier="DavidNichols" created="201006160832" modified="201006160846" changecount="9">
+<pre>!Synopsis
+:Opens a login session and returns a SSH2Channel object for the session
+!Usage
+:{{{SSH2Client::openSessionChannel(softint $timeout_ms = -1) returns SSH2Channel}}}
+:{{{SSH2Client::openSessionChannel(date $timeout) returns SSH2Channel}}}
+!Arguments
+:* {{{softint $timeout_ms = -1}}}: timeout value to open the channel; -1 is the default, meaning do not time out
+:* {{{date $timeout}}}: a relative date/time value to use as the timeout (ex: {{{10s}}} = 10 seconds)
+!Return Value
+: SSH2Channel: the channel for the new session
+!Example:
+{{{
+# open a session channel with a 15 second timeout
+my SSH2Channel $chan = $ssh2.openSessionChannel(15s);
+}}}
+!Exceptions
+:{{{SSH2CLIENT-NOT-CONNECTED}}}: client is not connected
+:{{{SSH2CLIENT-TIMEOUT}}}: timeout opening channel
+:{{{SSH2-ERROR}}}: error opening channel
+</pre>
+</div>
+<div title="SSH2Client::scpGet()" creator="DavidNichols" modifier="DavidNichols" created="201006160851" modified="201006160900" changecount="3">
+<pre>!Synopsis
+:opens a channel for retrieving a remote file with an optional timeout value and an optional reference for returning file status information; an SSH2Channel object is returned to use to retrieve the file's data
+!Usage
+: {{{SSH2Client::scpGet(string $remote_path, softint $timeout_ms = -1) returns SSH2Channel}}}
+: {{{SSH2Client::scpGet(string $remote_path, date $timeout) returns SSH2Channel|}}}
+: {{{SSH2Client::scpGet(string $remote_path, softint $timeout_ms = -1, reference $statinfo) returns SSH2Channel}}}
+: {{{SSH2Client::scpGet(string $remote_path, date $timeout, reference $statinfo) returns SSH2Channel}}}
+!Arguments
+:* {{{string $remote_path}}}: the path of the file to get
+:** {{{softint $timeout_ms = -1}}}: timeout value to open the channel; -1 is the default, meaning do not time out
+:** {{{date $timeout}}}: a relative date/time value to use as the timeout (ex: {{{10s}}} = 10 seconds)
+:* {{{[reference $statinfo]}}}: if present, will write a hash with the following structure to the lvalue:
+|!Key|!Type|!Description|h
+|{{{mode}}}|{{{int}}}|the file's mode|
+|{{{permissions}}}|{{{string}}}|a string giving the symbolic mode of the file|
+|{{{size}}}|{{{int}}}|the size of the file in bytes|
+|{{{atime}}}|{{{date}}}|the date/time the file was last accessed|
+|{{{mtime}}}|{{{date}}}|the date/time the file was last modified|
+!Return Value
+: SSH2Channel: the data channel to be used for receiving the file
+!Example:
+{{{
+my hash $info;
+# get a channel for receiving the file with a 15 second timeout
+my SSH2Channel $chan = $ssh2.scpGet(&quot;/path/somefile.txt&quot;, 15s, \$info);
+}}}
+!Exceptions
+:{{{SSH2CLIENT-NOT-CONNECTED}}}: client is not connected
+:{{{SSH2CLIENT-TIMEOUT}}}: timeout opening channel
+:{{{SSH2-ERROR}}}: error opening channel
 </pre>
 </div>
 <div title="SiteSubtitle" modifier="YourName" created="200808200718" changecount="25">

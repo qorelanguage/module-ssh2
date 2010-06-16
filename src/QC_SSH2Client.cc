@@ -25,29 +25,17 @@
 
 qore_classid_t CID_SSH2_CLIENT;
 
-// qore-constructor
-// SSH2Client(host, [port]);
+// SSH2Client::constructor(string $url)
+// SSH2Client::constructor(string $host, softint $port);
 static void SSH2C_constructor(QoreObject *self, const QoreListNode *params, ExceptionSink *xsink) {
    QORE_TRACE("SSH2C_constructor");
 
-   static char *ex_param=(char*)"use SSH2Client(URL/host (string), [port (int)]; note that providing a port number in the second argument will override any port number given in the URL";
-
-   const QoreStringNode *p0;
-
-   if(num_params(params) > 2 || num_params(params) < 1) {
-      xsink->raiseException("SSH2CLIENT-PARAMETER-ERROR", ex_param);
-      return;
-   }
-
-   if(!(p0 = test_string_param(params, 0))) {
-      xsink->raiseException("SSH2CLIENT-PARAMETER-ERROR", ex_param);
-      return;
-   }
+   const QoreStringNode *p0 = HARD_QORE_STRING(params, 0);
 
    QoreURL url(p0);
 
    if (!url.getHost()) {
-      xsink->raiseException("SSH2CLIENT-PARAMETER-ERROR", ex_param);
+      xsink->raiseException("SSH2CLIENT-PARAMETER-ERROR", "no hostname found in URL '%s'", p0->getBuffer());
       return;
    }
 
@@ -56,13 +44,8 @@ static void SSH2C_constructor(QoreObject *self, const QoreListNode *params, Exce
       return;
    }
 
-   // get optional port number
-   const AbstractQoreNode *p1 = get_param(params, 1);
-   int port = !is_nothing(p1) ? p1->getAsInt() : 0;
-
-   // create me
-   SSH2Client *mySSH2Client = new SSH2Client(url, port);
-
+   // create private data object
+   SSH2Client *mySSH2Client = new SSH2Client(url, get_int_param(params, 1));
    self->setPrivate(CID_SSH2_CLIENT, mySSH2Client);
 }
 
@@ -71,54 +54,48 @@ static void SSH2C_copy(QoreObject *self, QoreObject *old, SSH2Client *myself, Ex
    xsink->raiseException("SSH2CLIENT-COPY-ERROR", "copying ssh2 connection objects is not allowed");
 }
 
+// SSH2Client::info() returns hash
 static AbstractQoreNode *SSH2C_info(QoreObject *self, SSH2Client *myself, const QoreListNode *params, ExceptionSink *xsink) {
-   if(num_params(params)) {
-      xsink->raiseException("SSH2CLIENT-PARAMETER-ERROR", "getInfo() does not take any parameter");
-      return NULL;
-   }
-
    return myself->ssh_info(xsink);
 }
 
+// SSH2Client::openSessionChannel(softint $timeout_ms = -1) returns SSH2Channel
+// SSH2Client::openSessionChannel(date $timeout) returns SSH2Channel
 static AbstractQoreNode *SSH2C_openSessionChannel(QoreObject *self, SSH2Client *c, const QoreListNode *params, ExceptionSink *xsink) {
    return c->openSessionChannel(xsink, getMsMinusOneInt(get_param(params, 0)));
 }
 
+// SSH2Client::openDirectTcpipChannel(string $host, softint $port, string $source_host = "127.0.0.1", softint $source_port = 22, softint $timeout_ms = -1) returns SSH2Channel
+// SSH2Client::openDirectTcpipChannel(string $host, softint $port, string $source_host = "127.0.0.1", softint $source_port = 22, date $timeout) returns SSH2Channel
 static AbstractQoreNode *SSH2C_openDirectTcpipChannel(QoreObject *self, SSH2Client *c, const QoreListNode *params, ExceptionSink *xsink) {
    static const char *SSH2CLIENT_OPENDIRECTTCPIPCHANNEL_ERR = "SSH2CLIENT-OPENDIRECTTCPIPCHANNEL-ERROR";
    
-   const QoreStringNode *host = test_string_param(params, 0);
-   if (!host) {
-      xsink->raiseException(SSH2CLIENT_OPENDIRECTTCPIPCHANNEL_ERR, "missing host name for forwarded channel as first argument to SSH2Client::openDirectTcpipChannel()");
-      return 0;
-   }
+   const QoreStringNode *host = HARD_QORE_STRING(params, 0);
 
    int port = get_int_param(params, 1);
    if (!port) {
-      xsink->raiseException(SSH2CLIENT_OPENDIRECTTCPIPCHANNEL_ERR, "missing port number for forwarded channel as second argument to SSH2Client::openDirectTcpipChannel()");
+      xsink->raiseException(SSH2CLIENT_OPENDIRECTTCPIPCHANNEL_ERR, "port number for forwarded channel as second argument to SSH2Client::openDirectTcpipChannel() cannot be zero");
       return 0;
    }
 
-   const QoreStringNode *shost = test_string_param(params, 2);
+   const QoreStringNode *shost = HARD_QORE_STRING(params, 2);
    int sport = get_int_param(params, 3);
+   if (!sport) {
+      xsink->raiseException(SSH2CLIENT_OPENDIRECTTCPIPCHANNEL_ERR, "source port number as fourth argument to SSH2Client::openDirectTcpipChannel() cannot be zero");
+      return 0;
+   }
 
-   return c->openDirectTcpipChannel(xsink, host->getBuffer(), port, shost ? shost->getBuffer() : "127.0.0.1", sport ? sport : 22, getMsMinusOneInt(get_param(params, 0)));
+   return c->openDirectTcpipChannel(xsink, host->getBuffer(), port, shost ? shost->getBuffer() : "127.0.0.1", sport ? sport : 22, getMsMinusOneInt(get_param(params, 4)));
 }
 
+// SSH2Client::scpGet(string $path, softint $timeout_ms = -1) returns SSH2Channel
+// SSH2Client::scpGet(string $path, date $timeout) returns SSH2Channel
+// SSH2Client::scpGet(string $path, softint $timeout_ms = -1, reference $statinfo) returns SSH2Channel
+// SSH2Client::scpGet(string $path, date $timeout, reference $statinfo) returns SSH2Channel
 static AbstractQoreNode *SSH2C_scpGet(QoreObject *self, SSH2Client *c, const QoreListNode *params, ExceptionSink *xsink) {
-   static const char *SSH2CLIENT_SCPGET_ERR = "SSH2CLIENT-SCPGET-ERROR";
-   
-   const QoreStringNode *path = test_string_param(params, 0);
-   if (!path) {
-      xsink->raiseException(SSH2CLIENT_SCPGET_ERR, "missing remote file path as first argument to SSH2Client::scpGet()");
-      return 0;
-   }
+   const QoreStringNode *path = HARD_QORE_STRING(params, 0);
 
    const AbstractQoreNode *p = get_param(params, 2);
-   if (!is_nothing(p) && p->getType() != NT_REFERENCE) {
-      xsink->raiseException(SSH2CLIENT_SCPGET_ERR, "expecting either NOTHING (no argument) or an lvalue reference as the third argument to SSH2Client::scpGet() to return the remote file's status information, got instead type '%s'", p->getTypeName());
-      return 0;
-   }
    const ReferenceNode *ref = p ? reinterpret_cast<const ReferenceNode *>(p) : 0;   
 
    ReferenceHolder<QoreHashNode> statinfo(ref ? new QoreHashNode : 0, xsink);
@@ -133,29 +110,26 @@ static AbstractQoreNode *SSH2C_scpGet(QoreObject *self, SSH2Client *c, const Qor
    return o.release();
 }
 
+// SSH2Client::scpPut(string $remote_path, softint $size, softint $mode = 0644, date $mtime = date(), date $atime = date(), softint $timeout_ms = -1) returns SSH2Channel
+// SSH2Client::scpPut(string $remote_path, softint $size, softint $mode = 0644, date $mtime = date(), date $atime = date(), date $timeout) returns SSH2Channel
 static AbstractQoreNode *SSH2C_scpPut(QoreObject *self, SSH2Client *c, const QoreListNode *params, ExceptionSink *xsink) {
    static const char *SSH2CLIENT_SCPPUT_ERR = "SSH2CLIENT-SCPPUT-ERROR";
    
-   const QoreStringNode *path = test_string_param(params, 0);
-   if (!path) {
-      xsink->raiseException(SSH2CLIENT_SCPPUT_ERR, "missing remote file path as first argument to SSH2Client::scpPut()");
-      return 0;
-   }
+   const QoreStringNode *path = HARD_QORE_STRING(params, 0);
 
-   int64 size = get_bigint_param(params, 1);
+   int64 size = HARD_QORE_INT(params, 1);
    if (size <= 0) {
-      xsink->raiseException(SSH2CLIENT_SCPPUT_ERR, "missing file size as mandatory second argument to SSH2Client::scpPut() (got invalid size %lld)", size);
+      xsink->raiseException(SSH2CLIENT_SCPPUT_ERR, "invalid file size as second argument to SSH2Client::scpPut() (got invalid size %lld)", size);
       return 0;
    }
 
-   int mode = get_int_param(params, 2);
-   if (!mode)
-      mode = 0644;
+   int mode = HARD_QORE_INT(params, 2);
 
-   const DateTimeNode *d = test_date_param(params, 3);
-   long mtime = d ? d->getEpochSeconds() : 0;
-   d = test_date_param(params, 4);
-   long atime = d ? d->getEpochSeconds() : 0;
+   const DateTimeNode *d = HARD_QORE_DATE(params, 3);
+   long mtime = d->getEpochSeconds();
+
+   d = HARD_QORE_DATE(params, 4);
+   long atime = d->getEpochSeconds();
    //printd(5, "SSH2C_scpPut() mtime=%ld atime=%d\n", mtime, atime);
 
    return c->scpPut(xsink, path->getBuffer(), size, mode, mtime, atime, getMsMinusOneInt(get_param(params, 5)));
@@ -164,22 +138,48 @@ static AbstractQoreNode *SSH2C_scpPut(QoreObject *self, SSH2Client *c, const Qor
 /**
  * init
  */
-QoreClass *initSSH2ClientClass(QoreClass *ssh2base) {
+QoreClass *initSSH2ClientClass(QoreClass *ssh2base, const QoreClass *SSH2Channel) {
    QORE_TRACE("initSSH2Client()");
 
-   QoreClass *QC_SSH2_CLIENT=new QoreClass("SSH2Client", QDOM_NETWORK);
+   QoreClass *QC_SSH2_CLIENT = new QoreClass("SSH2Client", QDOM_NETWORK);
 
    QC_SSH2_CLIENT->addBuiltinVirtualBaseClass(ssh2base);
 
    CID_SSH2_CLIENT=QC_SSH2_CLIENT->getID();
-   QC_SSH2_CLIENT->setConstructor(SSH2C_constructor);
+
+   // SSH2Client::constructor(string $url)
+   // SSH2Client::constructor(string $host, softint $port);
+   QC_SSH2_CLIENT->setConstructorExtended(SSH2C_constructor, false, QC_NO_FLAGS, QDOM_DEFAULT, 1, stringTypeInfo, QORE_PARAM_NO_ARG);
+   QC_SSH2_CLIENT->setConstructorExtended(SSH2C_constructor, false, QC_NO_FLAGS, QDOM_DEFAULT, 2, stringTypeInfo, QORE_PARAM_NO_ARG, softBigIntTypeInfo, QORE_PARAM_NO_ARG);
+
    QC_SSH2_CLIENT->setCopy((q_copy_t)SSH2C_copy);
 
-   QC_SSH2_CLIENT->addMethod("info",                   (q_method_t)SSH2C_info);
-   QC_SSH2_CLIENT->addMethod("openSessionChannel",     (q_method_t)SSH2C_openSessionChannel);
-   QC_SSH2_CLIENT->addMethod("openDirectTcpipChannel", (q_method_t)SSH2C_openDirectTcpipChannel);
-   QC_SSH2_CLIENT->addMethod("scpGet",                 (q_method_t)SSH2C_scpGet);
-   QC_SSH2_CLIENT->addMethod("scpPut",                 (q_method_t)SSH2C_scpPut);
+   // SSH2Client::info() returns hash
+   QC_SSH2_CLIENT->addMethodExtended("info",                   (q_method_t)SSH2C_info, false, QC_RET_VALUE_ONLY, QDOM_DEFAULT, hashTypeInfo);
+
+   // SSH2Client::openSessionChannel(softint $timeout_ms = -1) returns SSH2Channel
+   QC_SSH2_CLIENT->addMethodExtended("openSessionChannel",     (q_method_t)SSH2C_openSessionChannel, false, QC_NO_FLAGS, QDOM_DEFAULT, SSH2Channel->getTypeInfo(), 1, softBigIntTypeInfo, new QoreBigIntNode(-1));
+   // SSH2Client::openSessionChannel(date $timeout) returns SSH2Channel
+   QC_SSH2_CLIENT->addMethodExtended("openSessionChannel",     (q_method_t)SSH2C_openSessionChannel, false, QC_NO_FLAGS, QDOM_DEFAULT, SSH2Channel->getTypeInfo(), 1, dateTypeInfo, QORE_PARAM_NO_ARG);
+
+   // SSH2Client::openDirectTcpipChannel(string $host, softint $port, string $source_host = "127.0.0.1", softint $source_port = 22, softint $timeout_ms = -1) returns SSH2Channel
+   QC_SSH2_CLIENT->addMethodExtended("openDirectTcpipChannel", (q_method_t)SSH2C_openDirectTcpipChannel, false, QC_NO_FLAGS, QDOM_DEFAULT, SSH2Channel->getTypeInfo(), 5, stringTypeInfo, QORE_PARAM_NO_ARG, softBigIntTypeInfo, QORE_PARAM_NO_ARG, stringTypeInfo, new QoreStringNode("127.0.0.1"), softBigIntTypeInfo, new QoreBigIntNode(22), softBigIntTypeInfo, new QoreBigIntNode(-1));
+   // SSH2Client::openDirectTcpipChannel(string $host, softint $port, string $source_host = "127.0.0.1", softint $source_port = 22, date $timeout) returns SSH2Channel
+   QC_SSH2_CLIENT->addMethodExtended("openDirectTcpipChannel", (q_method_t)SSH2C_openDirectTcpipChannel, false, QC_NO_FLAGS, QDOM_DEFAULT, SSH2Channel->getTypeInfo(), 5, stringTypeInfo, QORE_PARAM_NO_ARG, softBigIntTypeInfo, QORE_PARAM_NO_ARG, stringTypeInfo, new QoreStringNode("127.0.0.1"), softBigIntTypeInfo, new QoreBigIntNode(22), dateTypeInfo, QORE_PARAM_NO_ARG);
+
+   // SSH2Client::scpGet(string $path, softint $timeout_ms = -1) returns SSH2Channel
+   QC_SSH2_CLIENT->addMethodExtended("scpGet",                 (q_method_t)SSH2C_scpGet, false, QC_NO_FLAGS, QDOM_DEFAULT, SSH2Channel->getTypeInfo(), 2, stringTypeInfo, QORE_PARAM_NO_ARG, softBigIntTypeInfo, new QoreBigIntNode(-1));
+   // SSH2Client::scpGet(string $path, date $timeout) returns SSH2Channel
+   QC_SSH2_CLIENT->addMethodExtended("scpGet",                 (q_method_t)SSH2C_scpGet, false, QC_NO_FLAGS, QDOM_DEFAULT, SSH2Channel->getTypeInfo(), 2, stringTypeInfo, QORE_PARAM_NO_ARG, dateTypeInfo, QORE_PARAM_NO_ARG);
+   // SSH2Client::scpGet(string $path, softint $timeout_ms = -1, reference $statinfo) returns SSH2Channel
+   QC_SSH2_CLIENT->addMethodExtended("scpGet",                 (q_method_t)SSH2C_scpGet, false, QC_NO_FLAGS, QDOM_DEFAULT, SSH2Channel->getTypeInfo(), 3, stringTypeInfo, QORE_PARAM_NO_ARG, softBigIntTypeInfo, new QoreBigIntNode(-1), referenceTypeInfo, QORE_PARAM_NO_ARG);
+   // SSH2Client::scpGet(string $path, date $timeout, reference $statinfo) returns SSH2Channel
+   QC_SSH2_CLIENT->addMethodExtended("scpGet",                 (q_method_t)SSH2C_scpGet, false, QC_NO_FLAGS, QDOM_DEFAULT, SSH2Channel->getTypeInfo(), 3, stringTypeInfo, QORE_PARAM_NO_ARG, dateTypeInfo, QORE_PARAM_NO_ARG, referenceTypeInfo, QORE_PARAM_NO_ARG);
+
+   // SSH2Client::scpPut(string $remote_path, softint $size, softint $mode = 0644, date $mtime = date(), date $atime = date(), softint $timeout_ms = -1) returns SSH2Channel
+   QC_SSH2_CLIENT->addMethodExtended("scpPut",                 (q_method_t)SSH2C_scpPut, false, QC_NO_FLAGS, QDOM_DEFAULT, SSH2Channel->getTypeInfo(), 6, stringTypeInfo, QORE_PARAM_NO_ARG, softBigIntTypeInfo, QORE_PARAM_NO_ARG, softBigIntTypeInfo, new QoreBigIntNode(0644), dateTypeInfo, new DateTimeNode, dateTypeInfo, new DateTimeNode, softBigIntTypeInfo, new QoreBigIntNode(-1));
+   // SSH2Client::scpPut(string $remote_path, softint $size, softint $mode = 0644, date $mtime = date(), date $atime = date(), date $timeout) returns SSH2Channel
+   QC_SSH2_CLIENT->addMethodExtended("scpPut",                 (q_method_t)SSH2C_scpPut, false, QC_NO_FLAGS, QDOM_DEFAULT, SSH2Channel->getTypeInfo(), 6, stringTypeInfo, QORE_PARAM_NO_ARG, softBigIntTypeInfo, QORE_PARAM_NO_ARG, softBigIntTypeInfo, new QoreBigIntNode(0644), dateTypeInfo, new DateTimeNode, dateTypeInfo, new DateTimeNode, dateTypeInfo, QORE_PARAM_NO_ARG);
 
    return QC_SSH2_CLIENT;
 }
