@@ -141,9 +141,9 @@ QoreHashNode *SFTPClient::sftp_list(const char *path, ExceptionSink *xsink) {
   ON_BLOCK_EXIT(libssh2_sftp_close_handle, dh);
 
   // create objects after only possible error
-  QoreListNode *files=new QoreListNode();
+  ReferenceHolder<QoreListNode> files(new QoreListNode, xsink);
   ReferenceHolder<QoreListNode> dirs(new QoreListNode, xsink);
-  QoreListNode *links=new QoreListNode();
+  ReferenceHolder<QoreListNode> links(new QoreListNode, xsink);
 
   char buff[PATH_MAX];
   while(libssh2_sftp_readdir(dh, buff, sizeof(buff), &attrs) > 0) {
