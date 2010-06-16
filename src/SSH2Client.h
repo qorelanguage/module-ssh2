@@ -34,13 +34,20 @@
 #include <time.h>
 
 #include <set>
+#include <string>
 
 DLLLOCAL QoreClass *initSSH2ClientClass(QoreClass *parent, const QoreClass *SSH2Channel);
 DLLLOCAL extern qore_classid_t CID_SSH2_CLIENT;
 
+DLLLOCAL std::string mode2str(const int mode);
+DLLLOCAL void do_ssh2_err(const char *errstr, int err, ExceptionSink *xsink);
+DLLLOCAL void get_err_desc(int err, QoreString &desc);
+
 #define QAUTH_PASSWORD             (1 << 0)
 #define QAUTH_KEYBOARD_INTERACTIVE (1 << 1)
 #define QAUTH_PUBLICKEY            (1 << 2)
+
+DLLLOCAL extern const char *SSH2_ERROR;
 
 class SSH2Channel;
 class BlockingHelper;
@@ -105,7 +112,7 @@ protected:
       return msg;
    }
    DLLLOCAL void do_session_err_unlocked(ExceptionSink *xsink) {
-      xsink->raiseException("SSH2-ERROR", get_session_err_unlocked());
+      xsink->raiseException(SSH2_ERROR, "libssh2 returned error %d: %s", libssh2_session_last_errno(ssh_session), get_session_err_unlocked());
    }
    DLLLOCAL void set_blocking_unlocked(bool block) {
       assert(ssh_session);
@@ -199,55 +206,6 @@ public:
       client->set_blocking_unlocked(true);
    }
 };
-
-static inline std::string mode2str(const int mode) {
-   std::string ret=std::string("----------");
-   int tmode=mode;
-   for(int i=2; i>=0; i--) {
-      if(tmode & 001) {
-         ret[1+2+i*3]='x';
-      }
-      if(tmode & 002) {
-         ret[1+1+i*3]='w';
-      }
-      if(tmode & 004) {
-         ret[1+0+i*3]='r';
-      }
-      tmode>>=3;
-   }
-#ifdef S_ISDIR
-   if(S_ISDIR(mode)) {
-      ret[0]='d';
-   }
-#endif
-#ifdef S_ISBLK
-   if(S_ISBLK(mode)) {
-      ret[0]='b';
-   }
-#endif
-#ifdef S_ISCHR
-   if(S_ISCHR(mode)) {
-      ret[0]='c';
-   }
-#endif
-#ifdef S_ISFIFO
-   if(S_ISFIFO(mode)) {
-      ret[0]='p';
-   }
-#endif
-#ifdef S_ISLNK
-   if(S_ISLNK(mode)) {
-      ret[0]='l';
-   }
-#endif
-#ifdef S_ISSOCK
-   if(S_ISSOCK(mode)) {
-      ret[0]='s';
-   }
-#endif
-
-   return ret;
-}
 
 #endif // _QORE_SSH2CLIENT_H
 

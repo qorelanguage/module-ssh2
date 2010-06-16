@@ -39,6 +39,87 @@
 
 static const char *SSH2CLIENT_TIMEOUT = "SSH2CLIENT-TIMEOUT";
 static const char *SSH2CLIENT_NOT_CONNECTED = "SSH2CLIENT-NOT-CONNECTED";
+const char *SSH2_ERROR = "SSH2-ERROR";
+
+std::string mode2str(const int mode) {
+   std::string ret=std::string("----------");
+   int tmode=mode;
+   for(int i=2; i>=0; i--) {
+      if(tmode & 001) {
+         ret[1+2+i*3]='x';
+      }
+      if(tmode & 002) {
+         ret[1+1+i*3]='w';
+      }
+      if(tmode & 004) {
+         ret[1+0+i*3]='r';
+      }
+      tmode>>=3;
+   }
+#ifdef S_ISDIR
+   if(S_ISDIR(mode)) {
+      ret[0]='d';
+   }
+#endif
+#ifdef S_ISBLK
+   if(S_ISBLK(mode)) {
+      ret[0]='b';
+   }
+#endif
+#ifdef S_ISCHR
+   if(S_ISCHR(mode)) {
+      ret[0]='c';
+   }
+#endif
+#ifdef S_ISFIFO
+   if(S_ISFIFO(mode)) {
+      ret[0]='p';
+   }
+#endif
+#ifdef S_ISLNK
+   if(S_ISLNK(mode)) {
+      ret[0]='l';
+   }
+#endif
+#ifdef S_ISSOCK
+   if(S_ISSOCK(mode)) {
+      ret[0]='s';
+   }
+#endif
+
+   return ret;
+}
+
+void do_ssh2_err(const char *errstr, int err, ExceptionSink *xsink) {
+   QoreStringNode *desc = new QoreStringNode;
+   get_err_desc(err, *desc);
+   xsink->raiseException(errstr, desc);      
+}
+
+void get_err_desc(int err, QoreString &desc) {
+   desc.sprintf("libssh2 error %d: ", err);
+   switch (err) {
+      case LIBSSH2_ERROR_ALLOC:
+         desc.concat("an internal memory allocation call failed");
+         break;
+
+      case LIBSSH2_ERROR_SOCKET_SEND:
+         desc.concat("unable to send data on socket");
+         break;
+
+      case LIBSSH2_ERROR_SOCKET_TIMEOUT:
+         desc.concat("timeout on socket");
+         break;
+
+      case LIBSSH2_ERROR_SFTP_PROTOCOL:
+         desc.concat("an invalid SFTP protocol response was received on the socket, or an SFTP operation caused an errorcode to be returned by the server");
+         break;
+
+      default:
+         desc.concat("unknown error");
+         break;
+   }  
+}
 
 static void map_ssh2_sbuf_to_hash(QoreHashNode *h, struct stat *sbuf) {
    // note that dev_t on Linux is an unsigned 64-bit integer, so we could lose precision here
@@ -46,9 +127,8 @@ static void map_ssh2_sbuf_to_hash(QoreHashNode *h, struct stat *sbuf) {
    h->setKeyValue("permissions", new QoreStringNode(mode2str(sbuf->st_mode)), 0);
    h->setKeyValue("size",        new QoreBigIntNode(sbuf->st_size), 0);
    
-   struct tm tms;
-   h->setKeyValue("atime",       new DateTimeNode(q_localtime(&sbuf->st_atime, &tms)), 0);
-   h->setKeyValue("mtime",       new DateTimeNode(q_localtime(&sbuf->st_mtime, &tms)), 0);
+   h->setKeyValue("atime",       DateTimeNode::makeAbsolute(currentTZ(), (int64)sbuf->st_atime), 0);
+   h->setKeyValue("mtime",       DateTimeNode::makeAbsolute(currentTZ(), (int64)sbuf->st_mtime), 0);
 }
 
 /**
@@ -150,16 +230,16 @@ SSH2Client::~SSH2Client() {
  * sets errno
  */
 int SSH2Client::ssh_disconnect_unlocked(bool force, ExceptionSink *xsink) {
-   if(!ssh_session && !force) {
-      errno=ENOTCONN;
-      xsink && xsink->raiseException("SSH2CLIENT-DISCONNECT-ERROR", "disconnect(): %s", strerror(errno));
+   if (!ssh_session && !force) {
+      errno = ENOTCONN;
+      xsink && xsink->raiseException(SSH2CLIENT_NOT_CONNECTED, "disconnect(): %s", strerror(errno));
    }
 
    if (ssh_session) {
       // close ssh session if not null
       libssh2_session_disconnect(ssh_session, (char*)"qore program disconnect");
       libssh2_session_free(ssh_session);
-      ssh_session=NULL;
+      ssh_session = NULL;
    }
 
    socket.close();
@@ -330,13 +410,15 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
    // set to blocking
    // startup session with socket
 
+   static const char *SSH2CLIENT_CONNECT_ERROR = "SSH2CLIENT-CONNECT-ERROR";
+
    QORE_TRACE("SSH2Client::connect()");
 
    printd(1, "SSH2Client::connect(%s:%d, %dms)\n", sshhost, sshport, timeout_ms);
   
    // sanity check of data
    if (!sshuser) {
-      xsink && xsink->raiseException("SSH2CLIENT-CONNECT-ERROR", "ssh user must not be NOTHING");
+      xsink && xsink->raiseException(SSH2CLIENT_CONNECT_ERROR, "ssh user must not be NOTHING");
       return -1;
    }
 
@@ -357,7 +439,7 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
    ssh_session = libssh2_session_init();
    if(!ssh_session) {
       ssh_disconnect_unlocked(true); // clean up connection
-      xsink && xsink->raiseException("SSH2CLIENT-CONNECT-ERROR", "error in libssh2_session_init(): ", strerror(errno));
+      xsink && xsink->raiseException(SSH2_ERROR, "error in libssh2_session_init(): ", strerror(errno));
       return -1;
    }
 
@@ -369,7 +451,7 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
    rc = libssh2_session_startup(ssh_session, socket.getSocket());
    if(rc) {
       ssh_disconnect_unlocked(true); // clean up connection
-      xsink && xsink->raiseException("SSH2CLIENT-CONNECT-ERROR", "failure establishing SSH session: %d", rc);
+      xsink && xsink->raiseException(SSH2_ERROR, "failure establishing SSH session: %d", rc);
       return -1;
    }
   
@@ -451,7 +533,7 @@ int SSH2Client::ssh_connect(int timeout_ms, ExceptionSink *xsink = 0) {
 QoreHashNode *SSH2Client::ssh_info(ExceptionSink *xsink = 0) {
    AutoLocker al(m);
 
-   QoreHashNode *ret = new QoreHashNode();
+   QoreHashNode *ret = new QoreHashNode;
    ret->setKeyValue("ssh2host", new QoreStringNode(getHost()), xsink);
    ret->setKeyValue("ssh2port", new QoreBigIntNode(getPort()), xsink);
    ret->setKeyValue("ssh2user", new QoreStringNode(getUser()), xsink);

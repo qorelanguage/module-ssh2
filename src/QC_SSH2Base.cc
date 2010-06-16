@@ -28,6 +28,8 @@
 
 qore_classid_t CID_SSH2_BASE;
 
+static const char *SSH2_CONNECTED = "SSH2-CONNECTED";
+
 void SSH2BASE_constructor(QoreObject *self, const QoreListNode *params, ExceptionSink *xsink) {
    xsink->raiseException("SSH2BASE-CONSTRUCTOR-ERROR", "this class is an abstract class and cannot be instantiated directly");
 }
@@ -50,7 +52,7 @@ static AbstractQoreNode *SSH2BASE_setUser(QoreObject *self, SSH2Client *myself, 
    const QoreStringNode *p0 = HARD_QORE_STRING(params, 0);
 
    if (myself->setUser(p0->getBuffer()))
-      xsink->raiseException("SSH2BASE-STATUS-ERROR", "usage of setUser() is not allowed when connected");
+      xsink->raiseException(SSH2_CONNECTED, "usage of SSH2Base::setUser() is not allowed when connected");
 
    return 0;
 }
@@ -60,7 +62,7 @@ static AbstractQoreNode *SSH2BASE_setPassword(QoreObject *self, SSH2Client *myse
    const QoreStringNode *p0 = HARD_QORE_STRING(params, 0);
 
    if (myself->setPassword(p0->getBuffer()))
-      xsink->raiseException("SSH2BASE-STATUS-ERROR", "usage of setPassword() is not allowed when connected");
+      xsink->raiseException(SSH2_CONNECTED, "usage of SSH2Base::setPassword() is not allowed when connected");
 
    return 0;
 }
@@ -72,7 +74,7 @@ static AbstractQoreNode *SSH2BASE_setKeys(QoreObject *self, SSH2Client *myself, 
    const QoreStringNode *p1 = test_string_param(params, 1);
 
    if (myself->setKeys(p0->getBuffer(), p1 ? p1->getBuffer() : 0))
-      xsink->raiseException("SSH2BASE-STATUS-ERROR", "usage of setKeys() is not allowed when connected");
+      xsink->raiseException(SSH2_CONNECTED, "usage of SSH2Base::setKeys() is not allowed when connected");
 
    return 0;
 }

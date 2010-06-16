@@ -86,9 +86,9 @@ public:
    int sftp_unlink(const char *file, ExceptionSink *xsink);
    int sftp_chmod(const char *file, const int mode, ExceptionSink *xsink);
 
-   BinaryNode *sftp_getFile(const char *file, ExceptionSink *xsink = 0);
+   BinaryNode *sftp_getFile(const char *file, ExceptionSink *xsink);
    QoreStringNode *sftp_getTextFile(const char *file, ExceptionSink *xsink);
-   int sftp_putFile(const BinaryNode *data, const char *fname, int mode, class ExceptionSink *xsink);
+   qore_size_t sftp_putFile(const char *data, qore_size_t len, const char *fname, int mode, ExceptionSink *xsink);
 
    int sftp_getAttributes(const char *fname, LIBSSH2_SFTP_ATTRIBUTES *attrs, ExceptionSink *xsink);
 
@@ -97,9 +97,9 @@ public:
 };
 
 // maybe this should go to ssh2-module.h?
-extern class AbstractQoreNode *SSH2C_setUser(class QoreObject *, class SSH2Client *, const QoreListNode *, class ExceptionSink *);
-extern class AbstractQoreNode *SSH2C_setPassword(class QoreObject *, class SSH2Client *, const QoreListNode *, class ExceptionSink *);
-extern class AbstractQoreNode *SSH2C_setKeys(class QoreObject *, class SSH2Client *, const QoreListNode *, class ExceptionSink *);
+extern class AbstractQoreNode *SSH2C_setUser(class QoreObject *, class SSH2Client *, const QoreListNode *, ExceptionSink *);
+extern class AbstractQoreNode *SSH2C_setPassword(class QoreObject *, class SSH2Client *, const QoreListNode *, ExceptionSink *);
+extern class AbstractQoreNode *SSH2C_setKeys(class QoreObject *, class SSH2Client *, const QoreListNode *, ExceptionSink *);
 
 static inline std::string absolute_filename(const SFTPClient *me, const char *f) {
    if(!f) {
