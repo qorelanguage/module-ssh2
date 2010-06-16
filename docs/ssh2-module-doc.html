@@ -565,8 +565,8 @@ $chan.close();
 stdout.printf(&quot;exit status: %d\n&quot;, $chan.getExitStatus());
 }}}</pre>
 </div>
-<div title="Introduction" modifier="DavidNichols" created="200808200719" modified="201006161548" changecount="64">
-<pre>The sftp module provides Qore the possibility to connect to SFTP server and make there basic file and directory operations and upload and download files.
+<div title="Introduction" modifier="DavidNichols" created="200808200719" modified="201006161635" changecount="68">
+<pre>The ssh2 module provides Qore the possibility to communicate with sshd servers via the ssh2 protocol.
 
 This module is released under the [[LGPL 2.1|http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html]] and is tagged as such in the module's header (meaning it can be loaded unconditionally regardless of how the Qore library was initialized).
 
@@ -578,6 +578,8 @@ This module provides the following classes:
 |SSH2Client|allows Qore programs to establish an ssh2 connection to a remote server|
 |SFTPClient|allows Qore programs to use the sftp protocol|
 |SSH2Channel|allows Qore programs to send and receive data through an SSH2Channel|
+
+The SFTPClient class allows Qore program to make file and directory operations and upload and download files over the sftp service with the ssh2 protocol, and the SSH2Client class (along with the SSH2Channel class) allow for ssh sessions to be established and various port forwarding operations to be performed with remote sshd daemons.
 
 When starting the connection the module will try to:
 * connect to the server with the given port or with port 22 if no port is given
