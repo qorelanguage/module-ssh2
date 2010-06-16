@@ -565,7 +565,7 @@ $chan.close();
 stdout.printf(&quot;exit status: %d\n&quot;, $chan.getExitStatus());
 }}}</pre>
 </div>
-<div title="Introduction" modifier="DavidNichols" created="200808200719" modified="201006161037" changecount="62">
+<div title="Introduction" modifier="DavidNichols" created="200808200719" modified="201006161548" changecount="64">
 <pre>The sftp module provides Qore the possibility to connect to SFTP server and make there basic file and directory operations and upload and download files.
 
 This module is released under the [[LGPL 2.1|http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html]] and is tagged as such in the module's header (meaning it can be loaded unconditionally regardless of how the Qore library was initialized).
@@ -579,15 +579,12 @@ This module provides the following classes:
 |SFTPClient|allows Qore programs to use the sftp protocol|
 |SSH2Channel|allows Qore programs to send and receive data through an SSH2Channel|
 
-When starting the connection the module will try to
-* connect to the server with the given port
-* login as user (can be modified with setUser() command) using:
-** publickey authentification (keys can be modified with setKeys())
-** password authentification (password can be set with setPassword())
-
-See some examples here: [[Examples]]
-
-This module's documentation is still a work in progress; to be continued...</pre>
+When starting the connection the module will try to:
+* connect to the server with the given port or with port 22 if no port is given
+* login as the given user (user is set in the URL given to the SSH2Client or SFTPClient constructor or can be modified with [[SSH2Base::setUser()]]) using:
+** publickey authentification (public and private key files can be modified with [[SSH2Base::setKeys()]])
+** password authentification (password can be set in the URL given to the SSH2Client or SFTPClient constructor or can be set afterwards with [[SSH2Base::setPassword()]])
+See some examples here: [[Examples]]</pre>
 </div>
 <div title="MainMenu" modifier="DavidNichols" created="200808200730" modified="201006161037" changecount="35">
 <pre>[[Introduction]]
