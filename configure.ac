@@ -226,14 +226,11 @@ if test "$enable_static_ncurses" = "yes"; then
    ncurses_static=yes
 fi
 
-
-
 ################
 # module stuff #
 ################
 
-find_libssh2()
-{
+find_libssh2() {
     if test -f "$1/include/libssh2.h" -a -f "$1/include/libssh2_sftp.h" ; then
         LIBSSH2_CPPFLAGS="-I$1/include"
 	LIBSSH2_LDFLAGS="-L$1/lib -lssh2"
@@ -242,7 +239,6 @@ find_libssh2()
 	return
     fi
 }
-
 
 # see if we can figure out where the libssh2 library is
 AC_ARG_WITH([libssh2-dir],
@@ -266,11 +262,60 @@ else
     AC_SUBST(LIBSSH2_CPPFLAGS)
 fi
 
+####################
+# openssl includes #
+####################
+
+set_openssl_cppflags() {
+    openssl_found=yes
+    if test "$1" != "/usr/include"; then
+        OPENSSL_CPPFLAGS=-I$1
+    fi
+}
+
+find_openssl() {
+    dir="$1"
+    if test -z "$dir" -o "$dir" = "/"; then
+        dir="/"
+	lib=/lib
+	inc=/usr/include
+    else
+        lib="$dir/lib${LIBSUFFIX}"
+        inc="$dir/include"
+    fi
+
+    # try to find include files
+    if test -f "$inc/openssl/ssl.h"; then
+        AC_MSG_RESULT([found: $inc/openssl])
+        set_openssl_cppflags $inc
+    else
+	AC_MSG_ERROR([not found])
+    fi
+
+    QORE_LIB_CPPFLAGS="$QORE_LIB_CPPFLAGS $OPENSSL_CPPFLAGS"
+}
+
+# see if we can figure out where the openssl library is
+AC_ARG_WITH([openssl-dir],
+  [AS_HELP_STRING([--with-openssl-dir@<:@=DIR@:>@],
+                  [openssl directory])],
+  [if test ! -d "${with_openssl_dir}"; then AC_MSG_ERROR(bad value ${with_openssl_dir} for --with-openssl-dir); unset with_openssl_dir; fi], 
+  [with_openssl_dir="$OPENSSL_DIR"])
+
+AC_MSG_CHECKING([for openssl header files])
+for dir in "${with_openssl_dir}" "${find_prefix}" /usr / /usr/local /opt/gnu /opt/openssl /usr/local/openssl /opt/local /sw /usr/sfw /opt/sfw; do
+    find_openssl $dir
+    if test -n "$openssl_found"; then
+        break
+    fi
+done
+if test -z "$openssl_found"; then
+    AC_MSG_ERROR([no openssl headers found])
+fi
 
 #################
 # qore includes #
 #################
-
 
 set_qore_cppflags() {
     QORE_INC_DIR=$1

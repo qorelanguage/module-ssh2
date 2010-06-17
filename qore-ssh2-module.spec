@@ -70,10 +70,10 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: gcc-c++
 BuildRequires: qore-devel
 BuildRequires: qore
-BuildRequires: libssh2-devel
+BuildRequires: libssh2-devel >= 1.1
+BuildRequires: openssl-devel
 Requires: /usr/bin/env
 Requires: qore-module-api-%{module_api}
-Requires: libssh2
 
 %description
 SSH2 module for the Qore Programming Language.
