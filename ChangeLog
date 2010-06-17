@@ -1,3 +1,40 @@
+2010-06-16 18:47  david_nichols
+
+	* docs/ssh2-module-doc.html: fixed minor typos
+
+2010-06-16 18:40  david_nichols
+
+	* docs/ssh2-module-doc.html: fixed errors in constructor examples
+
+2010-06-16 16:35  david_nichols
+
+	* docs/ssh2-module-doc.html: doc updates
+
+2010-06-16 16:02  david_nichols
+
+	* docs/ssh2-module-doc.html: minor doc updates
+
+2010-06-16 15:47  david_nichols
+
+	* ChangeLog, docs/ssh2-module-doc.html, src/QC_SSH2Channel.cc,
+	  src/SSH2Channel.cc, src/SSH2Channel.h: updated all methods with
+	  type info; finished documenting all methods in docs
+
+2010-06-16 13:56  david_nichols
+
+	* docs/ssh2-module-doc.html, src/QC_SFTPClient.cc,
+	  src/QC_SSH2Base.cc, src/SFTPClient.cc, src/SFTPClient.h,
+	  src/SSH2Client.cc, src/SSH2Client.h: updated docs; applied hard
+	  typing to SFTPClient class
+
+2010-06-16 09:02  david_nichols
+
+	* configure.ac, docs/ssh2-module-doc.html, qore-ssh2-module.spec,
+	  src/QC_SSH2Base.cc, src/QC_SSH2Client.cc, src/SFTPClient.h,
+	  src/SSH2Client.cc, src/SSH2Client.h, src/ssh2-module.cc: tagged
+	  release as 0.9.5; requires qore 0.8.0, uses hard typing; updating
+	  docs
+
 2010-06-15 18:48  david_nichols
 
 	* docs/ssh2-module-doc.html: added remaining methods to class
