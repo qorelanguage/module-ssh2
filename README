@@ -11,8 +11,7 @@ method parameters and return types.
 
 BUILDING
 --------
-Requires qore 0.8.0+ and libssh2 1.0.1+ to build and run (may work with earlier
-versions of libssh2 as well)
+Requires qore 0.8.0+ and libssh2 1.1+ to build and run
 
 to configure the build, execute
         configure --disable-debug
