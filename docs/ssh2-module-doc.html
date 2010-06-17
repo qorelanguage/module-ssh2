@@ -596,7 +596,7 @@ See some examples here: [[Examples]]</pre>
 [[SSH2Channel Class|SSH2Channel]]
 [[Examples]]</pre>
 </div>
-<div title="SFTPClient" modifier="DavidNichols" created="201006151227" modified="201006161845" changecount="34">
+<div title="SFTPClient" modifier="DavidNichols" created="201006151227" modified="201006171057" changecount="36">
 <pre>The ~SFTPClient class provides access to the sftp protocol; this class inherits the SSH2Base class.
 Most methods require a connection to be already established; connections are established explicitly by calling [[SSH2Base::connect()]].
 
@@ -815,9 +815,10 @@ $sftpclient.removeFile(&quot;file&quot;);
 :{{{SSH2-ERROR}}}: socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
 </pre>
 </div>
-<div title="SFTPClient::rename()" creator="DavidNichols" modifier="DavidNichols" created="201006161201" modified="201006161328" changecount="5">
+<div title="SFTPClient::rename()" creator="DavidNichols" modifier="DavidNichols" created="201006161201" modified="201006171057" changecount="9">
 <pre>!Synopsis
-:Renames or moves a remote file
+:Renames or moves a remote file.
+:Note that this command is executed with the {{{LIBSSH2_SFTP_RENAME_OVERWRITE}}} option set to True, but that this option is commonly ignored by sshd servers, in which case i the target file already exists, an {{{SSH2-ERROR}}} exception will be raised
 !Prototype
 :{{{SFTPClient::rename(string $old, string $new) returns nothing}}}
 !Arguments
@@ -848,7 +849,7 @@ $sftpclient.rmdir(&quot;/var/tmp/newdir&quot;);
 :{{{SFTPCLIENT-NOT-CONNECTED}}}: no connection has been established
 :{{{SSH2-ERROR}}}: socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message</pre>
 </div>
-<div title="SFTPClient::stat()" creator="DavidNichols" modifier="DavidNichols" created="201006151353" modified="201006161147" changecount="6">
+<div title="SFTPClient::stat()" creator="DavidNichols" modifier="DavidNichols" created="201006151353" modified="201006171004" changecount="7">
 <pre>!Synopsis
 :Returns a hash of information about a file or {{{NOTHING}}} if the file cannot be found
 !Prototype
@@ -869,6 +870,7 @@ printf(&quot;info: %n\n&quot;, $hash);
 |{{{mtime}}}|{{{date}}}|the date/time the file was last modified|
 |{{{uid}}}|{{{int}}}|the userid of the file's owner|
 |{{{gid}}}|{{{int}}}|the groupid of the file|
+|{{{mode}}}|{{{int}}}|the mode of the file as an integer|
 |{{{permissions}}}|{{{string}}}|a string giving the symbolic mode of the file|
 !Exceptions
 :{{{SFTPCLIENT-NOT-CONNECTED}}}: no connection has been established
@@ -1547,9 +1549,10 @@ my SSH2Channel $chan = $ssh2.openSessionChannel(15s);
 :{{{SSH2-ERROR}}}: error opening channel
 </pre>
 </div>
-<div title="SSH2Client::scpGet()" creator="DavidNichols" modifier="DavidNichols" created="201006160851" modified="201006161000" changecount="4">
+<div title="SSH2Client::scpGet()" creator="DavidNichols" modifier="DavidNichols" created="201006160851" modified="201006171334" changecount="5">
 <pre>!Synopsis
-:opens a channel for retrieving a remote file with an optional timeout value and an optional reference for returning file status information; an SSH2Channel object is returned to use to retrieve the file's data
+:opens a channel for retrieving a remote file with an optional timeout value and an optional reference for returning file status information; an SSH2Channel object is returned to use to retrieve the file's data.
+:Note that [[SSH2Channel::readBlock()]] or [[SSH2Channel::readBinaryBlock()]] should be used with the file's size as a parameter, as [[SSH2Channel::read()]] and [[SSH2Channel::readBinary()]] can return an extra null byte at the end of the stream in some cases. 
 !Prototype
 : {{{SSH2Client::scpGet(string $remote_path, softint $timeout_ms = -1) returns SSH2Channel}}}
 : {{{SSH2Client::scpGet(string $remote_path, date $timeout) returns SSH2Channel|}}}

@@ -111,7 +111,7 @@ sub ssh_test($url) {
     stdout.printf("=======================================\n");
 
     readUntilPrompt($chan);
-    $chan.write(sprintf("rm %s\n", $fn));
+    $chan.write(sprintf("/bin/rm %s\n", $fn));
     readUntilPrompt($chan);
     $chan.write("ls -l | head -5\n");
     readUntilPrompt($chan);
