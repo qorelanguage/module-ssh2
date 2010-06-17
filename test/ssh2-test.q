@@ -50,7 +50,7 @@ sub readUntilPrompt(SSH2Channel $chan) {
     } while ($str !~ /[\#\$\>] *$/);
 }
 
-sub ssh_test($url) {
+sub ssh_test(string $url) {
     my string $file = get_random_filename();
     my string $fn = "/tmp/" + $file;
 
@@ -70,7 +70,6 @@ sub ssh_test($url) {
     # test readBlock() from SSH2Client::scpGet()
     $chan = $sc.scpGet($fn, -1, \$info);
     test_value($info.size, FileLen, "SSH2Client::scpGet()");
-    #stdout.printf("file info: %N\n", $info);
     my string $str = $chan.readBlock($info.size);
     test_value($str, FileContents, "SSH2Channel::readBlock()");
 
@@ -82,27 +81,16 @@ sub ssh_test($url) {
     $chan = $sc.openSessionChannel();
     test_value($chan instanceof SSH2Channel, True, "SSH2Client::openSessionChannel()");
 
-    #try {
-    #    $chan.requestX11Forwarding();
-    #    stdout.printf("X11 forwarding request succeeded\n");
-    #}
-    #catch ($ex) {
-    #    stdout.printf("X11 forwarding request failed\n");
-    #}
-
     $chan.exec("ls -l | head 5");
     $str = $chan.read();
     test_value(type($str), Type::String, "SSH2Channel::exec()");
-    #stdout.printf("%s", $chan.read());
 
     $chan.sendEof();
     $chan.close();
     my int $rc = $chan.getExitStatus();
     test_value(type($rc), Type::Int, "SSH2Channel::getExitStatus()");
-    #stdout.printf("exit status: %d\n", $rc);
 
     $chan = $sc.openSessionChannel();
-    #$chan.setenv("TEST", "123");
     $chan.requestPty("vt100");
     $chan.shell();
 
@@ -116,10 +104,6 @@ sub ssh_test($url) {
     $chan.write("ls -l | head -5\n");
     readUntilPrompt($chan);
     
-    #$chan.extendedDataNormal();
-    #$chan.extendedDataMerge();
-    #$chan.extendedDataIgnore();
-
     $chan.sendEof();
     $chan.close();
     stdout.printf("exit\n");
@@ -129,7 +113,7 @@ sub ssh_test($url) {
     stdout.printf("exit status: %d\n", $chan.getExitStatus());
 }
 
-sub sftp_test($url) {
+sub sftp_test(string $url) {
     my string $file = get_random_filename();
     my string $fn = "/tmp/" + $file;
 
@@ -149,7 +133,6 @@ sub sftp_test($url) {
 
     $sc.chmod($fn, FileMode);
     $info = $sc.stat($fn);
-    #printf("info=%n\n", $info);
     test_value($info.size, strlen(FileContents), "SFTPClient::stat() size");
     test_value($info.mode & 0777, FileMode, "SFTPClient::stat() mode");
     test_value($info.permissions, "-rwxr-xr-x", "SFTPClient::stat() permissions");
@@ -177,7 +160,6 @@ sub sftp_test($url) {
 
     $sc.mkdir($fn);
     $info = $sc.stat($fn);
-    #printf("info=%n\n", $info);
 
     # move (rename) directory
     $sc.rename($fn, $nfn);
