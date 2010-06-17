@@ -90,37 +90,6 @@ std::string mode2str(const int mode) {
    return ret;
 }
 
-void do_ssh2_err(const char *errstr, int err, ExceptionSink *xsink) {
-   QoreStringNode *desc = new QoreStringNode;
-   get_err_desc(err, *desc);
-   xsink->raiseException(errstr, desc);      
-}
-
-void get_err_desc(int err, QoreString &desc) {
-   desc.sprintf("libssh2 error %d: ", err);
-   switch (err) {
-      case LIBSSH2_ERROR_ALLOC:
-         desc.concat("an internal memory allocation call failed");
-         break;
-
-      case LIBSSH2_ERROR_SOCKET_SEND:
-         desc.concat("unable to send data on socket");
-         break;
-
-      case LIBSSH2_ERROR_SOCKET_TIMEOUT:
-         desc.concat("timeout on socket");
-         break;
-
-      case LIBSSH2_ERROR_SFTP_PROTOCOL:
-         desc.concat("an invalid SFTP protocol response was received on the socket, or an SFTP operation caused an errorcode to be returned by the server");
-         break;
-
-      default:
-         desc.concat("unknown error");
-         break;
-   }  
-}
-
 static void map_ssh2_sbuf_to_hash(QoreHashNode *h, struct stat *sbuf) {
    // note that dev_t on Linux is an unsigned 64-bit integer, so we could lose precision here
    h->setKeyValue("mode",        new QoreBigIntNode(sbuf->st_mode), 0);

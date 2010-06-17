@@ -50,8 +50,10 @@ protected:
 
    DLLLOCAL int sftp_connected_unlocked();
    DLLLOCAL QoreStringNode *sftp_path_unlocked();
-   int sftp_connect_unlocked(int timeout_ms, ExceptionSink *xsink);
-   int sftp_disconnect_unlocked(bool force, ExceptionSink *xsink = 0);
+   DLLLOCAL int sftp_connect_unlocked(int timeout_ms, ExceptionSink *xsink);
+   DLLLOCAL int sftp_disconnect_unlocked(bool force, ExceptionSink *xsink = 0);
+
+   DLLLOCAL void do_session_err_unlocked(ExceptionSink *xsink, const char *fmt, ...);
 
 public:
    // session props

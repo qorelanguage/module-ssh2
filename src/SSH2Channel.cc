@@ -226,10 +226,11 @@ QoreStringNode *SSH2Channel::read(ExceptionSink *xsink, int stream_id, int timeo
      loop0:
       char buffer[QSSH2_BUFSIZE];
       rc = libssh2_channel_read_ex(channel, stream_id, buffer, QSSH2_BUFSIZE);
+      //printd(0, "SSH2Channel::read() rc=%ld (EAGAIN=%d)\n", rc, LIBSSH2_ERROR_EAGAIN);
 
-      //printd(5, "SSH2Channel::read() rc=%lld (EAGAIN=%d)\n", rc, LIBSSH2_ERROR_EAGAIN);
-      if (rc > 0)
+      if (rc > 0) {
 	 str->concat(buffer, rc);
+      }
       else if (rc == LIBSSH2_ERROR_EAGAIN && !str->strlen() && first) {
 	 first = false;
 	 if ((rc = parent->check_timeout(timeout_ms, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-READ-ERROR", xsink)))
@@ -265,8 +266,8 @@ QoreStringNode *SSH2Channel::read(qore_size_t size, int stream_id, int timeout_m
       char buffer[QSSH2_BUFSIZE];
       qore_size_t to_read = QSSH2_BUFSIZE < b_remaining ? QSSH2_BUFSIZE : b_remaining;
       rc = libssh2_channel_read_ex(channel, stream_id, buffer, to_read);
+      //printd(5, "SSH2Channel::read() rc=%ld (EAGAIN=%d) b_read=%lu b_remaining=%lu to_read=%lu, size=%lu\n", rc, LIBSSH2_ERROR_EAGAIN, b_read, b_remaining, to_read, size);
 
-      //printd(5, "SSH2Channel::read() rc=%lld (EAGAIN=%d) b_read=%lld b_remaining=%lld to_read=%lld, size=%lld\n", rc, LIBSSH2_ERROR_EAGAIN, b_read, b_remaining, to_read, size);
       if (rc > 0) {
 	 str->concat(buffer, rc);
 	 b_read += rc;
@@ -279,7 +280,7 @@ QoreStringNode *SSH2Channel::read(qore_size_t size, int stream_id, int timeout_m
       if (!rc || rc == LIBSSH2_ERROR_EAGAIN) {
 	 rc = parent->waitsocket_unlocked(timeout_ms);
 	 if (!rc) {
-	    xsink->raiseException(SSH2CHANNEL_TIMEOUT, "read timeout after %dms reading %lld byte%s of %lld requested", timeout_ms, b_read, b_read == 1 ? "" : "s", size);
+	    xsink->raiseException(SSH2CHANNEL_TIMEOUT, "read timeout after %dms, read %lu byte%s of %lu requested", timeout_ms, b_read, b_read == 1 ? "" : "s", size);
 	    return 0;
 	 }
 	 if (rc < 0) {
@@ -312,10 +313,11 @@ BinaryNode *SSH2Channel::readBinary(ExceptionSink *xsink, int stream_id, int tim
      loop0:
       char buffer[QSSH2_BUFSIZE];
       rc = libssh2_channel_read_ex(channel, stream_id, buffer, QSSH2_BUFSIZE);
+      //printd(5, "SSH2Channel::readBinary() rc=%ld (EAGAIN=%d)\n", rc, LIBSSH2_ERROR_EAGAIN);
 
-      //printd(5, "SSH2Channel::read() rc=%lld (EAGAIN=%d)\n", rc, LIBSSH2_ERROR_EAGAIN);
-      if (rc > 0)
+      if (rc > 0) {
 	 bin->append(buffer, rc);
+      }
       else if (rc == LIBSSH2_ERROR_EAGAIN && !bin->size() && first) {
 	 first = false;
 	 if ((rc = parent->check_timeout(timeout_ms, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-READBINARY-ERROR", xsink)))
@@ -383,7 +385,7 @@ BinaryNode *SSH2Channel::readBinary(qore_size_t size, int stream_id, int timeout
    return bin.release();
 }
 
-int SSH2Channel::write(ExceptionSink *xsink, const void *buf, qore_size_t buflen, int stream_id, int timeout_ms) {
+qore_size_t SSH2Channel::write(ExceptionSink *xsink, const void *buf, qore_size_t buflen, int stream_id, int timeout_ms) {
    assert(buflen);
 
    AutoLocker al(parent->m);
@@ -397,14 +399,14 @@ int SSH2Channel::write(ExceptionSink *xsink, const void *buf, qore_size_t buflen
       qore_offset_t rc;
       while (true) {
 	 rc = libssh2_channel_write_ex(channel, stream_id, (char *)buf + b_sent, buflen - b_sent);
-	 //printd(0, "SSH2Channel::write() buf=%p buflen=%lld stream_id=%d timeout_ms=%d rc=%lld b_sent=%lld\n", buf, buflen, stream_id, timeout_ms, rc, b_sent);
+	 //printd(5, "SSH2Channel::write(len=%lu) buf=%p buflen=%lu stream_id=%d timeout_ms=%d rc=%ld b_sent=%lu\n", buflen - b_sent, buf, buflen, stream_id, timeout_ms, rc, b_sent);
 
 	 if (rc && rc != LIBSSH2_ERROR_EAGAIN)
 	    break;
 
 	 rc = parent->waitsocket_unlocked(timeout_ms);
 	 if (!rc) {
-	    xsink->raiseException(SSH2CHANNEL_TIMEOUT, "write timeout after %dms writing %lld byte%s of %lld", timeout_ms, b_sent, b_sent == 1 ? "" : "s", buflen);
+	    xsink->raiseException(SSH2CHANNEL_TIMEOUT, "write timeout after %dms writing %lu byte%s of %lu", timeout_ms, b_sent, b_sent == 1 ? "" : "s", buflen);
 	    return -1;
 	 }
 	 if (rc < 0) {

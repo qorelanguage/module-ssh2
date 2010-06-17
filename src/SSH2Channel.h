@@ -89,7 +89,7 @@ public:
    DLLLOCAL BinaryNode *readBinary(ExceptionSink *xsink, int stream_id, int timeout_ms = DEFAULT_TIMEOUT_MS);
    // read a block of a particular size, timeout_ms mandatory
    DLLLOCAL BinaryNode *readBinary(qore_size_t size, int stream_id, int timeout_ms, ExceptionSink *xsink);
-   DLLLOCAL int write(ExceptionSink *xsink, const void *buf, qore_size_t buflen, int stream_id = 0, int timeout_ms = -1);
+   DLLLOCAL qore_size_t write(ExceptionSink *xsink, const void *buf, qore_size_t buflen, int stream_id = 0, int timeout_ms = -1);
    DLLLOCAL int close(ExceptionSink *xsink, int timeout_ms = -1);
    DLLLOCAL int waitClosed(ExceptionSink *xsink, int timeout_ms = -1);
    DLLLOCAL int getExitStatus(ExceptionSink *xsink);

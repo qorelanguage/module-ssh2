@@ -32,6 +32,7 @@
 #include <qore/QoreSocket.h>
 
 #include <time.h>
+#include <stdarg.h>
 
 #include <set>
 #include <string>
@@ -40,8 +41,6 @@ DLLLOCAL QoreClass *initSSH2ClientClass(QoreClass *parent, const QoreClass *SSH2
 DLLLOCAL extern qore_classid_t CID_SSH2_CLIENT;
 
 DLLLOCAL std::string mode2str(const int mode);
-DLLLOCAL void do_ssh2_err(const char *errstr, int err, ExceptionSink *xsink);
-DLLLOCAL void get_err_desc(int err, QoreString &desc);
 
 #define QAUTH_PASSWORD             (1 << 0)
 #define QAUTH_KEYBOARD_INTERACTIVE (1 << 1)
@@ -113,6 +112,22 @@ protected:
    }
    DLLLOCAL void do_session_err_unlocked(ExceptionSink *xsink) {
       xsink->raiseException(SSH2_ERROR, "libssh2 returned error %d: %s", libssh2_session_last_errno(ssh_session), get_session_err_unlocked());
+   }
+   DLLLOCAL void do_session_err_unlocked(ExceptionSink *xsink, const char *fmt, ...) {
+      va_list args;
+      QoreStringNode *desc = new QoreStringNode;
+
+      while (true) {
+         va_start(args, fmt);
+         int rc = desc->vsprintf(fmt, args);
+         va_end(args);
+         if (!rc)
+            break;
+      }
+
+      desc->sprintf(": libssh2 returned error %d: %s", libssh2_session_last_errno(ssh_session), get_session_err_unlocked());
+
+      xsink->raiseException(SSH2_ERROR, desc);
    }
    DLLLOCAL void set_blocking_unlocked(bool block) {
       assert(ssh_session);

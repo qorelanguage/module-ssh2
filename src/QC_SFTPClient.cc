@@ -91,8 +91,10 @@ static QoreHashNode *attr2hash(const LIBSSH2_SFTP_ATTRIBUTES &attr) {
       ret->setKeyValue("uid", new QoreBigIntNode(attr.uid), 0);
       ret->setKeyValue("gid", new QoreBigIntNode(attr.gid), 0);
    }
-   if (attr.flags & LIBSSH2_SFTP_ATTR_PERMISSIONS)
+   if (attr.flags & LIBSSH2_SFTP_ATTR_PERMISSIONS) {
+      ret->setKeyValue("mode", new QoreBigIntNode(attr.permissions), 0);
       ret->setKeyValue("permissions", new QoreStringNode(mode2str(attr.permissions)), 0);
+   }
   
    return ret;
 }

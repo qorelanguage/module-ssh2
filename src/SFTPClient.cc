@@ -35,7 +35,6 @@
 
 static const char *SFTPCLIENT_CONNECT_ERROR  = "SFTPCLIENT-CONNECT-ERROR";
 static const char *SFTPCLIENT_NOT_CONNECTED  = "SFTPCLIENT-NOT-CONNECTED";
-static const char *SFTPCLIENT_TRANSFER_ERROR = "SFTPCLIENT-TRANSFER-ERROR";
 
 /**
  * SFTPClient constructor
@@ -199,7 +198,7 @@ int SFTPClient::sftp_chmod(const char *file, const int mode, ExceptionSink *xsin
    LIBSSH2_SFTP_ATTRIBUTES attrs;
    int rc = libssh2_sftp_stat(sftp_session, pstr.c_str(), &attrs);
    if (rc < 0) {
-      do_session_err_unlocked(xsink);
+      do_session_err_unlocked(xsink, "SFTPClient::chmod() raised an error in libssh2_sftp_stat(%s)", pstr.c_str());
       return rc;
    }
 
@@ -223,7 +222,7 @@ int SFTPClient::sftp_chmod(const char *file, const int mode, ExceptionSink *xsin
          return 0;
 
       // ok, there was a error
-      do_session_err_unlocked(xsink);
+      do_session_err_unlocked(xsink, "SFTPClient::chmod() raised an error in libssh2_sftp_setstat(%s)", pstr.c_str());
    }
 
    return rc;
@@ -255,7 +254,7 @@ int SFTPClient::sftp_mkdir(const char *dir, const int mode, ExceptionSink *xsink
    // TODO: use proper modes for created dir
    int rc = libssh2_sftp_mkdir(sftp_session, pstr.c_str(), mode);
    if (rc < 0)
-      do_session_err_unlocked(xsink);
+      do_session_err_unlocked(xsink, "SFTPClient::mkdir() raised an error in libssh2_sftp_mkdir(%s)", pstr.c_str());
 
    return rc;
 }
@@ -284,7 +283,7 @@ int SFTPClient::sftp_rmdir(const char *dir, ExceptionSink *xsink) {
 
    int rc = libssh2_sftp_rmdir(sftp_session, pstr.c_str());
    if (rc < 0)
-      do_session_err_unlocked(xsink);
+      do_session_err_unlocked(xsink, "SFTPClient::rmdir() raised an error in libssh2_sftp_rmdir(%s)", pstr.c_str());
 
    return rc;
 }
@@ -306,7 +305,7 @@ int SFTPClient::sftp_rename(const char *from, const char *to, ExceptionSink *xsi
 
    int rc = libssh2_sftp_rename(sftp_session, fstr.c_str(), tstr.c_str());
    if (rc < 0)
-      do_session_err_unlocked(xsink);
+      do_session_err_unlocked(xsink, "SFTPClient::rename() raised an error in libssh2_sftp_rename(%s, %s)", fstr.c_str(), tstr.c_str());
 
    return rc;
 }
@@ -330,7 +329,7 @@ int SFTPClient::sftp_unlink(const char *file, ExceptionSink *xsink) {
 
    int rc = libssh2_sftp_unlink(sftp_session, fstr.c_str());
    if (rc < 0)
-      do_session_err_unlocked(xsink);
+      do_session_err_unlocked(xsink, "SFTPClient::removeFile() raised an error in libssh2_sftp_unlink(%s)", fstr.c_str());
 
    return rc;
 }
@@ -359,7 +358,7 @@ QoreStringNode *SFTPClient::sftp_chdir(const char *nwd, ExceptionSink *xsink) {
    // returns the amount of chars
    int rc = libssh2_sftp_realpath(sftp_session, npath.c_str(), buff, sizeof(buff)-1);
    if (rc < 0) {
-      xsink->raiseException("SFTPCLIENT-CHDIR-ERROR", "error in calculating path for '%s'", npath.c_str());
+      xsink->raiseException("SFTPCLIENT-CHDIR-ERROR", "SFTPClient::chdir() raised an error in calculating path for '%s'", npath.c_str());
       return NULL;
    }
 
@@ -386,7 +385,7 @@ QoreStringNode *SFTPClient::sftp_path_unlocked() {
 
 QoreStringNode *SFTPClient::sftp_path() {
    AutoLocker al(m);
-   return sftp_path();
+   return sftp_path_unlocked();
 }
 
 /**
@@ -428,8 +427,9 @@ int SFTPClient::sftp_connect_unlocked(int timeout_ms, ExceptionSink *xsink) {
    char buff[PATH_MAX];
    // returns the amount of chars
    if(!(rc = libssh2_sftp_realpath(sftp_session, ".", buff, sizeof(buff)-1))) {
+      if (xsink)
+         do_session_err_unlocked(xsink, "SFTPClient::connect() raised an error in libssh2_sftp_realpath()");
       sftp_disconnect_unlocked(true); // force shutdown
-      xsink && xsink->raiseException(SFTPCLIENT_CONNECT_ERROR, "error in getting actual path: %s", strerror(errno));
       return -1;
    }
    // for safety: do end string
@@ -459,7 +459,7 @@ BinaryNode *SFTPClient::sftp_getFile(const char *file, ExceptionSink *xsink) {
    LIBSSH2_SFTP_ATTRIBUTES attrs;
    int rc = libssh2_sftp_stat(sftp_session, fname.c_str(), &attrs);
    if (rc < 0) {
-      do_session_err_unlocked(xsink);
+      do_session_err_unlocked(xsink, "SFTPClient::getFile() raised an error in libssh2_sftp_stat(%s)", fname.c_str());
       return NULL;
    }
    size_t fsize = attrs.filesize;
@@ -467,7 +467,7 @@ BinaryNode *SFTPClient::sftp_getFile(const char *file, ExceptionSink *xsink) {
    // open handle
    LIBSSH2_SFTP_HANDLE *sftp_handle = libssh2_sftp_open(sftp_session, fname.c_str(), LIBSSH2_FXF_READ, 0);
    if (!sftp_handle) {
-      do_session_err_unlocked(xsink);
+      do_session_err_unlocked(xsink, "SFTPClient::getFile() raised an error in libssh2_sftp_open(%s)", fname.c_str());
       return NULL;
    }
 
@@ -481,9 +481,9 @@ BinaryNode *SFTPClient::sftp_getFile(const char *file, ExceptionSink *xsink) {
 
    size_t tot = 0;
    while (true) {
-      rc = libssh2_sftp_read(sftp_handle, (char*)bn->getPtr() + tot, fsize - (size_t)tot);
+      rc = libssh2_sftp_read(sftp_handle, (char*)bn->getPtr() + tot, fsize - tot);
       if (rc < 0) {
-         do_session_err_unlocked(xsink);
+         do_session_err_unlocked(xsink, "SFTPClient::getFile() raised an error in libssh2_sftp_read(%ld) total read: %ld while reading '%s' size %ld", fsize - tot, tot, fname.c_str(), fsize);
          return NULL;
       }
       if (rc)
@@ -509,7 +509,7 @@ QoreStringNode *SFTPClient::sftp_getTextFile(const char *file, ExceptionSink *xs
    LIBSSH2_SFTP_ATTRIBUTES attrs;
    int rc = libssh2_sftp_stat(sftp_session, fname.c_str(), &attrs);
    if (rc < 0) {
-      do_session_err_unlocked(xsink);
+      do_session_err_unlocked(xsink, "SFTPClient::getTextFile() raised an error in libssh2_sftp_stat(%s)", fname.c_str());
       return NULL;
    }
    size_t fsize = attrs.filesize;
@@ -517,7 +517,7 @@ QoreStringNode *SFTPClient::sftp_getTextFile(const char *file, ExceptionSink *xs
    // open handle
    LIBSSH2_SFTP_HANDLE *sftp_handle = libssh2_sftp_open(sftp_session, fname.c_str(), LIBSSH2_FXF_READ, 0);
    if (!sftp_handle) {
-      do_session_err_unlocked(xsink);
+      do_session_err_unlocked(xsink, "SFTPClient::getTextFile() raised an error in libssh2_sftp_open(%s)", fname.c_str());
       return NULL;
    }
 
@@ -533,7 +533,7 @@ QoreStringNode *SFTPClient::sftp_getTextFile(const char *file, ExceptionSink *xs
    while (true) {
       rc = libssh2_sftp_read(sftp_handle, (char *)str->getBuffer() + tot, fsize - (size_t)tot);
       if (rc < 0) {
-         do_session_err_unlocked(xsink);
+         do_session_err_unlocked(xsink, "SFTPClient::getTextFile() raised an error in libssh2_sftp_read(%ld) total read: %ld while reading '%s' size %ld", fsize - tot, tot, fname.c_str(), fsize);
          return NULL;
       }
       if (rc)
@@ -547,7 +547,7 @@ QoreStringNode *SFTPClient::sftp_getTextFile(const char *file, ExceptionSink *xs
 }
 
 // putFile(binary to put, filename on server, mode of the created file)
-qore_size_t SFTPClient::sftp_putFile(const char *outb, qore_size_t towrite, const char *fname, int mode, class ExceptionSink *xsink) {
+qore_size_t SFTPClient::sftp_putFile(const char *outb, qore_size_t towrite, const char *fname, int mode, ExceptionSink *xsink) {
    AutoLocker al(m);
 
    if (!sftp_connected_unlocked()) {
@@ -558,9 +558,9 @@ qore_size_t SFTPClient::sftp_putFile(const char *outb, qore_size_t towrite, cons
    std::string file = absolute_filename(this, fname);
 
    // if this works we try to open an sftp handle on the other side
-   LIBSSH2_SFTP_HANDLE *sftp_handle = libssh2_sftp_open(sftp_session, file.c_str(), LIBSSH2_FXF_WRITE|LIBSSH2_FXF_CREAT, mode);
+   LIBSSH2_SFTP_HANDLE *sftp_handle = libssh2_sftp_open_ex(sftp_session, file.c_str(), file.size(), LIBSSH2_FXF_WRITE|LIBSSH2_FXF_CREAT|LIBSSH2_FXF_TRUNC, mode, LIBSSH2_SFTP_OPENFILE);
    if (!sftp_handle) {
-      do_session_err_unlocked(xsink);
+      do_session_err_unlocked(xsink, "SFTPClient::putFile() raised an error in libssh2_sftp_open_ex(%s)", file.c_str());
       return -1;
    }
 
@@ -568,7 +568,7 @@ qore_size_t SFTPClient::sftp_putFile(const char *outb, qore_size_t towrite, cons
    while (size < towrite) {
       ssize_t rc = libssh2_sftp_write(sftp_handle, outb, towrite - size);
       if (rc < 0) { 
-         do_session_err_unlocked(xsink);
+         do_session_err_unlocked(xsink, "SFTPClient::putFile() raised an error in libssh2_sftp_open_ex(%ld) while writing '%s', total written: %ld, total to write: %ld", towrite - size, file.c_str(), size, towrite);
          libssh2_sftp_close(sftp_handle);
          return -1;
       }
@@ -579,7 +579,7 @@ qore_size_t SFTPClient::sftp_putFile(const char *outb, qore_size_t towrite, cons
    // we check this error, because we want to be sure the file was written
    int rc = libssh2_sftp_close(sftp_handle);
    if (rc < 0) {
-      do_session_err_unlocked(xsink);
+      do_session_err_unlocked(xsink, "SFTPClient::putFile() raised an error in libssh2_sftp_close() while closing '%s'", file.c_str());
       return -1;
    }
 
@@ -593,44 +593,129 @@ qore_size_t SFTPClient::sftp_putFile(const char *outb, qore_size_t towrite, cons
 // -2   no such file
 // -3   not connected to server
 // gives the attrs in attrs argument back
-int SFTPClient::sftp_getAttributes(const char *fname, LIBSSH2_SFTP_ATTRIBUTES *attrs, ExceptionSink *xsink = 0) {
-   int rc;
-   char buff[PATH_MAX];
+int SFTPClient::sftp_getAttributes(const char *fname, LIBSSH2_SFTP_ATTRIBUTES *attrs, ExceptionSink *xsink) {
+   assert(fname);
 
    AutoLocker al(m);
 
-   if(!sftp_connected_unlocked()) {
-      xsink && xsink->raiseException(SFTPCLIENT_NOT_CONNECTED, "This action can only be performed if the client is connected");
+   if (!sftp_connected_unlocked()) {
+      xsink->raiseException(SFTPCLIENT_NOT_CONNECTED, "This action can only be performed if the client is connected");
       return -3;
    }
 
-   if(!fname) {
-      xsink && xsink->raiseException("SFTPCLIENT-PARAMETER-ERROR", "no file given");
+   if (!fname) {
+      xsink->raiseException("SFTPCLIENT-PARAMETER-ERROR", "no file given");
       return -2;
    }
 
-   std::string file=absolute_filename(this, fname);
-
-   // get the file
-   // returns the amount of chars
-   if(!(rc=libssh2_sftp_realpath(sftp_session, file.c_str(), buff, sizeof(buff)-1))) {
-      xsink && xsink->raiseException("SFTPCLIENT-CONNECT-ERROR", "error in getting path for '%s'", file.c_str());
-      return -1;
-   }
-
-   // this path was not found
-   if(!strlen(buff)) {
-      return -2;
-   }
-  
+   std::string file = absolute_filename(this, fname);
+ 
    // stat the file
-   rc=libssh2_sftp_stat(sftp_session, file.c_str(), attrs);
-   if(rc<0) {
-      xsink && xsink->raiseException(SFTPCLIENT_TRANSFER_ERROR, "error stating file on server side");
+   int rc = libssh2_sftp_stat(sftp_session, file.c_str(), attrs);
+   if (rc < 0) {
+      // check if the file does not exist
+      if (libssh2_session_last_errno(ssh_session) == LIBSSH2_ERROR_SFTP_PROTOCOL
+          && libssh2_sftp_last_error(sftp_session) == LIBSSH2_FX_NO_SUCH_FILE)
+         return -2;
+
+      do_session_err_unlocked(xsink, "SFTPClient::stat() raised an error in libssh2_sftp_stat(%s)", file.c_str());
       return -1;
    }
 
    return 0;
 }
 
-// EOF //
+void SFTPClient::do_session_err_unlocked(ExceptionSink *xsink, const char *fmt, ...) {
+   va_list args;
+   QoreStringNode *desc = new QoreStringNode;
+
+   while (true) {
+      va_start(args, fmt);
+      int rc = desc->vsprintf(fmt, args);
+      va_end(args);
+      if (!rc)
+         break;
+   }
+
+   int err = libssh2_session_last_errno(ssh_session);
+   if (err == LIBSSH2_ERROR_SFTP_PROTOCOL) {
+      unsigned long serr = libssh2_sftp_last_error(sftp_session);
+
+      desc->sprintf(": libssh2 returned sftp error %lu: ", serr);
+      switch (serr) {
+         case LIBSSH2_FX_OK:
+            desc->concat("success");
+            break;
+         case LIBSSH2_FX_EOF:
+            desc->concat("EOF: end of file");
+            break;
+         case LIBSSH2_FX_NO_SUCH_FILE:
+            desc->concat("file does not exist");
+            break;
+         case LIBSSH2_FX_PERMISSION_DENIED:
+            desc->concat("permission denied");
+            break;
+         case LIBSSH2_FX_FAILURE:
+            desc->concat("command failed");
+            break;
+         case LIBSSH2_FX_BAD_MESSAGE:
+            desc->concat("bad message");
+            break;
+         case LIBSSH2_FX_NO_CONNECTION:
+            desc->concat("no connection");
+            break;
+         case LIBSSH2_FX_CONNECTION_LOST:
+            desc->concat("connection lost");
+            break;
+         case LIBSSH2_FX_OP_UNSUPPORTED:
+            desc->concat("sshd sftp server does not support this operation");
+            break;
+         case LIBSSH2_FX_INVALID_HANDLE:
+            desc->concat("invalid handle");
+            break;
+         case LIBSSH2_FX_NO_SUCH_PATH:
+            desc->concat("path does not exist");
+            break;
+         case LIBSSH2_FX_FILE_ALREADY_EXISTS:
+            desc->concat("file already exists");
+            break;
+         case LIBSSH2_FX_WRITE_PROTECT:
+            desc->concat("write protected");
+            break;
+         case LIBSSH2_FX_NO_MEDIA:
+            desc->concat("no media");
+            break;
+         case LIBSSH2_FX_NO_SPACE_ON_FILESYSTEM:
+            desc->concat("filesystem full");
+            break;
+         case LIBSSH2_FX_QUOTA_EXCEEDED:
+            desc->concat("quota exceeddd");
+            break;
+         case LIBSSH2_FX_UNKNOWN_PRINCIPAL:
+            desc->concat("unknown principal");
+            break;
+         case LIBSSH2_FX_LOCK_CONFLICT:
+            desc->concat("lock conflict");
+            break;
+         case LIBSSH2_FX_DIR_NOT_EMPTY:
+            desc->concat("directory not empty");
+            break;
+         case LIBSSH2_FX_NOT_A_DIRECTORY:
+            desc->concat("not a directory");
+            break;
+         case LIBSSH2_FX_INVALID_FILENAME:
+            desc->concat("invalid filename");
+            break;
+         case LIBSSH2_FX_LINK_LOOP:
+            desc->concat("link loop");
+            break;
+         default:
+            desc->concat("unknown error");
+            break;
+      }
+   }
+   else
+      desc->sprintf(": libssh2 returned error %d: %s", err, get_session_err_unlocked());
+
+   xsink->raiseException(SSH2_ERROR, desc);
+}
