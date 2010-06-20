@@ -1,3 +1,10 @@
+2010-06-17 13:41  david_nichols
+
+	* src/QC_SFTPClient.cc, src/SFTPClient.cc, src/SFTPClient.h,
+	  src/SSH2Channel.cc, src/SSH2Channel.h, src/SSH2Client.cc,
+	  src/SSH2Client.h, test/ssh2-test.q: clean up code; added extended
+	  information for sftp errors, enhanced test script
+
 2010-06-16 18:47  david_nichols
 
 	* docs/ssh2-module-doc.html: fixed minor typos
