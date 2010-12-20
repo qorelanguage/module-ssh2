@@ -141,8 +141,10 @@ sub sftp_test_intern(SFTPClient $sc) {
     test_value($info.mode & 0777, FileMode, "SFTPClient::stat() mode");
     test_value($info.permissions, "-rwxr-xr-x", "SFTPClient::stat() permissions");
 
+    test_value("/tmp", $sc.chdir("/tmp"), "(before getFile()) SFTPClient::chdir()");
+
     # retrieve the file as a binary object
-    my binary $b = $sc.getFile($fn);
+    my binary $b = $sc.getFile(basename($fn));
     test_value($b, BinContents, "SFTPClient::getFile()");
 
     # retrieve the file as a string
