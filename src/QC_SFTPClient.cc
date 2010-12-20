@@ -63,7 +63,7 @@ static AbstractQoreNode *SFTPC_info(QoreObject *self, SFTPClient *myself, const 
    return ret;
 }
 
-// SFTPClient::path() returns string|NOTHING
+// SFTPClient::path() returns *string
 static AbstractQoreNode *SFTPC_path(QoreObject *self, SFTPClient *myself, const QoreListNode *params, ExceptionSink *xsink) {
    return myself->sftp_path();
 }
@@ -99,7 +99,7 @@ static QoreHashNode *attr2hash(const LIBSSH2_SFTP_ATTRIBUTES &attr) {
    return ret;
 }
 
-// SFTPClient::stat(string $filename) returns any
+// SFTPClient::stat(string $filename) returns *hash
 static AbstractQoreNode *SFTPC_stat(QoreObject *self, SFTPClient *myself, const QoreListNode *params, ExceptionSink *xsink) {
    const QoreStringNode *p0 = HARD_QORE_STRING(params, 0);
 
@@ -225,16 +225,16 @@ QoreClass *initSFTPClientClass(QoreClass *ssh2base) {
    // SFTPClient::info() returns hash
    QC_SFTP_CLIENT->addMethodExtended("info",       (q_method_t)SFTPC_info, false, QC_RET_VALUE_ONLY, QDOM_DEFAULT, hashTypeInfo);
 
-   // SFTPClient::path() returns string|NOTHING
-   QC_SFTP_CLIENT->addMethodExtended("path",       (q_method_t)SFTPC_path, false, QC_RET_VALUE_ONLY);
+   // SFTPClient::path() returns *string
+   QC_SFTP_CLIENT->addMethodExtended("path",       (q_method_t)SFTPC_path, false, QC_RET_VALUE_ONLY, QDOM_DEFAULT, stringOrNothingTypeInfo);
 
    // SFTPClient::list(string $path) returns hash
    QC_SFTP_CLIENT->addMethodExtended("list",       (q_method_t)SFTPC_list_str, false, QC_NO_FLAGS, QDOM_DEFAULT, hashTypeInfo, 1, stringTypeInfo, QORE_PARAM_NO_ARG);
    // SFTPClient::list() returns hash
    QC_SFTP_CLIENT->addMethodExtended("list",       (q_method_t)SFTPC_list, false, QC_NO_FLAGS, QDOM_DEFAULT, hashTypeInfo);
 
-   // SFTPClient::stat(string $filename) returns any
-   QC_SFTP_CLIENT->addMethodExtended("stat",       (q_method_t)SFTPC_stat, false, QC_NO_FLAGS, QDOM_DEFAULT, 0, 1, stringTypeInfo, QORE_PARAM_NO_ARG);
+   // SFTPClient::stat(string $filename) returns *hash
+   QC_SFTP_CLIENT->addMethodExtended("stat",       (q_method_t)SFTPC_stat, false, QC_NO_FLAGS, QDOM_DEFAULT, hashOrNothingTypeInfo, 1, stringTypeInfo, QORE_PARAM_NO_ARG);
 
    // SFTPClient::removeFile(string $filename) returns nothing
    QC_SFTP_CLIENT->addMethodExtended("removeFile", (q_method_t)SFTPC_removeFile, false, QC_NO_FLAGS, QDOM_DEFAULT, nothingTypeInfo, 1, stringTypeInfo, QORE_PARAM_NO_ARG);

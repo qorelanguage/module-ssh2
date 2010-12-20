@@ -596,34 +596,34 @@ See some examples here: [[Examples]]</pre>
 [[SSH2Channel Class|SSH2Channel]]
 [[Examples]]</pre>
 </div>
-<div title="SFTPClient" modifier="DavidNichols" created="201006151227" modified="201006171057" changecount="36">
+<div title="SFTPClient" modifier="YourName" created="201006151227" modified="201012201716" changecount="40">
 <pre>The ~SFTPClient class provides access to the sftp protocol; this class inherits the SSH2Base class.
 Most methods require a connection to be already established; connections are established explicitly by calling [[SSH2Base::connect()]].
 
 |!Method|!Description|h
 |[[SFTPClient::constructor(string $url)|SFTPClient::constructor()]]&lt;br&gt;[[SFTPClient::constructor(string $hostname, softint $port)|SFTPClient::constructor()]]|creates the object with the given URL|
 |[[SFTPClient::copy()]]|throws an exception; currently these objects cannot be copied|
-|[[SFTPClient::info() returns hash|SFTPClient::info()]]|returns a hash with information about the current connection status; safe to call when not connected|
-|[[SFTPClient::path() returns any|SFTPClient::path()]]|returns the current path as a string or {{{NOTHING}}} if no path is set|
-|[[SFTPClient::list() returns hash|SFTPClient::list()]]&lt;br&gt;[[SFTPClient::list(string $path) returns hash|SFTPClient::list()]]|list files in the current directory or the given path; throws an exception if not already connected|
-|[[SFTPClient::stat(string $file) returns any|SFTPClient::stat()]]|returns a hash of information about a file or {{{NOTHING}}} if the file cannot be found|
-|[[SFTPClient::removeFile(string $path) returns nothing|SFTPClient::removeFile()]]|deletes a file on the server side|
-|[[SFTPClient::rename(string $old, string $new) returns nothing|SFTPClient::rename()]]|renames or moves a remote file|
-|[[SFPTClient::chmod(string $path, int $mode) returns nothing|SFTPClient::chmod()]]|changes the mode of a remote file or directory|
-|[[SFTPClient::getFile(string $path) returns binary|SFTPClient::getFile()]]|retrieves a remote file and returns it as a binary|
-|[[SFTPClient::getTextFile(string $path) returns string|SFTPClient::getTextFile()]]|retrieves a remote file and returns it as a string|
-|[[SFTPClient::putFile(binary $data, string $name, int $mode = 0644) returns int|SFTPClient::putFile()]]&lt;br&gt;[[SFTPClient::putFile(string $data, string $name, int $mode = 0644) returns int|SFTPClient::putFile()]]|saves a file on the remote server|
-|[[SFTPClient::mkdir(string $name, int $mode = 0755) returns nothing|SFTPClient::mkdir()]]|makes a directory on the remote server|
-|[[SFTPClient::rmdir(string $path) returns nothing|SFTPClient::rmdir()]]|removes a directory on the remote server|
-|[[SFTPClient::chdir(string $path) returns string|SFTPClient::chdir()]]|changes the directory on the remote server and returns the new directory; throws an exception if no connection is established|
+|[[hash SFTPClient::info()|SFTPClient::info()]]|returns a hash with information about the current connection status; safe to call when not connected|
+|[[*string SFTPClient::path()|SFTPClient::path()]]|returns the current path as a string or {{{NOTHING}}} if no path is set|
+|[[hash SFTPClient::list()|SFTPClient::list()]]&lt;br&gt;[[hash SFTPClient::list(string $path)|SFTPClient::list()]]|list files in the current directory or the given path; throws an exception if not already connected|
+|[[*hash SFTPClient::stat(string $file)|SFTPClient::stat()]]|returns a hash of information about a file or {{{NOTHING}}} if the file cannot be found|
+|[[nothing SFTPClient::removeFile(string $path)|SFTPClient::removeFile()]]|deletes a file on the server side|
+|[[nothing SFTPClient::rename(string $old, string $new)|SFTPClient::rename()]]|renames or moves a remote file|
+|[[nothing SFPTClient::chmod(string $path, int $mode)|SFTPClient::chmod()]]|changes the mode of a remote file or directory|
+|[[binary SFTPClient::getFile(string $path)|SFTPClient::getFile()]]|retrieves a remote file and returns it as a binary|
+|[[string SFTPClient::getTextFile(string $path)|SFTPClient::getTextFile()]]|retrieves a remote file and returns it as a string|
+|[[int SFTPClient::putFile(binary $data, string $name, int $mode = 0644)|SFTPClient::putFile()]]&lt;br&gt;[[int SFTPClient::putFile(string $data, string $name, int $mode = 0644)|SFTPClient::putFile()]]|saves a file on the remote server|
+|[[nothing SFTPClient::mkdir(string $name, int $mode = 0755)|SFTPClient::mkdir()]]|makes a directory on the remote server|
+|[[nothing SFTPClient::rmdir(string $path)|SFTPClient::rmdir()]]|removes a directory on the remote server|
+|[[string SFTPClient::chdir(string $path)|SFTPClient::chdir()]]|changes the directory on the remote server and returns the new directory; throws an exception if no connection is established|
 
 </pre>
 </div>
-<div title="SFTPClient::chdir()" creator="DavidNichols" modifier="DavidNichols" created="201006161354" changecount="1">
+<div title="SFTPClient::chdir()" creator="DavidNichols" modifier="YourName" created="201006161354" modified="201012201717" changecount="2">
 <pre>!Synopsis
 :Changes the directory on the remote server and returns the new directory; throws an exception if no connection is established
 !Prototype
-:{{{SFTPClient::chdir(string $path) returns string}}}
+:{{{string SFTPClient::chdir(string $path)}}}
 !Arguments
 :* {{{string $path}}}: The pathname of the directory to change to
 !Example:
@@ -634,11 +634,11 @@ $sftpclient.chdir(&quot;/var/tmp/newdir&quot;);
 :{{{SFTPCLIENT-NOT-CONNECTED}}}: no connection has been established
 :{{{SSH2-ERROR}}}: socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message</pre>
 </div>
-<div title="SFTPClient::chmod()" creator="DavidNichols" modifier="DavidNichols" created="201006161215" modified="201006161259" changecount="3">
+<div title="SFTPClient::chmod()" creator="DavidNichols" modifier="YourName" created="201006161215" modified="201012201713" changecount="4">
 <pre>!Synopsis
 :Changes the mode of a remote file or directory; sticky bits may not be set
 !Prototype
-:{{{SFTPClient::chmod(string $path, int $mode) returns nothing}}}
+:{{{nothing SFTPClient::chmod(string $path, int $mode)}}}
 !Arguments
 :* {{{string $path}}}: The pathname of the file or directory to update
 :* {{{int $mode}}}: The new mode to set
@@ -672,11 +672,11 @@ $sftpclient.chmod(&quot;/tmp/new-dir&quot;, 0700);
 !Exceptions
 :{{{SFTPCLIENT-COPY-ERROR}}}: copying SFTPClient objects is currently not supported</pre>
 </div>
-<div title="SFTPClient::getFile()" creator="DavidNichols" modifier="DavidNichols" created="201006161302" modified="201006161333" changecount="3">
+<div title="SFTPClient::getFile()" creator="DavidNichols" modifier="YourName" created="201006161302" modified="201012201714" changecount="4">
 <pre>!Synopsis
 :Retrieves a remote file and returns it as a binary
 !Prototype
-:{{{SFTPClient::getFile(string $path) returns binary}}}
+:{{{binary SFTPClient::getFile(string $path)}}}
 !Arguments
 :* {{{string $path}}}: The pathname of the file to retrieve
 !Example:
@@ -702,11 +702,11 @@ my string $str = $sftpclient.getTextFile(&quot;/tmp/somefile&quot;);
 :{{{SFTPCLIENT-NOT-CONNECTED}}}: no connection has been established
 :{{{SSH2-ERROR}}}: socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message</pre>
 </div>
-<div title="SFTPClient::info()" creator="DavidNichols" modifier="DavidNichols" created="201006151259" modified="201006161050" changecount="10">
+<div title="SFTPClient::info()" creator="DavidNichols" modifier="YourName" created="201006151259" modified="201012201712" changecount="11">
 <pre>!Synopsis
 : Returns a hash with information about the current connection status; also safe to call when not connected  
 !Prototype
-:{{{SFTPClient::info() returns hash}}}
+:{{{hash SFTPClient::info()}}}
 !Example:
 {{{
 my hash $info = $sftpclient.info();
@@ -728,12 +728,12 @@ printf(&quot;connection info: %n\n&quot;, $info);
 
 </pre>
 </div>
-<div title="SFTPClient::list()" creator="DavidNichols" modifier="DavidNichols" created="201006151340" modified="201006161108" changecount="2">
+<div title="SFTPClient::list()" creator="DavidNichols" modifier="YourName" created="201006151340" modified="201012201712" changecount="3">
 <pre>!Synopsis
 :Returns a hash of directory information; throws an exception if not connected
 !Prototype
-:{{{SFTPClient::list() returns hash}}}
-:{{{SFTPClient::list(string $path) returns hash}}}
+:{{{hash SFTPClient::list()}}}
+:{{{hash SFTPClient::list(string $path)}}}
 !Arguments
 :* {{{string $path}}}: The pathname of the directory to list
 !Example:
@@ -747,11 +747,11 @@ printf(&quot;path: %n, directories: %n\nfiles: %n, links: %n\n&quot;, $hash.path
 :{{{SFTPCLIENT-NOT-CONNECTED}}}: client is not connected
 :{{{SFTPCLIENT-LIST-ERROR}}}: failed to list directory</pre>
 </div>
-<div title="SFTPClient::mkdir()" creator="DavidNichols" modifier="DavidNichols" created="201006161352" modified="201006161353" changecount="2">
+<div title="SFTPClient::mkdir()" creator="DavidNichols" modifier="YourName" created="201006161352" modified="201012201716" changecount="3">
 <pre>!Synopsis
 :Makes a directory on the remote server
 !Prototype
-:{{{SFTPClient::mkdir(string $name, int $mode = 0755) returns nothing}}}
+:{{{nothing SFTPClient::mkdir(string $name, int $mode = 0755)}}}
 !Arguments
 :* {{{string $name}}}: The pathname of the new directory
 :* {{{int $mode = 0755}}}: The mode of the new directory
@@ -764,26 +764,26 @@ $sftpclient.mkdir(&quot;/var/tmp/newdir&quot;, 0700);
 :{{{SFTPCLIENT-NOT-CONNECTED}}}: no connection has been established
 :{{{SSH2-ERROR}}}: socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message</pre>
 </div>
-<div title="SFTPClient::path()" creator="DavidNichols" modifier="DavidNichols" created="201006151333" modified="201006151336" changecount="3">
+<div title="SFTPClient::path()" creator="DavidNichols" modifier="YourName" created="201006151333" modified="201012201709" changecount="4">
 <pre>!Synopsis
 :Returns the current path as a string or {{{NOTHING}}} if no path is set
 !Prototype
-:{{{SFTPClient::path() returns any}}}
+:{{{*string SFTPClient::path()}}}
 !Example:
 {{{
-my any $path = $sftpclient.path();
+my *string $path = $sftpclient.path();
 printf(&quot;current path: %s\n&quot;, exists $path ? $path : &quot;&lt;not set&gt;&quot;);
 }}}
 !Return Value
 : {{{NOTHING}}}: if no path is set, or 
 : {{{string}}}: the current path</pre>
 </div>
-<div title="SFTPClient::putFile()" creator="DavidNichols" modifier="DavidNichols" created="201006161333" modified="201006161349" changecount="2">
+<div title="SFTPClient::putFile()" creator="DavidNichols" modifier="YourName" created="201006161333" modified="201012201714" changecount="3">
 <pre>!Synopsis
 :Saves a file on the remote server
 !Prototype
-:{{{SFTPClient::putFile(binary $data, string $name, int $mode = 0644) returns int}}}
-:{{{SFTPClient::putFile(string $data, string $name, int $mode = 0644) returns int}}}
+:{{{int SFTPClient::putFile(binary $data, string $name, int $mode = 0644)}}}
+:{{{int SFTPClient::putFile(string $data, string $name, int $mode = 0644)}}}
 !Arguments
 :* {{{binary}}} or {{{string $data}}}: the data to send for the file
 :* {{{string $name}}}: The pathname of the file
@@ -799,11 +799,11 @@ my int $size = $sftpclient.putFile($file_data, &quot;/var/tmp/newfile&quot;, 060
 :{{{SSH2-ERROR}}}: socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
 </pre>
 </div>
-<div title="SFTPClient::removeFile()" creator="DavidNichols" modifier="DavidNichols" created="201006161151" modified="201006161303" changecount="4">
+<div title="SFTPClient::removeFile()" creator="DavidNichols" modifier="YourName" created="201006161151" modified="201012201713" changecount="5">
 <pre>!Synopsis
 :Deletes a file on the server side
 !Prototype
-:{{{SFTPClient::removeFile(string $path) returns any}}}
+:{{{nothing SFTPClient::removeFile(string $path)}}}
 !Arguments
 :* {{{string $path}}}: The pathname of the file to delete
 !Example:
@@ -815,12 +815,12 @@ $sftpclient.removeFile(&quot;file&quot;);
 :{{{SSH2-ERROR}}}: socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
 </pre>
 </div>
-<div title="SFTPClient::rename()" creator="DavidNichols" modifier="DavidNichols" created="201006161201" modified="201006171057" changecount="9">
+<div title="SFTPClient::rename()" creator="DavidNichols" modifier="YourName" created="201006161201" modified="201012201713" changecount="11">
 <pre>!Synopsis
 :Renames or moves a remote file.
 :Note that this command is executed with the {{{LIBSSH2_SFTP_RENAME_OVERWRITE}}} option set to True, but that this option is commonly ignored by sshd servers, in which case i the target file already exists, an {{{SSH2-ERROR}}} exception will be raised
 !Prototype
-:{{{SFTPClient::rename(string $old, string $new) returns nothing}}}
+:{{{nothing SFTPClient::rename(string $old, string $new)}}}
 !Arguments
 :* {{{string $old}}}: The old pathname of the file
 :* {{{string $new}}}: The new pathname of the file
@@ -833,11 +833,11 @@ $sftpclient.rename(&quot;/tmp/file&quot;, &quot;/var/tmp/newfile&quot;);
 :{{{SSH2-ERROR}}}: socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
 </pre>
 </div>
-<div title="SFTPClient::rmdir()" creator="DavidNichols" modifier="DavidNichols" created="201006161353" changecount="1">
+<div title="SFTPClient::rmdir()" creator="DavidNichols" modifier="YourName" created="201006161353" modified="201012201716" changecount="2">
 <pre>!Synopsis
 :Removes a directory on the remote server
 !Prototype
-:{{{SFTPClient::rmdir(string $path) returns nothing}}}
+:{{{nothing SFTPClient::rmdir(string $path)}}}
 !Arguments
 :* {{{string $path}}}: The pathname of the directory to delete
 !Example:
@@ -849,11 +849,11 @@ $sftpclient.rmdir(&quot;/var/tmp/newdir&quot;);
 :{{{SFTPCLIENT-NOT-CONNECTED}}}: no connection has been established
 :{{{SSH2-ERROR}}}: socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message</pre>
 </div>
-<div title="SFTPClient::stat()" creator="DavidNichols" modifier="DavidNichols" created="201006151353" modified="201006171004" changecount="7">
+<div title="SFTPClient::stat()" creator="DavidNichols" modifier="YourName" created="201006151353" modified="201012201712" changecount="8">
 <pre>!Synopsis
 :Returns a hash of information about a file or {{{NOTHING}}} if the file cannot be found
 !Prototype
-:{{{SFTPClient::stat(string $path) returns any}}}
+:{{{*hash SFTPClient::stat(string $path)}}}
 !Arguments
 :* {{{string $path}}}: The pathname of the file to stat
 !Example:

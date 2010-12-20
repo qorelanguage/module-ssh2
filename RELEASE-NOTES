@@ -1,4 +1,12 @@
 *************
+version 0.9.6
+*************
+
+fixed a deadlock in the SFTPClient::disconnect() method
+requires qore 0.8.1+ to build and run
+
+
+*************
 version 0.9.5
 *************
 
