@@ -48,7 +48,7 @@ static void ssh2_module_ns_init(QoreNamespace *rns, QoreNamespace *qns);
 static void ssh2_module_delete();
 
 DLLEXPORT char qore_module_name[] = "ssh2";
-DLLEXPORT char qore_module_version[] = "1.0.2";
+DLLEXPORT char qore_module_version[] = PACKAGE_VERSION;
 DLLEXPORT char qore_module_description[] = "SSH2/SFTP client module";
 DLLEXPORT char qore_module_author[] = "Wolfgang Ritzinger";
 DLLEXPORT char qore_module_url[] = "http://qore.sourceforge.net";
