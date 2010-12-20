@@ -711,7 +711,7 @@ void SFTPClient::do_session_err_unlocked(ExceptionSink *xsink, const char *fmt, 
             desc->concat("link loop");
             break;
          default:
-            desc->concat("unknown error");
+            desc->sprintf("unknown error code %ld", serr);
             break;
       }
    }
@@ -719,4 +719,12 @@ void SFTPClient::do_session_err_unlocked(ExceptionSink *xsink, const char *fmt, 
       desc->sprintf(": libssh2 returned error %d: %s", err, get_session_err_unlocked());
 
    xsink->raiseException(SSH2_ERROR, desc);
+}
+
+QoreHashNode *SFTPClient::sftp_info() {
+   AutoLocker al(m);
+   QoreHashNode *h = ssh_info_intern();
+   h->setKeyValue("path", sftppath? new QoreStringNode(sftppath) : 0, 0);
+
+   return h;
 }

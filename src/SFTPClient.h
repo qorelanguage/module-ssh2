@@ -94,8 +94,7 @@ public:
 
    int sftp_getAttributes(const char *fname, LIBSSH2_SFTP_ATTRIBUTES *attrs, ExceptionSink *xsink);
 
-   QoreHashNode *sftp_info(ExceptionSink *xsink);
-
+   QoreHashNode *sftp_info();
 };
 
 // maybe this should go to ssh2-module.h?

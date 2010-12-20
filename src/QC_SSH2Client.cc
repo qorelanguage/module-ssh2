@@ -56,7 +56,7 @@ static void SSH2C_copy(QoreObject *self, QoreObject *old, SSH2Client *myself, Ex
 
 // SSH2Client::info() returns hash
 static AbstractQoreNode *SSH2C_info(QoreObject *self, SSH2Client *myself, const QoreListNode *params, ExceptionSink *xsink) {
-   return myself->ssh_info(xsink);
+   return myself->ssh_info();
 }
 
 // SSH2Client::openSessionChannel(softint $timeout_ms = -1) returns SSH2Channel

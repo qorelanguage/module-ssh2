@@ -56,11 +56,7 @@ void SFTPC_copy(QoreObject *self, QoreObject *old, SFTPClient *myself, Exception
 
 // SFTPClient::info() returns hash
 static AbstractQoreNode *SFTPC_info(QoreObject *self, SFTPClient *myself, const QoreListNode *params, ExceptionSink *xsink) {
-   QoreHashNode *ret = myself->ssh_info(xsink);
-   if (ret)
-      ret->setKeyValue("path", myself->sftppath? new QoreStringNode(myself->sftppath) : 0, xsink);
-
-   return ret;
+   return myself->sftp_info();
 }
 
 // SFTPClient::path() returns *string

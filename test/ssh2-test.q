@@ -221,6 +221,8 @@ sub main() {
 
     if (!$o.iters)
         $o.iters = 1;
+    if (!$o.threads)
+        $o.threads = 1;
 
     printf("using libssh2 version: %s\n", SSH2::Version);
 
