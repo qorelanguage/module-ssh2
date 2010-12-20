@@ -691,7 +691,7 @@ my binary $bin = $sftpclient.getFile(&quot;/tmp/somefile&quot;);
 <pre>!Synopsis
 :Retrieves a remote file and returns it as a string
 !Prototype
-:{{{SFTPClient::getTextFile(string $path) returns string}}}
+:{{{string SFTPClient::getTextFile(string $path)}}}
 !Arguments
 :* {{{string $path}}}: The pathname of the file to retrieve
 !Example:
@@ -878,28 +878,26 @@ printf(&quot;info: %n\n&quot;, $hash);
 :{{{SFTPCLIENT-TRANSFER-ERROR}}}: error stat()'ing file on server side
 </pre>
 </div>
-<div title="SSH2Base" creator="DavidNichols" modifier="DavidNichols" created="201006160712" modified="201006291057" changecount="7">
+<div title="SSH2Base" creator="DavidNichols" modifier="YourName" created="201006160712" modified="201012202025" changecount="10">
 <pre>The ~SSH2Base class provides common methods to the SSH2Client and SFTPClient classes
 
 |!Method|!Description|h
 |[[SSH2Base::constructor()]]|The constructor cannot be called manually|
-|[[SSH2Base::connect(softint $timeout_ms = -1) returns nothing|SSH2Base::connect()]]&lt;br&gt;[[SSH2Base::connect(date $timeout) returns nothing|SSH2Base::connect()]]|connect to remote system|
-|[[SSH2Base::disconnect() returns nothing|SSH2Base::disconnect()]]|disconnects from the remote system; throws an exception if the object is not currently connected|
-|[[SSH2Base::setUser(string $name) returns nothing|SSH2Base::setUser()]]|sets the user name for the next connection; can only be called when a connection is not established|
-|[[SSH2Base::setPassword(string $pass) returns nothing|SSH2Base::setPassword()]]|sets the password for the next connection; can only be called when a connection is not established|
-|[[SSH2Base::setKeys(string $priv_key) returns nothing|SSH2Base::setKeys()]]&lt;br&gt;[[SSH2Base::setKeys(string $priv_key, string $pub_key) returns nothing|SSH2Base::setKeys()]]|sets path to the private key and optionally the path to the public key to use for the next connection; can only be called when a connection is not established|
+|[[nothing SSH2Base::connect(softint $timeout = -1)|SSH2Base::connect()]]|connect to remote system|
+|[[nothing SSH2Base::disconnect()|SSH2Base::disconnect()]]|disconnects from the remote system; throws an exception if the object is not currently connected|
+|[[nothing SSH2Base::setUser(string $name)|SSH2Base::setUser()]]|sets the user name for the next connection; can only be called when a connection is not established|
+|[[nothing SSH2Base::setPassword(string $pass)|SSH2Base::setPassword()]]|sets the password for the next connection; can only be called when a connection is not established|
+|[[nothing SSH2Base::setKeys(string $priv_key, *string $pub_key)|SSH2Base::setKeys()]]|sets path to the private key and optionally the path to the public key to use for the next connection; can only be called when a connection is not established|
 
 </pre>
 </div>
-<div title="SSH2Base::connect()" creator="DavidNichols" modifier="DavidNichols" created="201006161018" modified="201006161027" changecount="6">
+<div title="SSH2Base::connect()" creator="DavidNichols" modifier="YourName" created="201006161018" modified="201012202028" changecount="10">
 <pre>!Synopsis
 :Connects to the remote system; if a connection is already established, then it is disconnected first
 !Prototype
-:{{{SSH2Base::connect(softint $timeout_ms = -1) returns nothing}}}
-:{{{SSH2Base::connect(date $timeout) returns nothing}}}
+:{{{nothing SSH2Base::connect(timeout $timeout = -1)}}}
 !Arguments
-:* {{{softint $timeout_ms = -1}}}: timeout value; -1 is the default, meaning do not time out
-:* {{{date $timeout}}}: a relative date/time value to use as the timeout (ex: {{{10s}}} = 10 seconds)
+:* {{{timeout $timeout = -1}}}: timeout value to open the channel; -1 is the default, meaning do not time out; can be either an integer (meaning miliseconds) or a relative date/time value (ex: {{{10s}}} = 10 seconds)
 !Example:
 {{{
 # connect with a 15 second timeout
@@ -918,11 +916,11 @@ $ssh2.connect(15s);
 !Exceptions
 :{{{SSH2BASE-CONSTRUCTOR-ERROR}}}: this class cannot be instantiated directly</pre>
 </div>
-<div title="SSH2Base::disconnect()" creator="DavidNichols" modifier="DavidNichols" created="201006161025" modified="201006161025" changecount="2">
+<div title="SSH2Base::disconnect()" creator="DavidNichols" modifier="YourName" created="201006161025" modified="201012202026" changecount="3">
 <pre>!Synopsis
 :Disconnects from the remote system; throws an exception if the object is not currently connected
 !Prototype
-:{{{SSH2Base::disconnect() returns nothing}}}
+:{{{nothing SSH2Base::disconnect()}}}
 !Example:
 {{{
 $ssh2.disconnect();
@@ -930,15 +928,14 @@ $ssh2.disconnect();
 !Exceptions
 :{{{SSH2CLIENT-NOT-CONNECTED}}: the client is not connected</pre>
 </div>
-<div title="SSH2Base::setKeys()" creator="DavidNichols" modifier="DavidNichols" created="201006161035" changecount="1">
+<div title="SSH2Base::setKeys()" creator="DavidNichols" modifier="YourName" created="201006161035" modified="201012202025" changecount="3">
 <pre>!Synopsis
 :Sets path to the private key and optionally the public key to use for the next connection; can only be called when a connection is not established, otherwise an exception is thrown
 !Prototype
-:{{{SSH2Base::setKeys(string $priv_key) returns nothing}}}
-:{{{SSH2Base::setKeys(string $priv_key, string $pub_key) returns nothing}}}
+:{{{nothing SSH2Base::setKeys(string $priv_key, *string $pub_key)}}}
 !Arguments
 :* {{{string $priv_key}}}: the path to the private key file to use for the next connection
-:* {{{string $pub_key}}}: the path to the public key file to use for the next connection
+:* {{{*string $pub_key}}}: the path to the public key file to use for the next connection
 !Example:
 {{{
 $ssh2.setKeys(&quot;/home/user/.ssh/id_rsa&quot;, &quot;/home/user/.ssh/id_rsa.pub&quot;);
@@ -946,11 +943,11 @@ $ssh2.setKeys(&quot;/home/user/.ssh/id_rsa&quot;, &quot;/home/user/.ssh/id_rsa.p
 !Exceptions
 :{{{SSH2-CONNECTED}}}: this method cannot be called when a connection is established</pre>
 </div>
-<div title="SSH2Base::setPassword()" creator="DavidNichols" modifier="DavidNichols" created="201006161032" modified="201006161032" changecount="2">
+<div title="SSH2Base::setPassword()" creator="DavidNichols" modifier="YourName" created="201006161032" modified="201012202026" changecount="3">
 <pre>!Synopsis
 :Sets the password for the next connection; can only be called when a connection is not established, otherwise an exception is thrown
 !Prototype
-:{{{SSH2Base::setPassword(string $pass) returns nothing}}}
+:{{{nothing SSH2Base::setPassword(string $pass)}}}
 !Arguments
 :* {{{string $pass}}}: the password for the next connection
 !Example:
@@ -960,11 +957,11 @@ $ssh2.setPassword(&quot;password&quot;);
 !Exceptions
 :{{{SSH2-CONNECTED}}}: this method cannot be called when a connection is established</pre>
 </div>
-<div title="SSH2Base::setUser()" creator="DavidNichols" modifier="DavidNichols" created="201006161031" modified="201006161031" changecount="2">
+<div title="SSH2Base::setUser()" creator="DavidNichols" modifier="YourName" created="201006161031" modified="201012202026" changecount="3">
 <pre>!Synopsis
 :Sets the user name for the next connection; can only be called when a connection is not established, otherwise an exception is thrown
 !Prototype
-:{{{SSH2Base::setUser(string $name) returns nothing}}}
+:{{{nothing SSH2Base::setUser(string $name)}}}
 !Arguments
 :* {{{string $name}}}: the user name to set for the next connection
 !Example:
@@ -974,45 +971,43 @@ $ssh2.setUser(&quot;user&quot;);
 !Exceptions
 :{{{SSH2-CONNECTED}}}: this method cannot be called when a connection is established</pre>
 </div>
-<div title="SSH2Channel" creator="DavidNichols" modifier="DavidNichols" created="201006151432" modified="201006161845" changecount="16">
+<div title="SSH2Channel" creator="DavidNichols" modifier="YourName" created="201006151432" modified="201012202054" changecount="25">
 <pre>The ~SSH2Channel class allows Qore programs to send and receive data through channels opened by the SSH2Client class.
 
 |!@@display:block;width:10em;Method@@|!@@display:block;width:20em;Description@@|h
 |[[SSH2Channel::constructor()]]|The constructor cannot be called manually; objects of this class can only be returned by the appropriate methods of the SSH2Client class|
 |[[SSH2Channel::copy()]]|throws an exception; currently these objects cannot be copied|
-|[[SSH2Channel::setenv(string $var, string $value, softint $timeout_ms = -1) returns nothing|SSH2Channel::setenv()]]&lt;br&gt;[[SSH2Channel::setenv(string $var, string $value, date $timeout) returns nothing|SSH2Channel::setenv()]]|sets an environment variable|
-|[[SSH2Channel::requestPty(string $term = &quot;vanilla&quot;, string $modes = &quot;&quot;, softint $width = LIBSSH2_TERM_WIDTH, softint $height = LIBSSH2_TERM_HEIGHT, softint $width_px = LIBSSH2_TERM_WIDTH_PX, softint $height_px = LIBSSH2_TERM_HEIGHT_PX, softint $timeout_ms = -1) returns nothing|SSH2Channel::requestPty()]]&lt;br&gt;[[SSH2Channel::requestPty(string $term = &quot;vanilla&quot;, string $modes = &quot;&quot;, softint $width = LIBSSH2_TERM_WIDTH, softint $height = LIBSSH2_TERM_HEIGHT, softint $width_px = LIBSSH2_TERM_WIDTH_PX, softint $height_px = LIBSSH2_TERM_HEIGHT_PX, date $timeout) returns nothing|SSH2Channel::requestPty()]]|Requests a terminal to be allocated to the channel|
-|[[SSH2Channel::shell(softint $timeout_ms = -1) returns nothing|SSH2Channel::shell()]]&lt;br&gt;[[SSH2Channel::shell(date $timeout) returns nothing|SSH2Channel::shell()]]|requests a login shell to be started for the channel|
-|[[SSH2Channel::eof() returns bool|SSH2Channel::eof()]]|returns True if an end of file condition is flagged on an open channel|
-|[[SSH2Channel::sendEof(softint $timeout_ms = -1) returns nothing|SSH2Channel::sendEof()]]&lt;br&gt;[[SSH2Channel::sendEof(date $timeout) returns nothing|SSH2Channel::sendEof()]]|Informs the remote end that we are closing the connection|
-|[[SSH2Channel::waitEof(softint $timeout_ms = -1) returns nothing|SSH2Channel::waitEof()]]&lt;br&gt;[[SSH2Channel::waitEof(date $timeout) returns nothing|SSH2Channel::waitEof()]]|wait for the remote end to acknowledge an EOF request|
-|[[SSH2Channel::exec(string $command, softint $timeout_ms = -1) returns nothing|SSH2Channel::exec()]]&lt;br&gt;[[SSH2Channel::exec(string $command, date $timeout) returns nothing|SSH2Channel::exec()]]|executes a command on the channel|
-|[[SSH2Channel::subsystem(string $command, softint $timeout_ms = -1) returns nothing|SSH2Channel::subsystem()]]&lt;br&gt;[[SSH2Channel::subsystem(string $command, date $timeout) returns nothing|SSH2Channel::subsystem()]]|executes a command on the channel as a subsystem|
-|[[SSH2Channel::read(softint $streamid = 0, softint $timeout_ms) returns string|SSH2Channel::read()]]&lt;br&gt;[[SSH2Channel::read(softint $streamid = 0, date $timeout = 10s) returns string|SSH2Channel::read()]]|reads data on the given stream and returns it as a string; the default timeout is 10 seconds|
-|[[SSH2Channel::readBinary(softint $streamid = 0, softint $timeout_ms) returns string|SSH2Channel::readBinary()]]&lt;br&gt;[[SSH2Channel::readBinary(softint $streamid, date $timeout = 10s) returns string|SSH2Channel::readBinary()]]|reads data on the given stream and returns it as a binary; the default timeout is 10 seconds|
-|[[SSH2Channel::readBlock(softint $size, softint $streamid = 0, softint $timeout_ms = -1) returns string|SSH2Channel::readBlock()]]&lt;br&gt;[[SSH2Channel::readBlock(softint $size, softint $streamid = 0, date $timeout) returns string|SSH2Channel::readBlock()]]|reads a block of data on the given stream and returns it as a string|
-|[[SSH2Channel::readBinaryBlock(softint $size, softint $streamid = 0, softint $timeout_ms = -1) returns string|SSH2Channel::readBinaryBlock()]]&lt;br&gt;[[SSH2Channel::readBinaryBlock(softint $size, softint $streamid = 0, date $timeout) returns string|SSH2Channel::readBinaryBlock()]]|reads data on the given stream and returns it as a binary|
-|[[SSH2Channel::write(data $data, softint $streamid = 0, softint $timeout_ms = -1) returns nothing|SSH2Channel::write()]]&lt;br&gt;[[SSH2Channel::write(data $data, softint $streamid = 0, date $timeout) returns nothing|SSH2Channel::write()]]|writes data to a stream|
-|[[SSH2Channel::close(softint $timeout_ms = 0) returns nothing|SSH2Channel::close()]]&lt;br&gt;[[SSH2Channel::close(date $timeout) returns nothing|SSH2Channel::close()]]|closes the channel|
-|[[SSH2Channel::waitClosed(softint $timeout_ms = 0) returns nothing|SSH2Channel::waitClosed()]]&lt;br&gt;[[SSH2Channel::waitClosed(date $timeout) returns nothing|SSH2Channel::waitClosed()]]|waits for the remote end to acknowledge the close request|
-|[[SSH2Channel::getExitStatus() returns int|SSH2Channel::getExitStatus()]]|Returns the exit code raised by the process running on the remote host at the other end of the named channel.  Note that the exit status may not be available if the remote end has not yet set its status to closed.|
-|[[SSH2Channel::requestX11Forwarding(softint $screen_no = 0, bool $single_connection = False, string $auth_proto = &quot;&quot;, string $auth_cookie = &quot;&quot;, softint $timeout_ms = -1) returns nothing|SSH2Channel::requestX11Forwarding()]]&lt;br&gt;[[SSH2Channel::requestX11Forwarding(softint $screen_no = 0, bool $single_connection = False, string $auth_proto = &quot;&quot;, string $auth_cookie = &quot;&quot;, date $timeout) returns nothing|SSH2Channel::requestX11Forwarding()]]|Request X11 forwarding on the channel|
-|[[SSH2Channel::setEncoding(string $encoding) returns nothing|SSH2Channel::setEncoding()]]|Sets the default string encoding for the channel; all string data read from the channel will be tagged with the encoding given|
-|[[SSH2Channel::getEncoding() returns string|SSH2Channel::getEncoding()]]|Returns the name of the default string encoding of the channel|
-|[[SSH2Channel::extendedDataNormal(softint $timeout_ms = -1) returns nothing|SSH2Channel::extendedDataNormal()]]&lt;br&gt;[[SSH2Channel::extendedDataNormal(date $timeout) returns nothing|SSH2Channel::extendedDataNormal()]]|Queue data in substreams (i.e. {{{stderr}}}, etc) for eventual reading|
-|[[SSH2Channel::extendedDataMerge(softint $timeout_ms = -1) returns nothing|SSH2Channel::extendedDataMerge()]]&lt;br&gt;[[SSH2Channel::extendedDataMerge(date $timeout) returns nothing|SSH2Channel::extendedDataMerge()]]|Merge substreams (i.e. {{{stderr}}}, etc) into stream 0 for reading|
-|[[SSH2Channel::extendedDataIgnore(softint $timeout_ms = -1) returns nothing|SSH2Channel::extendedDataIgnore()]]&lt;br&gt;[[SSH2Channel::extendedDataIgnore(date $timeout) returns nothing|SSH2Channel::extendedDataIgnore()]]|Discard all data in substreams (i.e. {{{stderr}}}, etc) immediately when it arrives.|
+|[[nothing SSH2Channel::setenv(string $var, string $value, timeout $timeout = -1)|SSH2Channel::setenv()]]|sets an environment variable|
+|[[nothing SSH2Channel::requestPty(string $term = &quot;vanilla&quot;, string $modes = &quot;&quot;, softint $width = LIBSSH2_TERM_WIDTH, softint $height = LIBSSH2_TERM_HEIGHT, softint $width_px = LIBSSH2_TERM_WIDTH_PX, softint $height_px = LIBSSH2_TERM_HEIGHT_PX, timeout $timeout = -1)|SSH2Channel::requestPty()]]|Requests a terminal to be allocated to the channel|
+|[[nothing SSH2Channel::shell(timeout $timeout = -1)|SSH2Channel::shell()]]|requests a login shell to be started for the channel|
+|[[bool SSH2Channel::eof()|SSH2Channel::eof()]]|returns True if an end of file condition is flagged on an open channel|
+|[[nothing SSH2Channel::sendEof(timeout $timeout = -1)|SSH2Channel::sendEof()]]|Informs the remote end that we are closing the connection|
+|[[nothing SSH2Channel::waitEof(timeout $timeout = -1)|SSH2Channel::waitEof()]]|wait for the remote end to acknowledge an EOF request|
+|[[nothing SSH2Channel::exec(string $command, timeout $timeout = -1)|SSH2Channel::exec()]]|executes a command on the channel|
+|[[nothing SSH2Channel::subsystem(string $command, timeout $timeout = -1)|SSH2Channel::subsystem()]]|executes a command on the channel as a subsystem|
+|[[string SSH2Channel::read(softint $streamid = 0, timeout $timeout = 10s)|SSH2Channel::read()]]|reads data on the given stream and returns it as a string; the default timeout is 10 seconds|
+|[[string SSH2Channel::readBinary(softint $streamid = 0, timeout $timeout = 10s)|SSH2Channel::readBinary()]]|reads data on the given stream and returns it as a binary; the default timeout is 10 seconds|
+|[[string SSH2Channel::readBlock(softint $size, softint $streamid = 0, timeout $timeout = -1)|SSH2Channel::readBlock()]]|reads a block of data on the given stream and returns it as a string|
+|[[string SSH2Channel::readBinaryBlock(softint $size, softint $streamid = 0, timeout $timeout = -1)|SSH2Channel::readBinaryBlock()]]|reads data on the given stream and returns it as a binary|
+|[[nothing SSH2Channel::write(data $data, softint $streamid = 0, timeout $timeout = -1)|SSH2Channel::write()]]|writes data to a stream|
+|[[nothing SSH2Channel::close(timeout $timeout = -1)|SSH2Channel::close()]]|closes the channel|
+|[[nothing SSH2Channel::waitClosed(timeout $timeout = -1)|SSH2Channel::waitClosed()]]|waits for the remote end to acknowledge the close request|
+|[[int SSH2Channel::getExitStatus()|SSH2Channel::getExitStatus()]]|Returns the exit code raised by the process running on the remote host at the other end of the named channel.  Note that the exit status may not be available if the remote end has not yet set its status to closed.|
+|[[nothing SSH2Channel::requestX11Forwarding(softint $screen_no = 0, bool $single_connection = False, string $auth_proto = &quot;&quot;, string $auth_cookie = &quot;&quot;, timeout $timeout = -1)|SSH2Channel::requestX11Forwarding()]]|Request X11 forwarding on the channel|
+|[[nothing SSH2Channel::setEncoding(string $encoding)|SSH2Channel::setEncoding()]]|Sets the default string encoding for the channel; all string data read from the channel will be tagged with the encoding given|
+|[[string SSH2Channel::getEncoding()|SSH2Channel::getEncoding()]]|Returns the name of the default string encoding of the channel|
+|[[nothing SSH2Channel::extendedDataNormal(timeout $timeout = -1)|SSH2Channel::extendedDataNormal()]]|Queue data in substreams (i.e. {{{stderr}}}, etc) for eventual reading|
+|[[nothing SSH2Channel::extendedDataMerge(timeout $timeout = -1)|SSH2Channel::extendedDataMerge()]]|Merge substreams (i.e. {{{stderr}}}, etc) into stream 0 for reading|
+|[[nothing SSH2Channel::extendedDataIgnore(timeout $timeout = -1)|SSH2Channel::extendedDataIgnore()]]|Discard all data in substreams (i.e. {{{stderr}}}, etc) immediately when it arrives.|
 </pre>
 </div>
-<div title="SSH2Channel::close()" creator="DavidNichols" modifier="DavidNichols" created="201006161442" modified="201006161520" changecount="2">
+<div title="SSH2Channel::close()" creator="DavidNichols" modifier="YourName" created="201006161442" modified="201012202053" changecount="3">
 <pre>!Synopsis
 :Closes the channel
 !Prototype
-:{{{SSH2Client::close(softint $timeout_ms = -1) returns nothing}}}
-:{{{SSH2Client::close(date $timeout) returns nothing}}}
+:{{{nothing SSH2Client::close(timeout $timeout = -1)}}}
 !Arguments
-:* {{{softint $timeout_ms = -1}}}: timeout value for the operation; -1 is the default, meaning do not time out
-:* {{{date $timeout}}}: a relative date/time value to use as the timeout (ex: {{{10s}}} = 10 seconds)
+:* {{{timeout $timeout = -1}}}: timeout value to execute the command; -1 is the default, meaning do not time out; can be either an integer (meaning miliseconds) or a relative date/time value (ex: {{{10s}}} = 10 seconds)
 !Example:
 {{{
 # close the channel with a 15 second timeout
@@ -1039,7 +1034,7 @@ $chan.close(15s);
 <pre>!Synopsis
 :returns True if an end of file condition is flagged on an open channel
 !Prototype
-:{{{SSH2Client::eof() returns bool}}}
+:{{{bool SSH2Client::eof()}}}
 !Return Value
 :* {{{bool}}}: True if an end of file condition is flagged on the channel, False if not
 !Example:
@@ -1052,16 +1047,14 @@ if ($chan.eof()) {
 :{{{SSH2CHANNEL-ERROR}}}: the channel has been closed
 </pre>
 </div>
-<div title="SSH2Channel::exec()" creator="DavidNichols" modifier="DavidNichols" created="201006161445" modified="201006161448" changecount="2">
+<div title="SSH2Channel::exec()" creator="DavidNichols" modifier="YourName" created="201006161445" modified="201012202047" changecount="3">
 <pre>!Synopsis
 :Executes a command on the channel; use [[SSH2Channel::read()]] to read the output.
 !Prototype
-:{{{SSH2Channel::exec(string $cmd, softint $timeout_ms = -1) returns nothing}}}
-:{{{SSH2Channel::exec(string $cmd, date $timeout) returns nothing}}}
+:{{{nothing SSH2Channel::exec(string $cmd, timeout $timeout = -1)}}}
 !Arguments
 :* {{{string $cmd}}}: the command to run
-:** {{{softint $timeout_ms = -1}}}: timeout value to open the channel; -1 is the default, meaning do not time out
-:** {{{date $timeout}}}: a relative date/time value to use as the timeout (ex: {{{10s}}} = 10 seconds)
+:* {{{timeout $timeout = -1}}}: timeout value to execute the command; -1 is the default, meaning do not time out; can be either an integer (meaning miliseconds) or a relative date/time value (ex: {{{10s}}} = 10 seconds)
 !Example:
 {{{
 # execute &quot;ls -l&quot; with a 15 second timeout
@@ -1073,15 +1066,13 @@ $chan.exec(&quot;ls -l&quot;, 15s);
 :{{{SSH2CHANNEL-EXEC-ERROR}}}: libssh2 reported an error on the channel while waiting for confirmation from the server
 </pre>
 </div>
-<div title="SSH2Channel::extendedDataIgnore()" creator="DavidNichols" modifier="DavidNichols" created="201006161541" changecount="1">
+<div title="SSH2Channel::extendedDataIgnore()" creator="DavidNichols" modifier="YourName" created="201006161541" modified="201012202056" changecount="2">
 <pre>!Synopsis
 :Discard all data in substreams (i.e. stderr, etc) immediately when it arrives.
 !Prototype
-:{{{SSH2Client::extendedDataIgnore(softint $timeout_ms = -1) returns nothing}}}
-:{{{SSH2Client::extendedDataIgnore(date $timeout) returns nothing}}}
+:{{{nothing SSH2Client::extendedDataIgnore(timeout $timeout = -1)}}}
 !Arguments
-:* {{{softint $timeout_ms = -1}}}: timeout value in milliseconds for the operation; -1 is the default, meaning do not time out
-:* {{{date $timeout}}}: a relative date/time value to use as the timeout (ex: {{{10s}}} = 10 seconds)
+:* {{{timeout $timeout = -1}}}: timeout value to execute the command; -1 is the default, meaning do not time out; can be either an integer (meaning miliseconds) or a relative date/time value (ex: {{{10s}}} = 10 seconds)
 !Example:
 {{{
 # call with a 15 second timeout
@@ -1092,15 +1083,13 @@ $chan.extendedDataIgnore(15s);
 :{{{SSH2CHANNEL-ERROR}}}: the channel has been closed
 :{{{SSH2CHANNEL-TIMEOUT}}}: timeout communicating on channel</pre>
 </div>
-<div title="SSH2Channel::extendedDataMerge()" creator="DavidNichols" modifier="DavidNichols" created="201006161540" changecount="1">
+<div title="SSH2Channel::extendedDataMerge()" creator="DavidNichols" modifier="YourName" created="201006161540" modified="201012202055" changecount="2">
 <pre>!Synopsis
 :Merge substreams (i.e. stderr, etc) into stream 0 for reading
 !Prototype
-:{{{SSH2Client::extendedDataMerge(softint $timeout_ms = -1) returns nothing}}}
-:{{{SSH2Client::extendedDataMerge(date $timeout) returns nothing}}}
+:{{{nothing SSH2Client::extendedDataMerge(timeout $timeout = -1)}}}
 !Arguments
-:* {{{softint $timeout_ms = -1}}}: timeout value in milliseconds for the operation; -1 is the default, meaning do not time out
-:* {{{date $timeout}}}: a relative date/time value to use as the timeout (ex: {{{10s}}} = 10 seconds)
+:* {{{timeout $timeout = -1}}}: timeout value to execute the command; -1 is the default, meaning do not time out; can be either an integer (meaning miliseconds) or a relative date/time value (ex: {{{10s}}} = 10 seconds)
 !Example:
 {{{
 # call with a 15 second timeout
@@ -1111,15 +1100,13 @@ $chan.extendedDataMerge(15s);
 :{{{SSH2CHANNEL-ERROR}}}: the channel has been closed
 :{{{SSH2CHANNEL-TIMEOUT}}}: timeout communicating on channel</pre>
 </div>
-<div title="SSH2Channel::extendedDataNormal()" creator="DavidNichols" modifier="DavidNichols" created="201006161539" changecount="1">
+<div title="SSH2Channel::extendedDataNormal()" creator="DavidNichols" modifier="YourName" created="201006161539" modified="201012202055" changecount="2">
 <pre>!Synopsis
 :Queue data in substreams (i.e. stderr, etc) for eventual reading
 !Prototype
-:{{{SSH2Client::extendedDataNormal(softint $timeout_ms = -1) returns nothing}}}
-:{{{SSH2Client::extendedDataNormal(date $timeout) returns nothing}}}
+:{{{nothing SSH2Client::extendedDataNormal(timeout $timeout = -1)}}}
 !Arguments
-:* {{{softint $timeout_ms = -1}}}: timeout value in milliseconds for the operation; -1 is the default, meaning do not time out
-:* {{{date $timeout}}}: a relative date/time value to use as the timeout (ex: {{{10s}}} = 10 seconds)
+:* {{{timeout $timeout = -1}}}: timeout value to execute the command; -1 is the default, meaning do not time out; can be either an integer (meaning miliseconds) or a relative date/time value (ex: {{{10s}}} = 10 seconds)
 !Example:
 {{{
 # call with a 15 second timeout
@@ -1134,7 +1121,7 @@ $chan.extendedDataNormal(15s);
 <pre>!Synopsis
 :Returns the name of the default string encoding of the channel
 !Prototype
-:{{{SSH2Client::getEncoding() returns string}}}
+:{{{string SSH2Client::getEncoding()}}}
 !Return Value
 :* {{{string}}}: the default encoding set for the channel
 !Example:
@@ -1147,7 +1134,7 @@ printf(&quot;channel encoding: %s\n&quot;, $chan.getEncoding());
 <pre>!Synopsis
 :Returns the exit code raised by the process running on the remote host at the other end of the named channel. Note that the exit status may not be available if the remote end has not yet set its status to closed.
 !Prototype
-:{{{SSH2Client::getExitStatus() returns int}}}
+:{{{int SSH2Client::getExitStatus()}}}
 !Return Value
 :* {{{int}}}: The exit code of the process at the other end of the channel
 !Example:
@@ -1158,16 +1145,14 @@ printf(&quot;exit status: %d\n&quot;, $chan.getExitStatus());
 :{{{SSH2CHANNEL-ERROR}}}: the channel has been closed
 </pre>
 </div>
-<div title="SSH2Channel::read()" creator="DavidNichols" modifier="DavidNichols" created="201006161452" modified="201006161517" changecount="5">
+<div title="SSH2Channel::read()" creator="DavidNichols" modifier="YourName" created="201006161452" modified="201012202049" changecount="7">
 <pre>!Synopsis
 :Reads data on the given stream and returns it as a string
 !Prototype
-:{{{SSH2Channel::read(softint $streamid = 0, softint $timeout_ms) returns string}}}
-:{{{SSH2Channel::read(softint $streamid = 0, date $timeout = 10s) returns string}}}
+:{{{string SSH2Channel::read(softint $streamid = 0, timeout $timeout = 10s)}}}
 !Arguments
 :* {{{softint $streamid = 0}}}: the stream ID to read (0 is the default, 1 is for {{{stderr}}})
-:** {{{softint $timeout_ms}}}: timeout value for the operation in milliseconds
-:** {{{date $timeout}}}: a relative date/time value to use as the timeout; the default is {{{10s}}} = 10 seconds
+:* {{{timeout $timeout = 10s}}}: timeout value to execute the command; can be either an integer (meaning miliseconds) or a relative date/time value (ex: {{{10s}}} = 10 seconds)
 !Example:
 {{{
 # read available data on the channel with a 15 second timeout
@@ -1179,16 +1164,14 @@ my string $str = $chan.read(0, 15s);
 :{{{SSH2CHANNEL-READ-ERROR}}}: invalid stream ID, libssh2 reported an error on the channel while waiting for data from the server
 </pre>
 </div>
-<div title="SSH2Channel::readBinary()" creator="DavidNichols" modifier="DavidNichols" created="201006161453" modified="201006161517" changecount="5">
+<div title="SSH2Channel::readBinary()" creator="DavidNichols" modifier="YourName" created="201006161453" modified="201012202050" changecount="7">
 <pre>!Synopsis
 :Reads data on the given stream and returns it as a binary
 !Prototype
-:{{{SSH2Channel::readBinary(softint $streamid = 0, softint $timeout_ms) returns binary}}}
-:{{{SSH2Channel::readBinary(softint $streamid = 0, date $timeout = 10s) returns binary}}}
+:{{{binary SSH2Channel::readBinary(softint $streamid = 0, timeout $timeout = 10s)}}}
 !Arguments
 :* {{{softint $streamid = 0}}}: the stream ID to read (0 is the default, 1 is for {{{stderr}}})
-:** {{{softint $timeout_ms = -1}}}: timeout value for the operation in milliseconds
-:** {{{date $timeout}}}: a relative date/time value to use as the timeout; the default is {{{10s}}} = 10 seconds
+:* {{{timeout $timeout = 10s}}}: timeout value to execute the command; can be either an integer (meaning miliseconds) or a relative date/time value (ex: {{{10s}}} = 10 seconds)
 !Example:
 {{{
 # read available data on the channel with a 15 second timeout
@@ -1199,17 +1182,15 @@ my binary $str = $chan.readBinary(0, 15s);
 :{{{SSH2CHANNEL-TIMEOUT}}}: timeout communicating on channel
 :{{{SSH2CHANNEL-READBINARY-ERROR}}}: invalid stream ID; libssh2 reported an error on the channel while waiting for data from the server</pre>
 </div>
-<div title="SSH2Channel::readBinaryBlock()" creator="DavidNichols" modifier="DavidNichols" created="201006161456" modified="201006161518" changecount="4">
+<div title="SSH2Channel::readBinaryBlock()" creator="DavidNichols" modifier="YourName" created="201006161456" modified="201012202051" changecount="5">
 <pre>!Synopsis
 :Reads a block of data of a given size on the given stream and returns it as a binary
 !Prototype
-:{{{SSH2Channel::readBinaryBlock(softint $size, softint $streamid = 0, softint $timeout_ms = -1) returns binary}}}
-:{{{SSH2Channel::readBinaryBlock(softint $size, softint $streamid = 0, date $timeout) returns binary}}}
+:{{{binary SSH2Channel::readBinaryBlock(softint $size, softint $streamid = 0, timeout $timeout = -1)}}}
 !Arguments
 :* {{{softint $size}}}: the size of the block of data to read in bytes
 :* {{{softint $streamid = 0}}}: the stream ID to read (0 is the default, 1 is for {{{stderr}}})
-:** {{{softint $timeout_ms = -1}}}: timeout value for the operation; -1 is the default, meaning do not time out
-:** {{{date $timeout}}}: a relative date/time value to use as the timeout (ex: {{{10s}}} = 10 seconds)
+:* {{{timeout $timeout = -1}}}: timeout value to execute the command; -1 is the default, meaning do not time out; can be either an integer (meaning miliseconds) or a relative date/time value (ex: {{{10s}}} = 10 seconds)
 !Example:
 {{{
 # read a 1000 byte block of data from stream 0 on the channel with a 15 second timeout
@@ -1220,17 +1201,15 @@ my binary $bin = $chan.readBinaryBlock(1000, 0, 15s);
 :{{{SSH2CHANNEL-TIMEOUT}}}: timeout communicating on channel
 :{{{SSH2CHANNEL-READBINARY-ERROR}}}: invalid stream ID; libssh2 reported an error on the channel while waiting for data from the server</pre>
 </div>
-<div title="SSH2Channel::readBlock()" creator="DavidNichols" modifier="DavidNichols" created="201006161455" modified="201006161525" changecount="4">
+<div title="SSH2Channel::readBlock()" creator="DavidNichols" modifier="YourName" created="201006161455" modified="201012202050" changecount="5">
 <pre>!Synopsis
 :Reads a block of data of a given size on the given stream and returns it as a string
 !Prototype
-:{{{SSH2Channel::readBlock(softint $size, softint $streamid = 0, softint $timeout_ms = -1) returns string}}}
-:{{{SSH2Channel::readBlock(softint $size, softint $streamid = 0, date $timeout) returns string}}}
+:{{{string SSH2Channel::readBlock(softint $size, softint $streamid = 0, timeout $timeout = -1)}}}
 !Arguments
 :* {{{softint $size}}}: the size of the block of data to read in bytes
 :* {{{softint $streamid = 0}}}: the stream ID to read (0 is the default, 1 is for {{{stderr}}})
-:** {{{softint $timeout_ms = -1}}}: timeout value for the operation; -1 is the default, meaning do not time out
-:** {{{date $timeout}}}: a relative date/time value to use as the timeout (ex: {{{10s}}} = 10 seconds)
+:* {{{timeout $timeout = -1}}}: timeout value to execute the command; -1 is the default, meaning do not time out; can be either an integer (meaning miliseconds) or a relative date/time value (ex: {{{10s}}} = 10 seconds)
 !Example:
 {{{
 # read a 1000 byte block of data from stream 0 on the channel with a 15 second timeout
@@ -1242,12 +1221,11 @@ my string $str = $chan.readBlock(1000, 0, 15s);
 :{{{SSH2CHANNEL-READ-ERROR}}}: invalid stream ID; libssh2 reported an error on the channel while waiting for data from the server
 </pre>
 </div>
-<div title="SSH2Channel::requestPty()" creator="DavidNichols" modifier="DavidNichols" created="201006161414" modified="201006161431" changecount="4">
+<div title="SSH2Channel::requestPty()" creator="DavidNichols" modifier="YourName" created="201006161414" modified="201012202044" changecount="6">
 <pre>!Synopsis
 :Requests a terminal to be allocated to the channel
 !Prototype
-:{{{SSH2Channel::requestPty(string $term = &quot;vanilla&quot;, string $modes = &quot;&quot;, softint $width = LIBSSH2_TERM_WIDTH, softint $height = LIBSSH2_TERM_HEIGHT, softint $width_px = LIBSSH2_TERM_WIDTH_PX, softint $height_px = LIBSSH2_TERM_HEIGHT_PX, softint $timeout_ms = -1) returns nothing}}}
-:{{{SSH2Channel::requestPty(string $term = &quot;vanilla&quot;, string $modes = &quot;&quot;, softint $width = LIBSSH2_TERM_WIDTH, softint $height = LIBSSH2_TERM_HEIGHT, softint $width_px = LIBSSH2_TERM_WIDTH_PX, softint $height_px = LIBSSH2_TERM_HEIGHT_PX, date $timeout) returns nothing}}}
+:{{{nothing SSH2Channel::requestPty(string $term = &quot;vanilla&quot;, string $modes = &quot;&quot;, softint $width = LIBSSH2_TERM_WIDTH, softint $height = LIBSSH2_TERM_HEIGHT, softint $width_px = LIBSSH2_TERM_WIDTH_PX, softint $height_px = LIBSSH2_TERM_HEIGHT_PX, timeout $timeout = -1)}}}
 !Arguments
 :* {{{string $term = &quot;vanilla&quot;}}}: terminal emulation requested
 :* {{{string $modes}}}: terminal mode modifier values
@@ -1255,8 +1233,7 @@ my string $str = $chan.readBlock(1000, 0, 15s);
 :* {{{softint $height = LIBSSH2_TERM_HEIGHT}}}: height of the pty in characters
 :* {{{softint $width_px = LIBSSH2_TERM_WIDTH_PX}}}: width of the pty in pixels
 :* {{{softint $height_px = LIBSSH2_TERM_HEIGHT_PX}}}: height of the pty in pixels
-:** {{{softint $timeout_ms = -1}}}: timeout value to open the channel; -1 is the default, meaning do not time out
-:** {{{date $timeout}}}: a relative date/time value to use as the timeout (ex: {{{10s}}} = 10 seconds)
+:* {{{timeout $timeout = -1}}}: timeout value to execute the command; -1 is the default, meaning do not time out; can be either an integer (meaning miliseconds) or a relative date/time value (ex: {{{10s}}} = 10 seconds)
 !Example:
 {{{
 $chan.setenv(&quot;TERM&quot;, &quot;vt100&quot;);
@@ -1267,19 +1244,17 @@ $chan.setenv(&quot;TERM&quot;, &quot;vt100&quot;);
 :{{{SSH2CHANNEL-TIMEOUT}}}: timeout communicating on channel
 </pre>
 </div>
-<div title="SSH2Channel::requestX11Forwarding()" creator="DavidNichols" modifier="DavidNichols" created="201006161530" changecount="1">
+<div title="SSH2Channel::requestX11Forwarding()" creator="DavidNichols" modifier="YourName" created="201006161530" modified="201012202055" changecount="2">
 <pre>!Synopsis
 :Request X11 forwarding on the channel
 !Prototype
-:{{{SSH2Channel::requestX11Forwarding(softint $screen_no = 0, bool $single_connection = False, string $auth_proto = &quot;&quot;, string $auth_cookie = &quot;&quot;, softint $timeout_ms = -1) returns nothing}}}
-:{{{SSH2Channel::requestX11Forwarding(softint $screen_no = 0, bool $single_connection = False, string $auth_proto = &quot;&quot;, string $auth_cookie = &quot;&quot;, date $timeout) returns nothing}}}
+:{{{nothing SSH2Channel::requestX11Forwarding(softint $screen_no = 0, bool $single_connection = False, string $auth_proto = &quot;&quot;, string $auth_cookie = &quot;&quot;, timeout $timeout = -1)}}}
 !Arguments
 :* {{{softint $screen_no = 0}}}: the X11 screen number to forward
 :* {{{bool $single_connection = False}}}: set to True to forward only a single connection on the channel
 :* {{{string $auth_proto = &quot;&quot;}}}: the authorization protocol to use
 :* {{{string $auth_cookie = &quot;&quot;}}}: the authorization cookie to use
-:** {{{softint $timeout_ms = -1}}}: timeout value for the operation; -1 is the default, meaning do not time out
-:** {{{date $timeout}}}: a relative date/time value to use as the timeout (ex: {{{10s}}} = 10 seconds)
+:* {{{timeout $timeout = -1}}}: timeout value to execute the command; -1 is the default, meaning do not time out; can be either an integer (meaning miliseconds) or a relative date/time value (ex: {{{10s}}} = 10 seconds)
 !Example:
 {{{
 $chan.requestX11Forwarding();
@@ -1290,15 +1265,13 @@ $chan.requestX11Forwarding();
 :{{{SSH2CHANNEL-REQUESTX11FORWARDING-ERROR}}}: invalid stream ID; libssh2 reported an error on the channel while waiting for data from the server
 </pre>
 </div>
-<div title="SSH2Channel::sendEof()" creator="DavidNichols" modifier="DavidNichols" created="201006161433" modified="201006161443" changecount="4">
+<div title="SSH2Channel::sendEof()" creator="DavidNichols" modifier="YourName" created="201006161433" modified="201012202047" changecount="7">
 <pre>!Synopsis
 :Informs the remote end that we are closing the connection
 !Prototype
-:{{{SSH2Client::sendEof(softint $timeout_ms = -1) returns nothing}}}
-:{{{SSH2Client::sendEof(date $timeout) returns nothing}}}
+:{{{nothing SSH2Client::sendEof(timeout $timeout = -1)}}}
 !Arguments
-:* {{{softint $timeout_ms = -1}}}: timeout value for the operation; -1 is the default, meaning do not time out
-:* {{{date $timeout}}}: a relative date/time value to use as the timeout (ex: {{{10s}}} = 10 seconds)
+:* {{{timeout $timeout = -1}}}: timeout value to execute the command; -1 is the default, meaning do not time out; can be either an integer (meaning miliseconds) or a relative date/time value (ex: {{{10s}}} = 10 seconds)
 !Example:
 {{{
 # send an eof request with a 15 second timeout
@@ -1314,7 +1287,7 @@ $chan.sendEof(15s);
 <pre>!Synopsis
 :Sets the default string encoding for the channel; all string data read from the channel will be tagged with the encoding given
 !Prototype
-:{{{SSH2Client::setEncoding(string $encoding) returns nothing}}}
+:{{{nothing SSH2Client::setEncoding(string $encoding)}}}
 !Arguments
 :* {{{string $encoding}}}: the string encoding to set for the channel
 !Example:
@@ -1322,17 +1295,15 @@ $chan.sendEof(15s);
 $chan.setEncoding(&quot;ISO-8859-1&quot;);
 }}}</pre>
 </div>
-<div title="SSH2Channel::setenv()" creator="DavidNichols" modifier="DavidNichols" created="201006161412" modified="201006161443" changecount="2">
+<div title="SSH2Channel::setenv()" creator="DavidNichols" modifier="YourName" created="201006161412" modified="201012202029" changecount="3">
 <pre>!Synopsis
 :sets an environment variable on the channel
 !Prototype
-:{{{SSH2Channel::setenv(string $var, string $value, softint $timeout_ms = -1) returns nothing}}}
-:{{{SSH2Channel::setenv(string $var, string $value, date $timeout) returns nothing}}}
+:{{{nothing SSH2Channel::setenv(string $var, string $value, timeout $timeout = -1)}}}
 !Arguments
 :* {{{string $var}}}: the environment variable to set
 :* {{{string $value}}}: the value to set
-:** {{{softint $timeout_ms = -1}}}: timeout value to open the channel; -1 is the default, meaning do not time out
-:** {{{date $timeout}}}: a relative date/time value to use as the timeout (ex: {{{10s}}} = 10 seconds)
+:* {{{timeout $timeout = -1}}}: timeout value to execute the command; -1 is the default, meaning do not time out; can be either an integer (meaning miliseconds) or a relative date/time value (ex: {{{10s}}} = 10 seconds)
 !Example:
 {{{
 $chan.setenv(&quot;TERM&quot;, &quot;vt100&quot;);
@@ -1343,15 +1314,14 @@ $chan.setenv(&quot;TERM&quot;, &quot;vt100&quot;);
 :{{{SSH2-ERROR}}}: libssh2 reported an error on the channel
 </pre>
 </div>
-<div title="SSH2Channel::shell()" creator="DavidNichols" modifier="DavidNichols" created="201006161428" modified="201006161442" changecount="4">
+<div title="SSH2Channel::shell()" creator="DavidNichols" modifier="YourName" created="201006161428" modified="201012202044" changecount="5">
 <pre>!Synopsis
 :Requests a login shell to be started for the channel
 !Prototype
-:{{{SSH2Client::shell(softint $timeout_ms = -1) returns nothing}}}
-:{{{SSH2Client::shell(date $timeout) returns nothing}}}
+:{{{nothing SSH2Client::shell(timeout $timeout = -1)}}}
 !Arguments
-:* {{{softint $timeout_ms = -1}}}: timeout value for the operation; -1 is the default, meaning do not time out
-:* {{{date $timeout}}}: a relative date/time value to use as the timeout (ex: {{{10s}}} = 10 seconds)
+:* {{{timeout $timeout = -1}}}: timeout value for the operation; -1 is the default, meaning do not time out
+:* {{{timeout $timeout = -1}}}: timeout value to execute the command; -1 is the default, meaning do not time out; can be either an integer (meaning miliseconds) or a relative date/time value (ex: {{{10s}}} = 10 seconds)
 !Example:
 {{{
 # open a shell on the channel with a 15 second timeout
@@ -1363,16 +1333,14 @@ $chan.shell(15s);
 :{{{SSH2CHANNEL-TIMEOUT}}}: timeout communicating on channel
 </pre>
 </div>
-<div title="SSH2Channel::subsystem()" creator="DavidNichols" modifier="DavidNichols" created="201006161450" changecount="1">
+<div title="SSH2Channel::subsystem()" creator="DavidNichols" modifier="YourName" created="201006161450" modified="201012202047" changecount="2">
 <pre>!Synopsis
 :Executes a command on the channel as a subsystem; use [[SSH2Channel::read()]] to read the output if needed.
 !Prototype
-:{{{SSH2Channel::subsystem(string $cmd, softint $timeout_ms = -1) returns nothing}}}
-:{{{SSH2Channel::subsystem(string $cmd, date $timeout) returns nothing}}}
+:{{{nothing SSH2Channel::subsystem(string $cmd, timeout $timeout = -1)}}}
 !Arguments
 :* {{{string $cmd}}}: the command to run as a subsystem
-:** {{{softint $timeout_ms = -1}}}: timeout value to open the channel; -1 is the default, meaning do not time out
-:** {{{date $timeout}}}: a relative date/time value to use as the timeout (ex: {{{10s}}} = 10 seconds)
+:* {{{timeout $timeout = -1}}}: timeout value to execute the command; -1 is the default, meaning do not time out; can be either an integer (meaning miliseconds) or a relative date/time value (ex: {{{10s}}} = 10 seconds)
 !Example:
 {{{
 # execute &quot;ls -l&quot; with a 15 second timeout
@@ -1384,15 +1352,13 @@ $chan.exec(&quot;ls -l&quot;, 15s);
 :{{{SSH2CHANNEL-SUBSYSTEM-ERROR}}}: libssh2 reported an error on the channel while waiting for confirmation from the server
 </pre>
 </div>
-<div title="SSH2Channel::waitClosed()" creator="DavidNichols" modifier="DavidNichols" created="201006161521" modified="201006161537" changecount="3">
+<div title="SSH2Channel::waitClosed()" creator="DavidNichols" modifier="YourName" created="201006161521" modified="201012202054" changecount="4">
 <pre>!Synopsis
 :Wait for the remote end to acknowledge the close request
 !Prototype
-:{{{SSH2Client::waitClosed(softint $timeout_ms = -1) returns nothing}}}
-:{{{SSH2Client::waitClosed(date $timeout) returns nothing}}}
+:{{{nothing SSH2Client::waitClosed(timeout $timeout = -1)}}}
 !Arguments
-:* {{{softint $timeout_ms = -1}}}: timeout value in milliseconds for the operation; -1 is the default, meaning do not time out
-:* {{{date $timeout}}}: a relative date/time value to use as the timeout (ex: {{{10s}}} = 10 seconds)
+:* {{{timeout $timeout = -1}}}: timeout value to execute the command; -1 is the default, meaning do not time out; can be either an integer (meaning miliseconds) or a relative date/time value (ex: {{{10s}}} = 10 seconds)
 !Example:
 {{{
 # wait for a close confirmation with a 15 second timeout
@@ -1403,15 +1369,13 @@ $chan.waitClosed(15s);
 :{{{SSH2CHANNEL-ERROR}}}: the channel has been closed
 :{{{SSH2CHANNEL-TIMEOUT}}}: timeout communicating on channel</pre>
 </div>
-<div title="SSH2Channel::waitEof()" creator="DavidNichols" modifier="DavidNichols" created="201006161441" modified="201006161443" changecount="2">
+<div title="SSH2Channel::waitEof()" creator="DavidNichols" modifier="YourName" created="201006161441" modified="201012202047" changecount="4">
 <pre>!Synopsis
 :Wait for the remote end to acknowledge an EOF request
 !Prototype
-:{{{SSH2Client::waitEof(softint $timeout_ms = -1) returns nothing}}}
-:{{{SSH2Client::waitEof(date $timeout) returns nothing}}}
+:{{{nothing SSH2Client::waitEof(timeout $timeout = -1)}}}
 !Arguments
-:* {{{softint $timeout_ms = -1}}}: timeout value for the operation; -1 is the default, meaning do not time out
-:* {{{date $timeout}}}: a relative date/time value to use as the timeout (ex: {{{10s}}} = 10 seconds)
+:* {{{timeout $timeout = -1}}}: timeout value to execute the command; -1 is the default, meaning do not time out; can be either an integer (meaning miliseconds) or a relative date/time value (ex: {{{10s}}} = 10 seconds)
 !Example:
 {{{
 # wait for an acknowledgment to our eof request with a 15 second timeout
@@ -1422,17 +1386,15 @@ $chan.waitEof(15s);
 :{{{SSH2CHANNEL-ERROR}}}: the channel has been closed
 :{{{SSH2CHANNEL-TIMEOUT}}}: timeout communicating on channel</pre>
 </div>
-<div title="SSH2Channel::write()" creator="DavidNichols" modifier="DavidNichols" created="201006161517" modified="201006161518" changecount="2">
+<div title="SSH2Channel::write()" creator="DavidNichols" modifier="YourName" created="201006161517" modified="201012202052" changecount="3">
 <pre>!Synopsis
 :Writes data to a stream
 !Prototype
-:{{{SSH2Channel::write(data $data, softint $streamid = 0, softint $timeout_ms = -1) returns nothing}}}
-:{{{SSH2Channel::write(data $data, softint $streamid = 0, date $timeout) returns nothing}}}
+:{{{nothing SSH2Channel::write(data $data, softint $streamid = 0, timeout $timeout = -1)}}}
 !Arguments
 :* {{{data $data}}}: the data to write; must be either a string or binary
 :* {{{softint $streamid = 0}}}: the stream ID to read (0 is the default, 1 is for {{{stderr}}})
-:** {{{softint $timeout_ms = -1}}}: timeout value for the operation; -1 is the default, meaning do not time out
-:** {{{date $timeout}}}: a relative date/time value to use as the timeout (ex: {{{10s}}} = 10 seconds)
+:* {{{timeout $timeout = -1}}}: timeout value to execute the command; -1 is the default, meaning do not time out; can be either an integer (meaning miliseconds) or a relative date/time value (ex: {{{10s}}} = 10 seconds)
 !Example:
 {{{
 # write data on stream 0 with a 15 second timeout
@@ -1443,18 +1405,18 @@ $chan.write($data, 0, 15s);
 :{{{SSH2CHANNEL-TIMEOUT}}}: timeout communicating on channel
 :{{{SSH2CHANNEL-WRITE-ERROR}}}: invalid stream ID; libssh2 reported an error on the channel while waiting for a response from the server</pre>
 </div>
-<div title="SSH2Client" creator="DavidNichols" modifier="DavidNichols" created="201006151407" modified="201006161845" changecount="17">
+<div title="SSH2Client" creator="DavidNichols" modifier="YourName" created="201006151407" modified="201012202027" changecount="22">
 <pre>The ~SSH2Client class provides access to the ssh2 protocol, allowing qore programs to establish ssh2 connections to remote servers and execute commands and retrieve the terminal output.  This class inherits the SSH2Base class.
 Most methods require a connection to be already established; connections are established explicitly by calling [[SSH2Base::connect()]].
 
 |!Method|!Description|h
 |[[SSH2Client::constructor(string $url)|SSH2Client::constructor()]]&lt;br&gt;[[SSH2Client::constructor(string $hostname, softint $port)|SSH2Client::constructor()]]|creates the object with the given URL|
 |[[SSH2Client::copy()]]|throws an exception; currently these objects cannot be copied|
-|[[SSH2Client::info() returns hash|SSH2Client::info()]]|returns a hash with information about the current connection status; safe to call when not connected|
-|[[SSH2Client::openSessionChannel(softint $timeout_ms = -1) returns SSH2Channel|SSH2Client::openSessionChannel()]]&lt;br&gt;[[SSH2Client::openSessionChannel(date $timeout) returns SSH2Channel|SSH2Client::openSessionChannel()]]|Opens a login session and returns a SSH2Channel object for the session|
-|[[SSH2Client::openDirectTcpipChannel(string $host, softint $port, string $source_host = &quot;127.0.0.1&quot;, softint $source_port = 22, softint $timeout_ms = -1) returns SSH2Channel|SSH2Client::openDirectTcpipChannel()]]&lt;br&gt;[[SSH2Client::openDirectTcpipChannel(string $host, softint $port, string $source_host = &quot;127.0.0.1&quot;, softint $source_port = 22, date $timeout) returns SSH2Channel|SSH2Client::openDirectTcpipChannel()]]|Opens a port forwarding channel and returns the corresponding SSH2Channel object for the new forwarded connection|
-|[[SSH2Client::scpGet(string $remote_path, softint $timeout_ms = -1) returns SSH2Channel|SSH2Client::scpGet()]]&lt;br&gt;[[SSH2Client::scpGet(string $remote_path, date $timeout) returns SSH2Channel|SSH2Client::scpGet()]]&lt;br&gt;[[SSH2Client::scpGet(string $remote_path, softint $timeout_ms = -1, reference $statinfo) returns SSH2Channel|SSH2Client::scpGet()]]&lt;br&gt;[[SSH2Client::scpGet(string $remote_path, date $timeout, reference $statinfo) returns SSH2Channel|SSH2Client::scpGet()]]|opens a channel for retrieving a remote file with an optional timeout value and an optional reference for returning file status information; an SSH2Channel object is returned to use to retrieve the file's data|
-|[[SSH2Client::scpPut(string $remote_path, softint $size, softint $mode = 0644, date $mtime = date(), date $atime = date(), softint $timeout_ms = -1) returns SSH2Channel|SSH2Client::scpPut()]]&lt;br&gt;[[SSH2Client::scpPut(string $remote_path, softint $size, softint $mode = 0644, date $mtime = date(), date $atime = date(), date $timeout) returns SSH2Channel|SSH2Client::scpPut()]]|Opens a channel for sending a remote file; an SSH2Channel object is returned to use to send the file's data|</pre>
+|[[hash SSH2Client::info()|SSH2Client::info()]]|returns a hash with information about the current connection status; safe to call when not connected|
+|[[SSH2Channel SSH2Client::openSessionChannel(timeout $timeout = -1)|SSH2Client::openSessionChannel()]]|Opens a login session and returns a SSH2Channel object for the session|
+|[[SSH2Channel SSH2Client::openDirectTcpipChannel(string $host, softint $port, string $source_host = &quot;127.0.0.1&quot;, softint $source_port = 22, timeout $timeout = -1)|SSH2Client::openDirectTcpipChannel()]]|Opens a port forwarding channel and returns the corresponding SSH2Channel object for the new forwarded connection|
+|[[SSH2Channel SSH2Client::scpGet(string $remote_path, timeout $timeout = -1, *reference $statinfo)|SSH2Client::scpGet()]]|opens a channel for retrieving a remote file with an optional timeout value and an optional reference for returning file status information; an SSH2Channel object is returned to use to retrieve the file's data|
+|[[SSH2Channel SSH2Client::scpPut(string $remote_path, softint $size, softint $mode = 0644, date $mtime = date(), date $atime = date(), timeout $timeout = -1)|SSH2Client::scpPut()]]|Opens a channel for sending a remote file; an SSH2Channel object is returned to use to send the file's data|</pre>
 </div>
 <div title="SSH2Client::constructor()" creator="DavidNichols" modifier="DavidNichols" created="201006151408" modified="201006161838" changecount="3">
 <pre>!Synopsis
@@ -1477,11 +1439,11 @@ Most methods require a connection to be already established; connections are est
 !Exceptions
 :{{{SSH2CLIENT-COPY-ERROR}}}: copying SSH2Client objects is currently not supported</pre>
 </div>
-<div title="SSH2Client::info()" creator="DavidNichols" modifier="DavidNichols" created="201006151409" modified="201006161051" changecount="4">
+<div title="SSH2Client::info()" creator="DavidNichols" modifier="YourName" created="201006151409" modified="201012202027" changecount="5">
 <pre>!Synopsis
 : Returns a hash with information about the current connection status; also safe to call when not connected  
 !Prototype
-:{{{SFTPClient::info()}}}
+:{{{hash SFTPClient::info()}}}
 !Example:
 {{{
 my hash $info = $sftpclient.info();
@@ -1501,19 +1463,17 @@ printf(&quot;connection info: %n\n&quot;, $info);
 |{{{methods}}}|{{{hash}}}|a hash of strings giving the crytographic methods used for the connection|
 </pre>
 </div>
-<div title="SSH2Client::openDirectTcpipChannel()" creator="DavidNichols" modifier="DavidNichols" created="201006160845" modified="201006160848" changecount="6">
+<div title="SSH2Client::openDirectTcpipChannel()" creator="DavidNichols" modifier="YourName" created="201006160845" modified="201012202022" changecount="8">
 <pre>!Synopsis
 :Opens a port forwarding channel and returns the corresponding SSH2Channel object for the new forwarded connection
 !Prototype
-:{{{SSH2Client::openDirectTcpipChannel(string $host, softint $port, string $source_host = &quot;127.0.0.1&quot;, softint $source_port = 22, softint $timeout_ms = -1) returns SSH2Channel}}}
-:{{{SSH2Client::openDirectTcpipChannel(string $host, softint $port, string $source_host = &quot;127.0.0.1&quot;, softint $source_port = 22, date $timeout) returns SSH2Channel}}}
+:{{{SSH2Channel SSH2Client::openDirectTcpipChannel(string $host, softint $port, string $source_host = &quot;127.0.0.1&quot;, softint $source_port = 22, timeout $timeout = -1)}}}
 !Arguments
 :* {{{string $host}}}: the remote host to connect to
 :* {{{softint $port}}}: the port number on the remote host to connect to
 :* {{{string $source_host = &quot;127.0.0.1&quot;}}}: the host name to report as the source of the connection
 :* {{{softint $source_port = 22}}}: the port number to report as the source of the connection
-:** {{{softint $timeout_ms = -1}}}: timeout value to open the channel; -1 is the default, meaning do not time out
-:** {{{date $timeout}}}: a relative date/time value to use as the timeout (ex: {{{10s}}} = 10 seconds)
+:* {{{timeout $timeout = -1}}}: timeout value to open the channel; -1 is the default, meaning do not time out; can be either an integer (meaning miliseconds) or a relative date/time value (ex: {{{10s}}} = 10 seconds)
 !Return Value
 : SSH2Channel: the forwarded data channel
 !Example:
@@ -1527,15 +1487,13 @@ my SSH2Channel $chan = $ssh2.openDirectTcpipChannel(&quot;remotehost&quot;, 8001
 :{{{SSH2-ERROR}}}: error opening channel
 </pre>
 </div>
-<div title="SSH2Client::openSessionChannel()" creator="DavidNichols" modifier="DavidNichols" created="201006160832" modified="201006161428" changecount="12">
+<div title="SSH2Client::openSessionChannel()" creator="DavidNichols" modifier="YourName" created="201006160832" modified="201012202023" changecount="14">
 <pre>!Synopsis
 :Opens a login session and returns a SSH2Channel object for the session
 !Prototype
-:{{{SSH2Client::openSessionChannel(softint $timeout_ms = -1) returns SSH2Channel}}}
-:{{{SSH2Client::openSessionChannel(date $timeout) returns SSH2Channel}}}
+:{{{SSH2Channel SSH2Client::openSessionChannel(timeout $timeout = -1)}}}
 !Arguments
-:* {{{softint $timeout_ms = -1}}}: timeout value to open the channel; -1 is the default, meaning do not time out
-:* {{{date $timeout}}}: a relative date/time value to use as the timeout (ex: {{{10s}}} = 10 seconds)
+:* {{{timeout $timeout = -1}}}: timeout value to open the channel; -1 is the default, meaning do not time out; can be either an integer (meaning miliseconds) or a relative date/time value (ex: {{{10s}}} = 10 seconds)
 !Return Value
 : SSH2Channel: the channel for the new session
 !Example:
@@ -1549,20 +1507,16 @@ my SSH2Channel $chan = $ssh2.openSessionChannel(15s);
 :{{{SSH2-ERROR}}}: error opening channel
 </pre>
 </div>
-<div title="SSH2Client::scpGet()" creator="DavidNichols" modifier="DavidNichols" created="201006160851" modified="201006171334" changecount="5">
+<div title="SSH2Client::scpGet()" creator="DavidNichols" modifier="YourName" created="201006160851" modified="201012202021" changecount="7">
 <pre>!Synopsis
 :opens a channel for retrieving a remote file with an optional timeout value and an optional reference for returning file status information; an SSH2Channel object is returned to use to retrieve the file's data.
 :Note that [[SSH2Channel::readBlock()]] or [[SSH2Channel::readBinaryBlock()]] should be used with the file's size as a parameter, as [[SSH2Channel::read()]] and [[SSH2Channel::readBinary()]] can return an extra null byte at the end of the stream in some cases. 
 !Prototype
-: {{{SSH2Client::scpGet(string $remote_path, softint $timeout_ms = -1) returns SSH2Channel}}}
-: {{{SSH2Client::scpGet(string $remote_path, date $timeout) returns SSH2Channel|}}}
-: {{{SSH2Client::scpGet(string $remote_path, softint $timeout_ms = -1, reference $statinfo) returns SSH2Channel}}}
-: {{{SSH2Client::scpGet(string $remote_path, date $timeout, reference $statinfo) returns SSH2Channel}}}
+: {{{SSH2Channel SSH2Client::scpGet(string $remote_path, timeout $timeout = -1, *reference $statinfo)}}}
 !Arguments
 :* {{{string $remote_path}}}: the path of the file to get
-:** {{{softint $timeout_ms = -1}}}: timeout value to open the channel; -1 is the default, meaning do not time out
-:** {{{date $timeout}}}: a relative date/time value to use as the timeout (ex: {{{10s}}} = 10 seconds)
-:* {{{[reference $statinfo]}}}: if present, will write a hash with the following structure to the lvalue:
+:* {{{timeout $timeout = -1}}}: timeout value to open the channel; -1 is the default, meaning do not time out; can be either an integer (meaning miliseconds) or a relative date/time value (ex: {{{10s}}} = 10 seconds)
+:* {{{*reference $statinfo}}}: if present, will write a hash with the following structure to the lvalue:
 |!Key|!Type|!Description|h
 |{{{mode}}}|{{{int}}}|the file's mode|
 |{{{permissions}}}|{{{string}}}|a string giving the symbolic mode of the file|
@@ -1583,20 +1537,18 @@ my SSH2Channel $chan = $ssh2.scpGet(&quot;/path/somefile.txt&quot;, 15s, \$info)
 :{{{SSH2-ERROR}}}: error opening channel
 </pre>
 </div>
-<div title="SSH2Client::scpPut()" creator="DavidNichols" modifier="DavidNichols" created="201006161005" changecount="1">
+<div title="SSH2Client::scpPut()" creator="DavidNichols" modifier="YourName" created="201006161005" modified="201012202028" changecount="3">
 <pre>!Synopsis
 :Opens a channel for sending a remote file; an SSH2Channel object is returned to use to send the file's data
 !Prototype
-: {{{SSH2Client::scpPut(string $remote_path, softint $size, softint $mode = 0644, date $mtime = date(), date $atime = date(), softint $timeout_ms = -1) returns SSH2Channel}}}
-: {{{SSH2Client::scpPut(string $remote_path, softint $size, softint $mode = 0644, date $mtime = date(), date $atime = date(), date $timeout) returns SSH2Channel}}}
+: {{{SSH2Channel SSH2Client::scpPut(string $remote_path, softint $size, softint $mode = 0644, date $mtime = date(), date $atime = date(), timeout $timeout = -1)}}}
 !Arguments
 :* {{{string $remote_path}}}: the path of the file to get
 :* {{{softint $size}}}: the size of the file to send; this parameter is required
 :* {{{softint $mode = 0644}}}: the file's mode on the remote machine
 :* {{{date $mtime = date()}}}: the file's last modified time to create on the remote machine
 :* {{{date $atime = date()}}}: the file's last access time to create on the remote machine
-:** {{{softint $timeout_ms = -1}}}: timeout value to open the channel; -1 is the default, meaning do not time out
-:** {{{date $timeout}}}: a relative date/time value to use as the timeout (ex: {{{10s}}} = 10 seconds)
+:* {{{timeout $timeout = -1}}}: timeout value to open the channel; -1 is the default, meaning do not time out; can be either an integer (meaning miliseconds) or a relative date/time value (ex: {{{10s}}} = 10 seconds)
 !Return Value
 : SSH2Channel: the data channel to be used for sending the file's data
 !Example:
