@@ -321,7 +321,7 @@ const char *SSH2Client::getKeyPub() {
 }
 
 QoreStringNode *SSH2Client::fingerprint_unlocked() {
-   if(!ssh_connected_unlocked()) {
+   if (!ssh_connected_unlocked()) {
       return NULL;
    }
 
@@ -512,7 +512,7 @@ QoreHashNode *SSH2Client::ssh_info(ExceptionSink *xsink = 0) {
    ret->setKeyValue("fingerprint", fingerprint_unlocked(), xsink);
    //  ret->setKeyValue("userauthlist", myself->sshauthlist? new QoreStringNode(myself->sshauthlist): NULL, xsink);
    const char *str=getAuthenticatedWith();
-   ret->setKeyValue("authenticated", str? new QoreStringNode(str): NULL, xsink);
+   ret->setKeyValue("authenticated", str ? new QoreStringNode(str) : NULL, xsink);
    ret->setKeyValue("connected", get_bool_node(ssh_connected_unlocked()), xsink);
    
    if (ssh_connected_unlocked()) {

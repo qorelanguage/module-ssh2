@@ -7,6 +7,8 @@
 
 our hash $ehash;
 our int $errors = 0;
+our int $iters = 1;
+our hash $o;
 
 const FileContents = "hi there";
 const BinContents = binary(FileContents);
@@ -14,6 +16,11 @@ const FileLen = strlen(FileContents);
 const FileMode = 0755;
 
 const FileNameLen = 40;
+
+const opts = ( "iters": "i,iters=i",
+               "threads": "t,threads=i",
+               "help": "h,help"
+    );
 
 sub get_random_filename() returns string {    
     my string $name;
@@ -113,12 +120,9 @@ sub ssh_test(string $url) {
     stdout.printf("exit status: %d\n", $chan.getExitStatus());
 }
 
-sub sftp_test(string $url) {
+sub sftp_test_intern(SFTPClient $sc) {
     my string $file = get_random_filename();
     my string $fn = "/tmp/" + $file;
-
-    my SFTPClient $sc($url);
-    $sc.connect();
 
     my hash $info = $sc.info();
 
@@ -150,7 +154,7 @@ sub sftp_test(string $url) {
 
     # move (rename) file
     $sc.rename($fn, $nfn);
-    my hash $info = $sc.stat($nfn);
+    $info = $sc.stat($nfn);
     test_value($info.size, strlen(FileContents), "SFTPClient::rename() and SFTPClient::stat() size");
     test_value($sc.stat($fn), NOTHING, "SFTPClient::stat() on non-existent file");
 
@@ -163,7 +167,7 @@ sub sftp_test(string $url) {
 
     # move (rename) directory
     $sc.rename($fn, $nfn);
-    my hash $info = $sc.stat($nfn);
+    $info = $sc.stat($nfn);
     test_value(type($info.atime), Type::Date, "SFTPClient::rename() and SFTPClient::stat() on dir");
     test_value($sc.stat($fn), NOTHING, "SFTPClient::stat() on non-existent file");
 
@@ -175,13 +179,48 @@ sub sftp_test(string $url) {
     test_value($sc.stat($nfn), NOTHING, "SFTPClient::rmdir()");
 }
 
+sub sftp_test(string $url) {
+    my SFTPClient $sc($url);
+    $sc.connect();
+
+    my Counter $c();
+
+    my code $test = sub () {
+        my int $iters = $o.iters;
+        while ($iters--) {
+            sftp_test_intern($sc);
+        }
+        $c.dec();
+    };
+
+    while ($o.threads--) {
+        $c.inc();
+        background $test();
+    }
+
+    # do not return from function call until all threads have exited
+    $c.waitForZero();
+}
+
 sub main() {
-    my any $url = shift $ARGV;
-    if (!exists $url) {
-	printf("usage: %s <url>\nurl example: ssh://user:password@host\n", get_script_name());
+    my GetOpt $g(opts);
+    $o = $g.parse2(\$ARGV);
+
+    my *string $url = shift $ARGV;
+    if (!exists $url || $o.help || $o.iters < 0 || $o.threads < 0) {
+	printf("usage: %s <url>
+  url examples:
+    ssh://user:password@host  (for SSH2 tests)
+    sftp://user:password@host (for SFTP tests)
+ -i,--iters=ARG    iterations per test
+ -t,--threads=ARG  number of threads
+ -h,--help         for this help test\n", get_script_name());
 	exit(1);
     }
     srand(now());
+
+    if (!$o.iters)
+        $o.iters = 1;
 
     printf("using libssh2 version: %s\n", SSH2::Version);
 

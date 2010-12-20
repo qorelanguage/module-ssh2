@@ -75,34 +75,35 @@ SFTPClient::~SFTPClient() {
  * cleanup
  */
 void SFTPClient::deref(ExceptionSink *xsink) {
-   if(ROdereference()) {
+   if (ROdereference()) {
       delete this;
    }
 }
 
 
 int SFTPClient::sftp_connected_unlocked() {
-   return (sftp_session? 1: 0);
+   return (sftp_session ? 1: 0);
 }
 
 int SFTPClient::sftp_connected() {
    AutoLocker al(m);
-   return sftp_connected();
+   return sftp_connected_unlocked();
 }
 
 int SFTPClient::sftp_disconnect_unlocked(bool force, ExceptionSink *xsink) {
    int rc;
 
    // close sftp session if not null
-   if(sftp_session) {
+   if (sftp_session) {
       libssh2_sftp_shutdown(sftp_session);
-      sftp_session=NULL;
+      sftp_session = NULL;
    }
    free_string(sftppath);
 
    // close ssh session if not null
-   rc=ssh_disconnect(force, xsink);
- 
+   //rc = ssh_disconnect_unlocked(force, xsink);
+   rc = ssh_disconnect(force, xsink);
+
    return rc;
 }
 
@@ -175,17 +176,17 @@ int SFTPClient::sftp_chmod(const char *file, const int mode, ExceptionSink *xsin
 
    assert(file);
 
+   if (!strlen(file)) {
+      xsink->raiseException(SFTPCLIENT_CHMOD_ERROR, "file argument is empty");
+      return -3;
+   }
+
    AutoLocker al(m);
 
    // no path?
    if (!sftp_connected_unlocked()) {
       xsink->raiseException(SFTPCLIENT_NOT_CONNECTED, "the SFTPClient object is not connected");
       return -2;
-   }
-
-   if (!strlen(file)) {
-      xsink->raiseException(SFTPCLIENT_CHMOD_ERROR, "file argument is empty");
-      return -3;
    }
 
    std::string pstr;

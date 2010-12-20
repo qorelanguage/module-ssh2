@@ -73,10 +73,10 @@ public:
       return sftp_disconnect(force, xsink);
    }
 
-   int sftp_disconnect(bool force = false, ExceptionSink *xsink = 0);
-   int sftp_connect(int timeout_ms, ExceptionSink *xsink = 0);
+   DLLLOCAL int sftp_disconnect(bool force = false, ExceptionSink *xsink = 0);
+   DLLLOCAL int sftp_connect(int timeout_ms, ExceptionSink *xsink = 0);
 
-   int sftp_connected();
+   DLLLOCAL int sftp_connected();
 
    //QoreStringNode *sftp_path(ExceptionSink *xsink);
    QoreStringNode *sftp_path();
