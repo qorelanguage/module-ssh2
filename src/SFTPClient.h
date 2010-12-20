@@ -98,9 +98,9 @@ public:
 };
 
 // maybe this should go to ssh2-module.h?
-extern class AbstractQoreNode *SSH2C_setUser(class QoreObject *, class SSH2Client *, const QoreListNode *, ExceptionSink *);
-extern class AbstractQoreNode *SSH2C_setPassword(class QoreObject *, class SSH2Client *, const QoreListNode *, ExceptionSink *);
-extern class AbstractQoreNode *SSH2C_setKeys(class QoreObject *, class SSH2Client *, const QoreListNode *, ExceptionSink *);
+extern AbstractQoreNode *SSH2C_setUser(QoreObject *, SSH2Client *, const QoreListNode *, ExceptionSink *);
+extern AbstractQoreNode *SSH2C_setPassword(QoreObject *, SSH2Client *, const QoreListNode *, ExceptionSink *);
+extern AbstractQoreNode *SSH2C_setKeys(QoreObject *, SSH2Client *, const QoreListNode *, ExceptionSink *);
 
 static inline std::string absolute_filename(const SFTPClient *me, const char *f) {
    if(!f) {
