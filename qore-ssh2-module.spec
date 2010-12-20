@@ -34,7 +34,7 @@
 
 Summary: SSH2 module for Qore
 Name: qore-ssh2-module
-Version: 0.9.5
+Version: 0.9.6
 Release: 1%{dist}
 License: LGPL
 Group: Development/Languages
@@ -83,6 +83,9 @@ rm -rf $RPM_BUILD_ROOT
 %doc COPYING README RELEASE-NOTES ChangeLog AUTHORS docs/ssh2-module-doc.html
 
 %changelog
+* Mon Dec 20 2010 David Nichols <david@qore.org>
+- updated to version 0.9.6
+
 * Wed Jun 16 2010 David Nichols <david@qore.org>
 - updated to version 0.9.5
 

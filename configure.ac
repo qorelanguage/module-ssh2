@@ -1,7 +1,7 @@
 # Process this file with autoconf to produce a configure script.
 
 # AC_PREREQ(2.59)
-AC_INIT([qore-ssh2-module], [0.9.5],
+AC_INIT([qore-ssh2-module], [0.9.6],
         [Wolfgang Ritzinger <aargon(a)rat(dot)at>],
         [qore-ssh2-module])
 AM_INIT_AUTOMAKE
