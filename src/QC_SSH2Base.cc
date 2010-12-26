@@ -23,6 +23,8 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+//! @file SSH2Base.qc defines the SSH2Base class
+
 #include "QC_SSH2Base.h"
 #include "SSH2Client.h"
 
@@ -30,24 +32,66 @@ qore_classid_t CID_SSH2_BASE;
 
 static const char *SSH2_CONNECTED = "SSH2-CONNECTED";
 
+//! namespace for the SSH2 module
+/**# namespace SSH2 {
+*/
+//! base class for SFTPClient and SSH2Client
+/** The SSH2Base class provides common methods to the SSH2Client and SFTPClient classes
+ */
+/**# class SSH2Base {
+public:
+ */
+
+//! Throws an exception; the constructor cannot be called manually
+/** Throws an exception if called directly; this class cannot be instantiated directly
+    @throw SSH2BASE-CONSTRUCTOR-ERROR this class is an abstract class and cannot be instantiated directly or directly inherited by a user-defined class
+ */
+//# constructor() {}
 void SSH2BASE_constructor(QoreObject *self, const QoreListNode *params, ExceptionSink *xsink) {
-   xsink->raiseException("SSH2BASE-CONSTRUCTOR-ERROR", "this class is an abstract class and cannot be instantiated directly");
+   xsink->raiseException("SSH2BASE-CONSTRUCTOR-ERROR", "this class is an abstract class and cannot be instantiated directly or directly inherited by a user-defined class");
 }
 
-// SSH2Client::connect(softint $timeout_ms = -1) returns nothing
-// SSH2Client::connect(date $timeout) returns nothing
+//! connect to remote system
+/** Connects to the remote system; if a connection is already established, then it is disconnected first
+
+    @param $timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
+
+    @throw SOCKET-CONNECT-ERROR error establishing socket connection (no listener, port blocked, etc); timeout establishing socket connection
+    @throw SSH2CLIENT-CONNECT-ERROR no user name set; ssh2 or libssh2 error
+    @throw SSH2-ERROR error initializing or establishing ssh2 session
+    @throw SSH2CLIENT-AUTH-ERROR no proper authentication method found
+    @throw SFTPCLIENT-CONNECT-ERROR error initializing sftp session or getting remote path (exception only possible when called from an SFTPClient object)
+
+    @par Example:
+    @code @sftpclient.connect(30s); @endcode
+ */
+//# nothing connect(timeout $timeout = -1) {}
 static AbstractQoreNode *SSH2BASE_connect(QoreObject *self, SSH2Client *myself, const QoreListNode *params, ExceptionSink *xsink) {
    myself->connect(getMsMinusOneInt(get_param(params, 0)), xsink);
    return 0;
 }
 
-// SSH2Base::disconnect() returns nothing
+//! Disconnects from the remote system; throws an exception if the object is not currently connected
+/** @throw SSH2CLIENT-NOT-CONNECTED the client is not connected
+
+    @par Example:
+    @code $sftpclient.disconnect(); @endcode
+ */
+//# nothing disconnect() {}
 static AbstractQoreNode *SSH2BASE_disconnect(QoreObject *self, SSH2Client *myself, const QoreListNode *params, ExceptionSink *xsink) {
    myself->disconnect(0, xsink);
    return 0;
 }
 
-// SSH2Base::setUser(string $user) returns nothing
+//! Sets the user name for the next connection; can only be called when a connection is not established, otherwise an exception is thrown
+/** @param $user the user name to set for the next connection
+
+    @throw SSH2-CONNECTED this method cannot be called when a connection is established
+
+    @par Example:
+    @code $sftpclient.setUser("username"); @endcode
+ */
+//# nothing setUser(string $user) {}
 static AbstractQoreNode *SSH2BASE_setUser(QoreObject *self, SSH2Client *myself, const QoreListNode *params, ExceptionSink *xsink) {
    const QoreStringNode *p0 = HARD_QORE_STRING(params, 0);
 
@@ -57,7 +101,15 @@ static AbstractQoreNode *SSH2BASE_setUser(QoreObject *self, SSH2Client *myself, 
    return 0;
 }
 
-// SSH2Base::setPassword(string $pass) returns nothing
+//! Sets the password for the next connection; can only be called when a connection is not established, otherwise an exception is thrown
+/** @param $pass the password to use for the next connection
+
+    @throw SSH2-CONNECTED this method cannot be called when a connection is established
+
+    @par Example:
+    @code $sftpclient.setPassword("pass"); @endcode
+ */
+//# nothing setPassword(string $pass) {}
 static AbstractQoreNode *SSH2BASE_setPassword(QoreObject *self, SSH2Client *myself, const QoreListNode *params, ExceptionSink *xsink) {
    const QoreStringNode *p0 = HARD_QORE_STRING(params, 0);
 
@@ -67,8 +119,16 @@ static AbstractQoreNode *SSH2BASE_setPassword(QoreObject *self, SSH2Client *myse
    return 0;
 }
 
-// SSH2Base::setKeys(string $priv_key) returns nothing
-// SSH2Base::setKeys(string $priv_key, string $pub_key) returns nothing
+//! Sets path to the private key and optionally the public key to use for the next connection; can only be called when a connection is not established, otherwise an exception is thrown
+/** @param $priv_key the path to the private key file to use for the next connection
+    @param $pub_key optional: the path to the public key file to use for the next connection
+
+    @throw SSH2-CONNECTED this method cannot be called when a connection is established
+
+    @par Example:
+    @code $sftpclient.setKeys($ENV.HOME + "/.ssh/id_rsa", $ENV.HOME + "/.ssh/id_rsa.pub"); @endcode
+ */
+//# nothing setKeys(string $priv_key, *string $pub_key) {}
 static AbstractQoreNode *SSH2BASE_setKeys(QoreObject *self, SSH2Client *myself, const QoreListNode *params, ExceptionSink *xsink) {
    const QoreStringNode *p0 = HARD_QORE_STRING(params, 0);
    const QoreStringNode *p1 = test_string_param(params, 1);
@@ -78,6 +138,10 @@ static AbstractQoreNode *SSH2BASE_setKeys(QoreObject *self, SSH2Client *myself, 
 
    return 0;
 }
+
+/**# };
+};
+*/
 
 QoreClass *initSSH2BaseClass() {
    QORE_TRACE("initSSH2Base()");

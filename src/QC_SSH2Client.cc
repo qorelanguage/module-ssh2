@@ -21,12 +21,42 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+//! @file SSH2Client.qc defines the SSH2Client class
+
 #include "SSH2Client.h"
 
 qore_classid_t CID_SSH2_CLIENT;
 
-// SSH2Client::constructor(string $url)
-// SSH2Client::constructor(string $host, softint $port);
+//! namespace for the SSH2 module
+/**# namespace SSH2 {
+*/
+//! allows Qore programs to establish an ssh2 connection to a remote server
+/** 
+ */
+/**# class SSH2Client {
+public:
+ */
+
+//! creates the object with the given URL
+/** @param $url The URL to use to connect to the remote server; if any protocol (URI scheme) is present, then it must be \c "ssh" or \c "ssh2"; with this variant the username and password can be set as well as the hostname and port
+
+    @throw SSH2CLIENT-PARAMETER-ERROR unknown protocol passed in URL; no hostname in URL
+
+    @par Example:
+    @code my $ssh2client SSH2Client("ssh2://user:pass@host:port"); @endcode
+ */
+//# constructor(string $url) {}
+
+//! creates the object with the given hostname and port number
+/** @param $host the remote host to connect to
+    @param $port the port number on the remote host to connect to
+
+    @throw SSH2CLIENT-PARAMETER-ERROR empty hostname passed
+
+    @par Example:
+    @code my $ssh2client SSH2Client("host", 4022); @endcode
+ */
+//# constructor(string $host, softint $port) {}
 static void SSH2C_constructor(QoreObject *self, const QoreListNode *params, ExceptionSink *xsink) {
    QORE_TRACE("SSH2C_constructor");
 
@@ -49,24 +79,67 @@ static void SSH2C_constructor(QoreObject *self, const QoreListNode *params, Exce
    self->setPrivate(CID_SSH2_CLIENT, mySSH2Client);
 }
 
-// no copy allowed
+//! throws an exception; currently SSH2Client objects cannot be copied
+/** @throw SSH2CLIENT-COPY-ERROR copying SSH2Client objects is not currently implemented
+ */
+//# SSH2Client copy() {}
 static void SSH2C_copy(QoreObject *self, QoreObject *old, SSH2Client *myself, ExceptionSink *xsink) {
    xsink->raiseException("SSH2CLIENT-COPY-ERROR", "copying ssh2 connection objects is not allowed");
 }
 
-// SSH2Client::info() returns hash
+//! returns a hash with information about the current connection status
+/** this method is safe to call when not connected
+
+    @return a hash with the following keys:
+    - \c ssh2host: (string) the host name of the remote server
+    - \c ssh2port: (int) the port number of the remote server
+    - \c ssh2user: (string) the user name used for the connection
+    - \c keyfile_priv: (string) the filename of the local private key file used
+    - \c keyfile_pub: (string) the filename of the local public key file used
+    - \c fingerprint: (*string) The fingerprint of the public host key of the remote server as a string of hex digit pairs separated by colons (:), ex: \c "AC:AA:DF:3F:49:82:5A:1A:DE:C9:ED:14:00:7D:65:9E" or \c NOTHING if not connected
+    - \c authenticated: (*string) a string giving the authentication mechanism used: \c "publickey", \c "password", \c "keyboard-interactive" or \c NOTHING if not connected
+    - \c connected: (bool) tells if the connection is currently active or not
+    - \c methods: (hash) a hash of strings giving the crytographic methods used for the connection
+
+    @par Example:
+    @code my hash $h = $ssh2client.info(); @endcode
+ */
+//# hash info() {}
 static AbstractQoreNode *SSH2C_info(QoreObject *self, SSH2Client *myself, const QoreListNode *params, ExceptionSink *xsink) {
    return myself->ssh_info();
 }
 
-// SSH2Client::openSessionChannel(softint $timeout_ms = -1) returns SSH2Channel
-// SSH2Client::openSessionChannel(date $timeout) returns SSH2Channel
+//! Opens a login session and returns a SSH2Channel object for the session
+/** @param $timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
+
+    @throw SSH2CLIENT-NOT-CONNECTED client is not connected
+    @throw SSH2CLIENT-TIMEOUT timeout opening channel
+    @throw SSH2-ERROR error opening channel
+
+    @par Example:
+    @code my SSH2Channel $chan = $ssh2client.openSessionChannel(30s); @endcode
+ */
+//# SSH2Channel openSessionChannel(timeout $timeout = -1) {}
 static AbstractQoreNode *SSH2C_openSessionChannel(QoreObject *self, SSH2Client *c, const QoreListNode *params, ExceptionSink *xsink) {
    return c->openSessionChannel(xsink, getMsMinusOneInt(get_param(params, 0)));
 }
 
-// SSH2Client::openDirectTcpipChannel(string $host, softint $port, string $source_host = "127.0.0.1", softint $source_port = 22, softint $timeout_ms = -1) returns SSH2Channel
-// SSH2Client::openDirectTcpipChannel(string $host, softint $port, string $source_host = "127.0.0.1", softint $source_port = 22, date $timeout) returns SSH2Channel
+//! Opens a port forwarding channel and returns the corresponding SSH2Channel object for the new forwarded connection
+/** @param $host the remote host to connect to
+    @param $port the port number on the remote host to connect to
+    @param $source_host the host name to report as the source of the connection
+    @param $source_port the port number to report as the source of the connection
+    @param $timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
+
+    @throw SSH2CLIENT-OPENDIRECTTCPIPCHANNEL-ERROR port number for forwarded channel as second argument cannot be zero; source port number as fourth argument cannot be zero
+    @throw SSH2CLIENT-NOT-CONNECTED client is not connected
+    @throw SSH2CLIENT-TIMEOUT timeout opening channel
+    @throw SSH2-ERROR error opening channel
+
+    @par Example:
+    @code my SS2Channel $chan = $ssh2client.("host", 4022, NOTHING, NOTHING, 30s); @endcode
+ */
+//# SSH2Channel openDirectTcpipChannel(string $host, softint $port, string $source_host = "127.0.0.1", softint $source_port = 22, timeout $timeout = -1) {}
 static AbstractQoreNode *SSH2C_openDirectTcpipChannel(QoreObject *self, SSH2Client *c, const QoreListNode *params, ExceptionSink *xsink) {
    static const char *SSH2CLIENT_OPENDIRECTTCPIPCHANNEL_ERR = "SSH2CLIENT-OPENDIRECTTCPIPCHANNEL-ERROR";
    
@@ -88,10 +161,19 @@ static AbstractQoreNode *SSH2C_openDirectTcpipChannel(QoreObject *self, SSH2Clie
    return c->openDirectTcpipChannel(xsink, host->getBuffer(), port, shost ? shost->getBuffer() : "127.0.0.1", sport ? sport : 22, getMsMinusOneInt(get_param(params, 4)));
 }
 
-// SSH2Client::scpGet(string $path, softint $timeout_ms = -1) returns SSH2Channel
-// SSH2Client::scpGet(string $path, date $timeout) returns SSH2Channel
-// SSH2Client::scpGet(string $path, softint $timeout_ms = -1, reference $statinfo) returns SSH2Channel
-// SSH2Client::scpGet(string $path, date $timeout, reference $statinfo) returns SSH2Channel
+//! opens a channel for retrieving a remote file with an optional timeout value and an optional reference for returning file status information
+/** an SSH2Channel object is returned to use to retrieve the file's data
+
+    @throw SSH2CLIENT-NOT-CONNECTED client is not connected
+    @throw SSH2CLIENT-TIMEOUT timeout opening channel
+    @throw SSH2-ERROR error opening channel
+
+    @par Example:
+    @code
+my hash $info;
+my SS2Channel $chan = $ssh2client.scpGet("/tmp/file.txt", 30s, \$info); @endcode
+ */
+//# SSH2Channel scpGet(string $path, timeout $timeout = -1, *reference $statinfo) {}
 static AbstractQoreNode *SSH2C_scpGet(QoreObject *self, SSH2Client *c, const QoreListNode *params, ExceptionSink *xsink) {
    const QoreStringNode *path = HARD_QORE_STRING(params, 0);
 
@@ -110,8 +192,22 @@ static AbstractQoreNode *SSH2C_scpGet(QoreObject *self, SSH2Client *c, const Qor
    return o.release();
 }
 
-// SSH2Client::scpPut(string $remote_path, softint $size, softint $mode = 0644, date $mtime = date(), date $atime = date(), softint $timeout_ms = -1) returns SSH2Channel
-// SSH2Client::scpPut(string $remote_path, softint $size, softint $mode = 0644, date $mtime = date(), date $atime = date(), date $timeout) returns SSH2Channel
+//! Opens a channel for sending a file to the remote server; an SSH2Channel object is returned to use to send the file's data
+/** @param $remote_path the path of the file to save on the remote server
+    @param $size the size of the file to send; this parameter is required
+    @param $mode the file's mode on the remote machine
+    @param $mtime the file's last modified time to create on the remote machine
+    @param $atime the file's last access time to create on the remote machine
+    @param $timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
+
+    @throw SSH2CLIENT-NOT-CONNECTED client is not connected
+    @throw SSH2CLIENT-TIMEOUT timeout opening channel
+    @throw SSH2-ERROR error opening channel
+
+    @par Example:
+    @code my SS2Channel $chan = $ssh2client.scpPut("/tmp/file.txt", $size, 0644, 2010-12-25, 2010-12-25, 30s); @endcode
+ */
+//# SSH2Channel scpPut(string $remote_path, softint $size, softint $mode = 0644, date $mtime = date(), date $atime = date(), timeout $timeout = -1) {}
 static AbstractQoreNode *SSH2C_scpPut(QoreObject *self, SSH2Client *c, const QoreListNode *params, ExceptionSink *xsink) {
    static const char *SSH2CLIENT_SCPPUT_ERR = "SSH2CLIENT-SCPPUT-ERROR";
    
@@ -134,6 +230,10 @@ static AbstractQoreNode *SSH2C_scpPut(QoreObject *self, SSH2Client *c, const Qor
 
    return c->scpPut(xsink, path->getBuffer(), size, mode, mtime, atime, getMsMinusOneInt(get_param(params, 5)));
 }
+
+/**# };
+};
+*/
 
 /**
  * init

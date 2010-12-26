@@ -20,27 +20,62 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+//! @file SSH2Channel.qc defines the SSH2Channel class
+
 #include "SSH2Channel.h"
 
 qore_classid_t CID_SSH2_CHANNEL;
 QoreClass *QC_SSH2CHANNEL;
 
+//! namespace for the SSH2 module
+/**# namespace SSH2 {
+*/
+//! allows Qore programs to send and receive data through an ssh2 channel
+/** 
+ */
+/**# class SSH2Channel {
+public:
+ */
+
+//! Throws an exception; the constructor cannot be called manually
+/** Throws an exception if called directly; this class cannot be instantiated directly
+    @throw SSH2CHANNEL-CONSTRUCTOR-ERROR this class cannot be directly constructed but is created from methods in the SSH2Client class
+ */
+//# constructor() {}
 void SSH2CHANNEL_constructor(QoreObject *self, const QoreListNode *params, ExceptionSink *xsink) {
    xsink->raiseException("SSH2CHANNEL-CONSTRUCTOR-ERROR", "this class cannot be directly constructed but is created from methods in the SSH2Client class (ex: SSH2Client::openSessionChannel())");
 }
 
-// no copy allowed
+//! Throws an exception; currently SSH2Channel objects cannot be copied
+/** @throw SSH2CHANNEL-COPY-ERROR copying SSH2Channel objects is not supported
+ */
+//# SSH2Client copy() {}
 void SSH2CHANNEL_copy(QoreObject *self, QoreObject *old, SSH2Channel *c, ExceptionSink *xsink) {
   xsink->raiseException("SSH2CHANNEL-COPY-ERROR", "copying SSH2Channel objects is not supported");
 }
 
+//! destroys the object by disconnecting the channel and deregistering with the parent object
+/**
+ */
+//# destructor() {}
 static void SSH2CHANNEL_destructor(QoreObject *self, SSH2Channel *c, ExceptionSink *xsink) {
    c->destructor();
    c->deref();
 }
 
-// SSH2Channel::setenv(string $var, string $value, softint $timeout_ms = -1) returns nothing
-// SSH2Channel::setenv(string $var, string $value, date $timeout) returns nothing
+//! Sets an environment variable on the channel
+/** @param $var the environment variable to set
+    @param $value the value to set
+    @param $timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
+
+    @throw SSH2CHANNEL-SETENV-ERROR libssh2 reported an error on the channel
+    @throw SSH2CHANNEL-ERROR the channel has been closed
+    @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
+
+    @par Example:
+    @code $chan.setenv("", "", 30s); @endcode
+ */
+//# nothing setenv(string $var, string $value, timeout $timeout = -1) {}
 AbstractQoreNode *SSH2CHANNEL_setenv(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
    const QoreStringNode *name = HARD_QORE_STRING(params, 0);
    const QoreStringNode *value = HARD_QORE_STRING(params, 1);
@@ -49,8 +84,23 @@ AbstractQoreNode *SSH2CHANNEL_setenv(QoreObject *self, SSH2Channel *c, const Qor
    return 0;
 }
 
-// SSH2Channel::requestPty(string $term = "vanilla", string $modes = "", softint $width = LIBSSH2_TERM_WIDTH, softint $height = LIBSSH2_TERM_HEIGHT, softint $width_px = LIBSSH2_TERM_WIDTH_PX, softint $height_px = LIBSSH2_TERM_HEIGHT_PX, softint $timeout_ms = -1) returns nothing
-// SSH2Channel::requestPty(string $term = "vanilla", string $modes = "", softint $width = LIBSSH2_TERM_WIDTH, softint $height = LIBSSH2_TERM_HEIGHT, softint $width_px = LIBSSH2_TERM_WIDTH_PX, softint $height_px = LIBSSH2_TERM_HEIGHT_PX, date $timeout) returns nothing
+//! Requests a terminal to be allocated to the channel
+/** @param $term terminal emulation requested
+    @param $modes terminal mode modifier values
+    @param $width width of the pty in characters
+    @param $height height of the pty in characters
+    @param $width_px width of the pty in pixels
+    @param $height_px height of the pty in pixels
+    @param $timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
+
+    @throw SSH2CHANNEL-REQUESTPTY-ERROR negative terminal or pixel width, height passed
+    @throw SSH2CHANNEL-ERROR the channel has been closed
+    @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
+
+    @par Example:
+    @code $chan.requestPty("vt100"); @endcode
+ */
+//# nothing requestPty(string $term = "vanilla", string $modes = "", softint $width = LIBSSH2_TERM_WIDTH, softint $height = LIBSSH2_TERM_HEIGHT, softint $width_px = LIBSSH2_TERM_WIDTH_PX, softint $height_px = LIBSSH2_TERM_HEIGHT_PX, timeout $timeout = -1) {}
 AbstractQoreNode *SSH2CHANNEL_requestPty(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
    static const char *SSH2CHANNEL_REQUESTPTY_ERR = "SSH2CHANNEL-REQUESTPTY-ERROR";
 
@@ -81,51 +131,118 @@ AbstractQoreNode *SSH2CHANNEL_requestPty(QoreObject *self, SSH2Channel *c, const
    return 0;
 }
 
-// SSH2Channel::shell(softint $timeout_ms = -1) returns nothing
-// SSH2Channel::shell(date $timeout) returns nothing
+//! Request a login shell to be started for the channel
+/** @param $timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
+
+    @throw SSH2CHANNEL-SHELL-ERROR server returned an error while waiting for a response
+    @throw SSH2CHANNEL-ERROR the channel has been closed
+    @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
+
+    @par Example:
+    @code $chan.shell(30s); @endcode
+ */
+//# nothing shell(timeout $timeout = -1) {}
 AbstractQoreNode *SSH2CHANNEL_shell(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
    c->shell(xsink, getMsMinusOneInt(get_param(params, 0)));
    return 0;
 }
 
-// SSH2Channel::eof() returns bool
+//! returns \c True if an end of file condition is flagged on an open channel
+/** @return \c True if an end of file condition is flagged on an open channel, \c False if not
+
+    @throw SSH2CHANNEL-ERROR the channel has been closed
+
+    @par Example:
+    @code my bool $b = $chan.eof(); @endcode
+ */
+//# bool eof() {}
 AbstractQoreNode *SSH2CHANNEL_eof(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
    bool b = c->eof(xsink);
    return *xsink ? get_bool_node(b) : 0;
 }
 
-// SSH2Channel::sendEof(softint $timeout_ms = -1) returns nothing
-// SSH2Channel::sendEof(date $timeout) returns nothing
+//! Informs the remote end that we are closing the connection
+/** @param $timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
+
+    @throw SSH2CHANNEL-SENDEOF-ERROR server returned an error while waiting for a response
+    @throw SSH2CHANNEL-ERROR the channel has been closed
+    @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
+
+    @par Example:
+    @code $chan.sendEof(30s); @endcode
+ */
+//# nothing sendEof(timeout $timeout = -1) {}
 AbstractQoreNode *SSH2CHANNEL_sendEof(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
    c->sendEof(xsink, getMsMinusOneInt(get_param(params, 0)));
    return 0;
 }
 
-// SSH2Channel::waitEof(softint $timeout_ms = -1) returns nothing
-// SSH2Channel::waitEof(date $timeout) returns nothing
+//! Wait for the remote end to acknowledge an EOF request
+/** @param $timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
+
+    @throw SSH2CHANNEL-WAITEOF-ERROR server returned an error while waiting for a response
+    @throw SSH2CHANNEL-ERROR the channel has been closed
+    @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
+
+    @par Example:
+    @code $chan.waitEof(30s); @endcode
+ */
+//# nothing waitEof(timeout $timeout = -1) {}
 AbstractQoreNode *SSH2CHANNEL_waitEof(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
    c->waitEof(xsink, getMsMinusOneInt(get_param(params, 0)));
    return 0;
 }
 
-// SSH2Channel::exec(string $command, softint $timeout_ms = -1) returns nothing
-// SSH2Channel::exec(string $command, date $timeout) returns nothing
+//! Executes a command on the channel
+/** use SSH2Channel::read() to read the output
+    @param $command the command to run
+    @param $timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
+
+    @throw SSH2CHANNEL-EXEC-ERROR libssh2 reported an error on the channel while waiting for confirmation from the server
+    @throw SSH2CHANNEL-ERROR the channel has been closed
+    @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
+
+    @par Example:
+    @code $chan.exec("ls -l", 30s); @endcode
+ */
+//# nothing exec(string $command, timeout $timeout = -1) {}
 AbstractQoreNode *SSH2CHANNEL_exec(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
    const QoreStringNode *command = HARD_QORE_STRING(params, 0);
    c->exec(command->getBuffer(), getMsMinusOneInt(get_param(params, 1)), xsink);
    return 0;
 }
 
-// SSH2Channel::subsystem(string $command, softint $timeout_ms = -1) returns nothing
-// SSH2Channel::subsystem(string $command, date $timeout) returns nothing
+//! Executes a command on the channel as a subsystem
+/** use SSH2Channel::read() to read the output
+    @param $command the command to run as a subsystem
+    @param $timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
+
+    @throw SSH2CHANNEL-SUBSYSTEM-ERROR libssh2 reported an error on the channel while waiting for confirmation from the server
+    @throw SSH2CHANNEL-ERROR the channel has been closed
+    @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
+
+    @par Example:
+    @code $chan.subsystem("ls -l", 30s); @endcode
+ */
+//# nothing subsystem(string $command, timeout $timeout = -1) {}
 AbstractQoreNode *SSH2CHANNEL_subsystem(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
    const QoreStringNode *command = HARD_QORE_STRING(params, 0);
    c->subsystem(command->getBuffer(), getMsMinusOneInt(get_param(params, 1)), xsink);
    return 0;
 }
 
-// SSH2Channel::read(softint $stream_id = 0, softint $timeout_ms = 10000) returns string
-// SSH2Channel::read(softint $stream_id = 0, date $timeout) returns string
+//! Reads data on the given stream and returns it as a string
+/** @param $stream_id the stream ID to read (0 is the default, meaning \c stdin, 1 is for \c stderr
+    @param $timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
+
+    @throw SSH2CHANNEL-READ-ERROR expecting non-negative integer for stream id as optional first argument to SSH2Channel::read(); use 0 for stdin, 1 for stderr; libssh2 reported an error on the channel while waiting for data from the server
+    @throw SSH2CHANNEL-ERROR the channel has been closed
+    @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
+
+    @par Example:
+    @code my string $str = $chan.read(0, 30s); @endcode
+ */
+//# string read(softint $stream_id = 0, timeout $timeout = 10000) {}
 AbstractQoreNode *SSH2CHANNEL_read(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
    int stream = HARD_QORE_INT(params, 0);
    if (stream < 0) {
@@ -135,8 +252,18 @@ AbstractQoreNode *SSH2CHANNEL_read(QoreObject *self, SSH2Channel *c, const QoreL
    return c->read(xsink, stream, getMsTimeoutWithDefault(get_param(params, 1), DEFAULT_TIMEOUT_MS));
 }
 
-// SSH2Channel::readBinary(softint $stream_id = 0, softint $timeout_ms = 10000) returns binary
-// SSH2Channel::readBinary(softint $stream_id = 0, date $timeout) returns binary
+//! Reads data on the given stream and returns it as a binary object
+/** @param $stream_id the stream ID to read (0 is the default, meaning \c stdin, 1 is for \c stderr
+    @param $timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
+
+    @throw SSH2CHANNEL-READBINARY-ERROR expecting non-negative integer for stream id as optional first argument to SSH2Channel::read(); use 0 for stdin, 1 for stderr; libssh2 reported an error on the channel while waiting for data from the server
+    @throw SSH2CHANNEL-ERROR the channel has been closed
+    @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
+
+    @par Example:
+    @code my string $str = $chan.read(0, 30s); @endcode
+ */
+//# binary SSH2Channel::readBinary(softint $stream_id = 0, timeout $timeout = 10000) {}
 AbstractQoreNode *SSH2CHANNEL_readBinary(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
    int stream = HARD_QORE_INT(params, 0);
    if (stream < 0) {
@@ -146,8 +273,21 @@ AbstractQoreNode *SSH2CHANNEL_readBinary(QoreObject *self, SSH2Channel *c, const
    return c->readBinary(xsink, stream, getMsTimeoutWithDefault(get_param(params, 1), DEFAULT_TIMEOUT_MS));
 }
 
-// SSH2Channel::readBlock(softint $size, softint $stream_id = 0, softint $timeout_ms = -1) returns string
-// SSH2Channel::readBlock(softint $size, softint $stream_id = 0, date $timeout) returns string
+//! Reads a block of data of a given size on the given stream and returns it as a string
+/** @param $size the maximum size of the block of data to read in bytes
+    @param $stream_id the stream ID to read (0 is the default, meaning \c stdin, 1 is for \c stderr
+    @param $timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
+
+    @return a string representing the block read; note that if a multibyte character encoding is being read and the end of the block lands in the middle of a character, then the string returned (or the next string read) could have invalid bytes if an attempt is made to use the string as-is
+
+    @throw SSH2CHANNEL-READBLOCK-ERROR zero or negative value passed for block size; negative value passed for stream id; libssh2 reported an error on the channel while waiting for data from the server
+    @throw SSH2CHANNEL-ERROR the channel has been closed; 
+    @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
+
+    @par Example:
+    @code my string $str = $chan.readBlock(4096, 0, 30s); @endcode
+ */
+//# string readBlock(softint $size, softint $stream_id = 0, timeout $timeout = -1) {}
 AbstractQoreNode *SSH2CHANNEL_readBlock(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
    static const char *SSH2CHANNEL_READBLOCK_ERROR = "SSH2CHANNEL-READBLOCK-ERROR";
    int64 size = HARD_QORE_INT(params, 0);
@@ -164,8 +304,21 @@ AbstractQoreNode *SSH2CHANNEL_readBlock(QoreObject *self, SSH2Channel *c, const 
    return c->read(size, stream, getMsMinusOneInt(get_param(params, 2)), xsink);
 }
 
-// SSH2Channel::readBinaryBlock(softint $size, softint $stream_id = 0, softint $timeout_ms = -1) returns binary
-// SSH2Channel::readBinaryBlock(softint $size, softint $stream_id = 0, date $timeout) returns binary
+//! Reads a block of data of a given size on the given stream and returns it as a binary object
+/** @param $size the maximum size of the block of data to read in bytes
+    @param $stream_id the stream ID to read (0 is the default, meaning \c stdin, 1 is for \c stderr
+    @param $timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
+
+    @return a binary object of data representing the block read
+
+    @throw SSH2CHANNEL-READBLOCK-ERROR zero or negative value passed for block size; negative value passed for stream id; libssh2 reported an error on the channel while waiting for data from the server
+    @throw SSH2CHANNEL-ERROR the channel has been closed
+    @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
+
+    @par Example:
+    @code my binary $b = $chan.readBinaryBlock(4096, 0, 30s); @endcode
+ */
+//# binary readBinaryBlock(softint $size, softint $stream_id = 0, timeout $timeout = -1) {}
 AbstractQoreNode *SSH2CHANNEL_readBinaryBlock(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
    static const char *SSH2CHANNEL_READBINARYBLOCK_ERROR = "SSH2CHANNEL-READBINARYBLOCK-ERROR";
    int64 size = HARD_QORE_INT(params, 0);
@@ -181,8 +334,19 @@ AbstractQoreNode *SSH2CHANNEL_readBinaryBlock(QoreObject *self, SSH2Channel *c, 
    return c->readBinary(size, stream, getMsMinusOneInt(get_param(params, 2)), xsink);
 }
 
-// SSHChannel::write(data $data, softint $stream_id = 0, softint $timeout_ms = -1) returns nothing
-// SSHChannel::write(data $data, softint $stream_id = 0, date $timeout) returns nothing
+//! Writes data to a stream
+/** @param $data the data to write; must be either a string or binary
+    @param $stream_id the stream ID to write (0 is the default, 1 is for \c stderr)
+    @param $timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
+
+    @throw SSH2CHANNEL-WRITE-ERROR invalid stream ID; libssh2 reported an error on the channel while waiting for a response from the server
+    @throw SSH2CHANNEL-ERROR the channel has been closed
+    @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
+
+    @par Example:
+    @code $chan.write($data, 0, 30s); @endcode
+ */
+//# nothing write(data $data, softint $stream_id = 0, timeout $timeout = -1) {}
 AbstractQoreNode *SSH2CHANNEL_write(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
    static const char *SSH2CHANNEL_WRITE_ERROR = "SSH2CHANNEL-WRITE-ERROR";
    const void *buf = 0;
@@ -221,28 +385,69 @@ AbstractQoreNode *SSH2CHANNEL_write(QoreObject *self, SSH2Channel *c, const Qore
    return 0;
 }
 
-// SSH2Channel::close(softint $timeout_ms = -1) returns nothing
-// SSH2Channel::close(date $timeout) returns nothing
+//! Closes the channel
+/** @param $timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
+
+    @throw SSH2CHANNEL-CLOSE-ERROR server returned an error while waiting for a response
+    @throw SSH2CHANNEL-ERROR the channel has been closed
+    @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
+
+    @par Example:
+    @code $chan.close(30s); @endcode
+ */
+//# nothing close(timeout $timeout = -1) {}
 AbstractQoreNode *SSH2CHANNEL_close(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
    c->close(xsink, getMsMinusOneInt(get_param(params, 0)));
    return 0;
 }
 
-// SSH2Channel::waitClosed(softint $timeout_ms = -1) returns nothing
-// SSH2Channel::waitClosed(date $timeout) returns nothing
+//! Wait for the remote end to acknowledge the close request
+/** @param $timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
+
+    @throw SSH2CHANNEL-WAITCLOSED-ERROR server returned an error while waiting for a response
+    @throw SSH2CHANNEL-ERROR the channel has been closed
+    @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
+
+    @par Example:
+    @code $chan.waitClosed(30s); @endcode
+ */
+//# nothing waitClosed(timeout $timeout = -1) {}
 AbstractQoreNode *SSH2CHANNEL_waitClosed(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
    c->waitClosed(xsink, getMsMinusOneInt(get_param(params, 0)));
    return 0;
 }
 
-// SSH2Channel::getExitStatus() returns int
+//! Returns the exit code raised by the process running on the remote host at the other end of the named channel
+/** Note that the exit status may not be available if the remote end has not yet set its status to closed
+
+    @return the exit code raised by the process running on the remote host at the other end of the named channel
+
+    @throw SSH2CHANNEL-ERROR the channel has been closed
+
+    @par Example:
+    @code my int $rc = $chan.getExitStatus(); @endcode
+ */
+//# int getExitStatus() {}
 AbstractQoreNode *SSH2CHANNEL_getExitStatus(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
    int rc = c->getExitStatus(xsink);
    return *xsink ? 0 : new QoreBigIntNode(rc);
 }
 
-// SSH2Channel::requestX11Forwarding(softint $screen_no = 0, bool $single_connection = False, string $auth_proto = "", string $auth_cookie = "", softint $timeout_ms = -1) returns nothing
-// SSH2Channel::requestX11Forwarding(softint $screen_no = 0, bool $single_connection = False, string $auth_proto = "", string $auth_cookie = "", date $timeout) returns nothing
+//! Request X11 forwarding on the channel
+/** @param $screen_no the X11 screen number to forward
+    @param $single_connection set to True to forward only a single connection on the channel
+    @param $auth_proto the authorization protocol to use
+    @param $auth_cookie the authorization cookie to use
+    @param $timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
+
+    @throw SSH2CHANNEL-REQUESTX11FORWARDING-ERROR invalid stream ID; libssh2 reported an error on the channel while waiting for data from the server
+    @throw SSH2CHANNEL-ERROR the channel has been closed
+    @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
+
+    @par Example:
+    @code $chan.requestX11Forwarding(NOTHING, NOTHING, NOTHING, NOTHING, 30s); @endcode
+ */
+//# nothing requestX11Forwarding(softint $screen_no = 0, bool $single_connection = False, string $auth_proto = "", string $auth_cookie = "", timeout $timeout = -1) {}
 AbstractQoreNode *SSH2CHANNEL_requestX11Forwarding(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
    int screen_no = HARD_QORE_INT(params, 0);
    bool single_connection = HARD_QORE_BOOL(params, 1);
@@ -252,38 +457,81 @@ AbstractQoreNode *SSH2CHANNEL_requestX11Forwarding(QoreObject *self, SSH2Channel
    return 0;
 }
 
-// SSH2Channel::setEncoding(string $encoding) returns nothing
+//! Sets the default string encoding for the channel; all string data read from the channel will be tagged with the encoding given
+/** @param $encoding the string encoding to set for the channel
+
+    @par Example:
+    @code $chan.setEncoding("utf8"); @endcode
+ */
+//# nothing setEncoding(string $encoding) {}
 static AbstractQoreNode *SSH2CHANNEL_setEncoding(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
    const QoreStringNode *p0 = HARD_QORE_STRING(params, 0);
    c->setEncoding(QEM.findCreate(p0));
    return 0; 
 }
 
-// SSH2Channel::getEncoding() returns string
+//! Returns the name of the default string encoding of the channel
+/** @return the name of the default string encoding of the channel
+
+    @par Example:
+    @code my string $enc = $chan.getEncoding(); @endcode
+ */
+//# string getEncoding() {}
 static AbstractQoreNode *SSH2CHANNEL_getEncoding(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
    return new QoreStringNode(c->getEncoding()->getCode());
 }
 
-// SSH2Channel::extendedDataNormal(softint $timeout_ms = -1) returns nothing
-// SSH2Channel::extendedDataNormal(date $timeout) returns nothing
+//! Queue data in substreams (i.e. \c stderr, etc) for eventual reading
+/** @param $timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
+
+    @throw SSH2CHANNEL-EXTENDEDDATANORMAL-ERROR server returned an error while waiting for a response
+    @throw SSH2CHANNEL-ERROR the channel has been closed
+    @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
+
+    @par Example:
+    @code $chan.extendedDataNormal(30s); @endcode
+ */
+//# nothing extendedDataNormal(timeout $timeout = -1) {}
 static AbstractQoreNode *SSH2CHANNEL_extendedDataNormal(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
    c->extendedDataNormal(xsink, getMsMinusOneInt(get_param(params, 0)));
    return 0;
 }
 
-// SSH2Channel::extendedDataMerge(softint $timeout_ms = -1) returns nothing
-// SSH2Channel::extendedDataMerge(date $timeout) returns nothing
+//! Merge substreams (i.e. \c stderr, etc) into stream 0 for reading
+/** @param $timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
+
+    @throw SSH2CHANNEL-EXTENDEDDATAMERGE-ERROR server returned an error while waiting for a response
+    @throw SSH2CHANNEL-ERROR the channel has been closed
+    @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
+
+    @par Example:
+    @code $chan.extendedDataMerge(30s); @endcode
+ */
+//# nothing extendedDataMerge(timeout $timeout = -1) {}
 static AbstractQoreNode *SSH2CHANNEL_extendedDataMerge(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
    c->extendedDataMerge(xsink, getMsMinusOneInt(get_param(params, 0)));
    return 0;
 }
 
-// SSH2Channel::extendedDataIgnore(softint $timeout_ms = -1) returns nothing
-// SSH2Channel::extendedDataIgnore(date $timeout) returns nothing
+//! Discard all data in substreams (i.e. stderr, etc) immediately when it arrives
+/** @param $timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
+
+    @throw SSH2CHANNEL-EXTENDEDDATAIGNORE-ERROR server returned an error while waiting for a response
+    @throw SSH2CHANNEL-ERROR the channel has been closed
+    @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
+
+    @par Example:
+    @code $chan.extendedDataIgnore(30s); @endcode
+ */
+//# nothing extendedDataIgnore(timeout $timeout = -1) {}
 static AbstractQoreNode *SSH2CHANNEL_extendedDataIgnore(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
    c->extendedDataIgnore(xsink, getMsMinusOneInt(get_param(params, 0)));
    return 0;
 }
+
+/**# };
+};
+*/
 
 QoreClass *initSSH2ChannelClass() {
    QORE_TRACE("initSSH2Channel()");

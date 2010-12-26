@@ -80,7 +80,21 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-,root,root,-)
 %{module_dir}
-%doc COPYING README RELEASE-NOTES ChangeLog AUTHORS docs/ssh2-module-doc.html
+%doc COPYING README RELEASE-NOTES ChangeLog AUTHORS
+
+%package doc
+Summary: SSH2 module for Qore
+Group: Development/Languages
+
+%description doc
+SSH2 module for the Qore Programming Language.
+
+This RPM provides API documentation, test and example programs
+
+
+%files doc
+%defattr(-,root,root,-)
+%doc docs/ssh2/html test/ 
 
 %changelog
 * Mon Dec 20 2010 David Nichols <david@qore.org>
