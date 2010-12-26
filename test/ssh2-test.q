@@ -3,7 +3,7 @@
 
 %require-our
 %requires qore >= 0.8
-%requires ssh2 >= 0.9.5
+%requires ssh2 >= 0.9.6
 
 our hash $ehash;
 our int $errors = 0;

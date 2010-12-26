@@ -4,7 +4,7 @@
 AC_INIT([qore-ssh2-module], [0.9.6],
         [Wolfgang Ritzinger <aargon(a)rat(dot)at>],
         [qore-ssh2-module])
-AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE([no-dist-gzip dist-bzip2])
 AC_CONFIG_HEADER([config.h])
 
 AC_LANG(C++)
