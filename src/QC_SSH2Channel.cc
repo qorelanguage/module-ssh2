@@ -263,7 +263,7 @@ AbstractQoreNode *SSH2CHANNEL_read(QoreObject *self, SSH2Channel *c, const QoreL
     @par Example:
     @code my string $str = $chan.read(0, 30s); @endcode
  */
-//# binary SSH2Channel::readBinary(softint $stream_id = 0, timeout $timeout = 10000) {}
+//# binary readBinary(softint $stream_id = 0, timeout $timeout = 10000) {}
 AbstractQoreNode *SSH2CHANNEL_readBinary(QoreObject *self, SSH2Channel *c, const QoreListNode *params, ExceptionSink *xsink) {
    int stream = HARD_QORE_INT(params, 0);
    if (stream < 0) {

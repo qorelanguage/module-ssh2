@@ -116,7 +116,7 @@ static AbstractQoreNode *SFTPC_info(QoreObject *self, SFTPClient *myself, const 
     @par Example:
     @code my *string $path = $sftpclient.path(); @endcode
 */
-//# *string SFTPClient::path() {}
+//# *string path() {}
 static AbstractQoreNode *SFTPC_path(QoreObject *self, SFTPClient *myself, const QoreListNode *params, ExceptionSink *xsink) {
    return myself->sftp_path();
 }
