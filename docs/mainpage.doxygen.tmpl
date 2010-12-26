@@ -1,0 +1,97 @@
+/** @mainpage %Qore %SSH2 Module
+
+    Contents of this documentation:
+    - @ref intro
+    - @ref examples
+    - @ref codetags
+
+    @section intro Introduction
+
+    The ssh2 module provides Qore the possibility to communicate with sshd servers via the ssh2 protocol; the underlying functionality is provided by <a href="http://www.libssh2.org">libssh2</a>.
+
+    This module is released under the <a href="http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html">LGPL 2.1</a> and is tagged as such in the module's header (meaning it can be loaded unconditionally regardless of how the %Qore library was initialized).  This version of the module requires Qore 0.8.1+ to compile and run.
+
+    To use the module in a %Qore script, use the \c %%requires directive as follows:
+    @code %requires ssh2 @endcode
+
+    This module provides the following classes:
+    |!Class|!Description
+    |SSH2::SSH2Base|base class for SSH2::SFTPClient and SSH2::SSH2Client
+    |SSH2::SSH2Client|allows Qore programs to establish an ssh2 connection to a remote server
+    |SSH2::SFTPClient|allows Qore programs to use the sftp protocol
+    |SSH2::SSH2Channel|allows Qore programs to send and receive data through an ssh2 channel
+
+    When connecting the module will try to:
+
+    - connect to the server with the given port or with port 22 if no port is given
+    - login as the given user (user is set in the URL given to SSH2::SSH2Client::constructor() or SSH2::SFTPClient::constructor() or can be modified with SSH2::SSH2Base::setUser()) using:
+      - publickey authentification (public and private key files can be modified with SSH2::SSH2Base::setKeys())
+      - password authentification (password can be set in the URL given to SSH2::SSH2Client::constructor() or SSH2::SFTPClient::constructor() or can be set afterwards with SSH2::SSH2Base::setPassword())
+
+    See some examples here: @ref examples
+
+    @section examples Examples
+
+    Example of a basic sftp connection:
+
+    @code
+# create object
+my SFTPClient $sftp("sftp://user:pass@host.com:22");
+# connect to sftp server
+$sftp.connect();@endcode
+
+    Example of logging in via ssh2 and executing a command and retrieving the output:
+
+    @code
+# set URL
+my string $url = "sftp://user:pass@host.com:22";
+# create object
+my SSH2Client $ssh2($url);
+# connect to remote sshd daemon
+$ssh2.connect();
+# get a session channel
+my SSH2Channel $chan = $sc.openSessionChannel();
+# execute a command on the channel
+$chan.exec("ls -l");
+# retrieve the output and print it out
+stdout.printf("%s", $chan.read());
+# close channel
+$chan.sendEof();
+$chan.close();
+# print out the exit status after the channel is closed
+stdout.printf("exit status: %d\n", $chan.getExitStatus());@endcode
+
+    @section codetags Function and Method Tags
+
+    @subsection NOOP
+
+    Code with this flag makes no calculations, but rather returns a constant value. This flag is given to function and method variants that return a default value depending on the type of argument(s).  When variants with this flag are resolved at parse time, a \c "call-with-type-errors" warning is raised (assuming this warning is enabled), unless \c PO_REQUIRE_TYPES or \c PO_STRICT_ARGS is set.  If \c PO_REQUIRE_TYPES or \c PO_STRICT_ARGS is set, then these variants are inaccessible at parse time; resolving to a variant with this flag set at parse time causes an exception to be thrown.
+
+    These variants are included for backwards-compatibility with qore prior to version 0.8.0 for functions that would ignore type errors in arguments.
+
+    This tag is equal to @ref RUNTIME_NOOP, except no runtime effect is caused by resolving a function or method tagged with \c NOOP at runtime; this tag only affects parse time resolution.
+
+    @subsection RUNTIME_NOOP
+
+    Code with this flag makes no calculations, but rather returns a constant value.  This flag is given to function and method variants that return a default value depending on the type of argument(s).  When variants with this flag are resolved at parse time, a \c "call-with-type-errors" warning is raised (assuming this warning is enabled), unless \c PO_REQUIRE_TYPES or \c PO_STRICT_ARGS is set.  If \c PO_REQUIRE_TYPES or \c PO_STRICT_ARGS is set, then these variants are inaccessible; resolving to a variant with this flag set at parse time or run time causes an exception to be thrown.
+
+    These variants are included for backwards-compatibility with qore prior to version 0.8.0 for functions that would ignore type errors in arguments.
+
+    This tag is equal to @ref NOOP, except that \c RUNTIME_NOOP is also enforced at runtime.
+
+    @subsection RET_VALUE_ONLY
+	
+    This flag indicates that the function or method has no side effects; it only returns a value, for example.
+
+    This tag is identical to @ref CONSTANT except that functions or methods tagged with \c RET_VALUE_ONLY could throw exceptions.
+
+    @subsection CONSTANT
+	
+    This flag indicates that the function or method has no side effects and does not throw any exceptions.
+
+    This tag is identical to @ref RET_VALUE_ONLY except that functions or methods tagged with \c CONSTANT do not throw exceptions.
+
+    @subsection DEPRECATED
+	
+    Code with this flag is deprecated and may be removed in a future version of this module; if a variant with this flag is resolved at parse time, a \c "deprecated" warning is raised (assuming this warning is enabled).
+*/
