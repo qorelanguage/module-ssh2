@@ -1,3 +1,119 @@
+2010-12-26 20:54  david_nichols
+
+	* src/QC_SFTPClient.cc, src/QC_SSH2Channel.cc: doc fixes
+
+2010-12-26 20:47  david_nichols
+
+	* docs/doxyfile.tmpl, docs/doxygen-api-filter.q,
+	  docs/footer_template.html, docs/mainpage.doxygen.tmpl: checked in
+	  missing files
+
+2010-12-26 20:41  david_nichols
+
+	* Makefile.am, configure.ac, docs/ssh2-module-doc.html,
+	  qore-ssh2-module.spec, scratch,
+	  scratch/ssh2-module-doc.html-orig, src/QC_SFTPClient.cc,
+	  src/QC_SSH2Base.cc, src/QC_SSH2Channel.cc, src/QC_SSH2Client.cc:
+	  updated to use doxygen for documentation, make separate RPM with
+	  docs
+
+2010-12-26 10:04  david_nichols
+
+	* configure.ac, qore-ssh2-module.spec, test/ssh2-test.q: updated
+	  distribution to use bz2 instead of gz
+
+2010-12-20 21:12  david_nichols
+
+	* test/ssh2-test.q: added an additional chdir() test
+
+2010-12-20 20:57  david_nichols
+
+	* docs/ssh2-module-doc.html: updated docs
+
+2010-12-20 18:20  david_nichols
+
+	* src/ssh2-module.cc: fixed module version reporting
+
+2010-12-20 17:51  david_nichols
+
+	* src/SFTPClient.h: cosmetic updates
+
+2010-12-20 17:49  david_nichols
+
+	* src/QC_SFTPClient.cc, src/QC_SSH2Client.cc, src/SFTPClient.cc,
+	  src/SFTPClient.h, src/SSH2Client.cc, src/SSH2Client.h,
+	  test/ssh2-test.q: fixed race condition in SFTPClient::info(),
+	  added default threads=1 to test script
+
+2010-12-20 17:19  david_nichols
+
+	* RELEASE-NOTES, configure.ac, docs/ssh2-module-doc.html,
+	  src/QC_SFTPClient.cc: updated to require qore 0.8.1+ to compile
+	  and run, upadted release notes,
+	  updated return types for SFTPClient::path(), SFTPClient::stat()
+
+2010-12-20 17:04  david_nichols
+
+	* configure.ac, qore-ssh2-module.spec: updated to v0.9.6
+
+2010-12-20 17:01  david_nichols
+
+	* src/SFTPClient.cc, src/SFTPClient.h, src/SSH2Client.cc,
+	  test/ssh2-test.q: fixed deadlock in SFTPClient::disconnect(),
+	  made tests multithreaded and with
+	  a variable number of iterations if desired, other minor updates
+
+2010-06-29 11:38  david_nichols
+
+	* docs/ssh2-module-doc.html: checking in new uuid module
+
+2010-06-21 09:12  david_nichols
+
+	* qore-ssh2-module.spec: updated spec files to generically
+	  determine *suse versions for distribution tagging in rpm file
+	  names
+
+2010-06-20 06:03  david_nichols
+
+	* ChangeLog: fixed ChangeLogs with non-broken svn2cl
+
+2010-06-19 18:50  david_nichols
+
+	* README-BINARIES: added new readme
+
+2010-06-17 15:22  david_nichols
+
+	* ChangeLog, docs/ssh2-module-doc.html: updated changelog, fixed
+	  typo in docs
+
+2010-06-17 14:55  david_nichols
+
+	* README: updated readme with some links
+
+2010-06-17 14:50  david_nichols
+
+	* README: updated readme with correct libssh2 dependency
+
+2010-06-17 14:45  david_nichols
+
+	* configure.ac, qore-ssh2-module.spec: fixed module dependencies,
+	  added a --with-openssl-dir option to configure as QoreSocket.h
+	  requires the ssl includes to be available
+
+2010-06-17 14:03  david_nichols
+
+	* test/ssh2-test.q: updated test file
+
+2010-06-17 13:57  david_nichols
+
+	* AUTHORS, README, RELEASE-NOTES: updated text files for initial
+	  release
+
+2010-06-17 13:47  david_nichols
+
+	* docs/ssh2-module-doc.html, test/ssh2-test.q: doc and test script
+	  update
+
 2010-06-17 13:41  david_nichols
 
 	* src/QC_SFTPClient.cc, src/SFTPClient.cc, src/SFTPClient.h,
