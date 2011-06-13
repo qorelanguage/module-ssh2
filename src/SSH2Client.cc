@@ -406,7 +406,7 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
   
    // Create a session instance
    ssh_session = libssh2_session_init();
-   if(!ssh_session) {
+   if (!ssh_session) {
       ssh_disconnect_unlocked(true); // clean up connection
       xsink && xsink->raiseException(SSH2_ERROR, "error in libssh2_session_init(): ", strerror(errno));
       return -1;
