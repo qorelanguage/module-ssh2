@@ -59,7 +59,8 @@ case "${host_os}" in
 		LDFLAGS="$LDFLAGS -lnsl"
 		# assume we are using CC if not using g++, add -norunpath to link flags in this case
 		if test "$GXX" != "yes"; then
-		   LDFLAGS="$LDFLAGS -norunpath"
+		   CXXFLAGS="${CXXFLAGS} -mt"
+		   LDFLAGS="$LDFLAGS -norunpath -mt"
 		fi
 		AC_DEFINE(SOLARIS, 1, if compiling on Solaris)
 		# add -ldl to libs if on Solaris 8
