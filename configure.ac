@@ -534,6 +534,8 @@ AC_HEADER_TIME
 AC_STRUCT_TM
 AC_C_VOLATILE
 
+AC_CHECK_HEADERS([stdint.h])
+
 # turn on optimizations if we know how
 if test "$enable_optimization" = "yes"; then
     if test "$GXX" = "yes"; then
