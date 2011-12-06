@@ -63,7 +63,7 @@ void SSH2BASE_constructor(QoreObject *self, const QoreListNode *params, Exceptio
     @throw SFTPCLIENT-CONNECT-ERROR error initializing sftp session or getting remote path (exception only possible when called from an SFTPClient object)
 
     @par Example:
-    @code @sftpclient.connect(30s); @endcode
+    @code $sftpclient.connect(30s); @endcode
  */
 //# nothing connect(timeout $timeout = -1) {}
 static AbstractQoreNode *SSH2BASE_connect(QoreObject *self, SSH2Client *myself, const QoreListNode *params, ExceptionSink *xsink) {
