@@ -33,7 +33,7 @@ qore_classid_t CID_SFTP_CLIENT;
 //! allows Qore programs to establish an ssh2 connection to a remote server
 /** 
  */
-/**# class SFTPClient {
+/**# class SFTPClient inherits SSH2Base {
 public:
  */
 

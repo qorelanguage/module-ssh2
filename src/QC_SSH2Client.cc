@@ -33,7 +33,7 @@ qore_classid_t CID_SSH2_CLIENT;
 //! allows Qore programs to establish an ssh2 connection to a remote server
 /** 
  */
-/**# class SSH2Client {
+/**# class SSH2Client inherits SSH2Base {
 public:
  */
 
