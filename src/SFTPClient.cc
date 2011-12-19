@@ -101,8 +101,7 @@ int SFTPClient::sftp_disconnect_unlocked(bool force, ExceptionSink *xsink) {
    free_string(sftppath);
 
    // close ssh session if not null
-   //rc = ssh_disconnect_unlocked(force, xsink);
-   rc = ssh_disconnect(force, xsink);
+   rc = ssh_disconnect_unlocked(force, xsink);
 
    return rc;
 }

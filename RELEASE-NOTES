@@ -1,4 +1,12 @@
 *************
+version 0.9.7
+*************
+
+fixed another deadlock in the SFTPClient::disconnect() method (oops)
+minor doc updates
+
+
+*************
 version 0.9.6
 *************
 
