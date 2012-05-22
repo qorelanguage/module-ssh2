@@ -29,7 +29,9 @@
 #include <map>
 #include <utility>
 #include <sys/types.h>
+#ifdef HAVE_PWD_H
 #include <pwd.h>
+#endif
 #include <errno.h>
 #include <strings.h>
 #include <sys/stat.h> 
@@ -106,7 +108,6 @@ static void map_ssh2_sbuf_to_hash(QoreHashNode *h, struct stat *sbuf) {
  * this just prefills the values for connection with hostname and port
  */
 SSH2Client::SSH2Client(const char *hostname, const uint32_t port) {
-   struct passwd *usrpwd;
    // remember host settings
    sshhost=strdup(hostname);
    sshport=port;
@@ -116,8 +117,9 @@ SSH2Client::SSH2Client(const char *hostname, const uint32_t port) {
    sshkeys_priv=(char *)NULL;
    sshauthenticatedwith=NULL; // will be filled on connect
 
+#ifdef HAVE_PWD_H
    // prefill the user and 'estimate' the key files for rsa
-   usrpwd=getpwuid(getuid());
+   struct passwd *usrpwd = getpwuid(getuid());
    if(usrpwd!=NULL) {
       char thome[PATH_MAX];
       sshuser=strdup(usrpwd->pw_name);
@@ -126,6 +128,7 @@ SSH2Client::SSH2Client(const char *hostname, const uint32_t port) {
       strncpy(thome, usrpwd->pw_dir, sizeof(thome)-1);
       sshkeys_priv=strdup(strncat(thome, "/.ssh/id_rsa", sizeof(thome)-1));
    }
+#endif
     
    ssh_session=NULL;
 }
@@ -142,6 +145,7 @@ SSH2Client::SSH2Client(QoreURL &url, const uint32_t port) {
    sshkeys_priv = 0;
    sshauthenticatedwith = 0; // will be filled on connect
 
+#ifdef HAVE_PWD_H
    // prefill the user if not already set and 'estimate' the key files for rsa
    struct passwd *usrpwd = getpwuid(getuid());
    if (usrpwd) {
@@ -155,6 +159,7 @@ SSH2Client::SSH2Client(QoreURL &url, const uint32_t port) {
 
       //printd(5, "keys='%s' priv='%s'\n", sshkeys_pub, sshkeys_priv);
    }
+#endif
     
    ssh_session = 0;
 }
@@ -200,7 +205,7 @@ SSH2Client::~SSH2Client() {
  */
 int SSH2Client::ssh_disconnect_unlocked(bool force, ExceptionSink *xsink) {
    if (!ssh_session && !force) {
-      errno = ENOTCONN;
+      errno = EINVAL;
       xsink && xsink->raiseException(SSH2CLIENT_NOT_CONNECTED, "disconnect(): %s", strerror(errno));
    }
 

@@ -87,6 +87,35 @@ case "${host_os}" in
 		fi
 		AC_DEFINE(HPUX, 1, if compiling on HP-UX)
 		;;
+     *cygwin*)  SHLIB_SUFFIX=dll
+     		CPPFLAGS=-mwin32
+		windows=yes
+     		;;
+     *mingw32*) SHLIB_SUFFIX=dll
+     		windows=yes
+		mingw=yes
+		#CPPFLAGS="$CPPFLAGS -D_WIN32_WINNT=0x0501"
+		LDFLAGS="$LDFLAGS -lwsock32 -lws2_32 -lgdi32 -lz -lsecur32"
+		#make_dll=yes
+		CPPFLAGS="$CPPFLAGS -DBUILDING_DLL=1"
+		MODULE_LDFLAGS="-no-undefined"
+		OS=Windows
+		# set LIB_PREFIX if not already set
+		if test -z "$LIB_PREFIX"; then
+   		   AC_MSG_CHECKING([for mingw32 library prefix])
+		   cc_loc=`which $CXX|head -1`
+		   mingw_base=`dirname $cc_loc|sed 's/\/@<:@^/@:>@*$//'`
+		   cc_targ=`echo $CXX|sed s/-g++$//`
+		   if test -d $mingw_base/$cc_targ; then
+		      LIB_PREFIX=$mingw_base/$cc_targ
+		      AC_MSG_RESULT([$LIB_PREFIX])
+		   else
+		      AC_MSG_RESULT([not found])
+		   fi
+		fi
+		;;
+     *)         AC_WARN(Unknown platform ${host_os})
+                ;;
 esac
 AC_SUBST(SHLIB_SUFFIX)
 if test -z "$MODULE_SUFFIX" ; then
@@ -206,6 +235,13 @@ fi
 CXXFLAGS="$CXXFLAGS $PTHREAD_CFLAGS"
 #LDFLAGS="$LDFLAGS $PTHREAD_LIBS"
 
+# allow the user to set a generic search prefix for libraries, includes, etc
+AC_ARG_WITH([lib-prefix],
+  [AS_HELP_STRING([--with-lib-prefix@<:@=DIR@:>@],
+                  [generic search prefix for libraries, includes, etc])],
+  [if test ! -d "${with_lib_prefix}"; then AC_MSG_ERROR([bad value ${with_lib_prefix} for --with-lib-prefix]); unset with_lib_prefix; fi],
+  [with_lib_prefix="$LIB_PREFIX"])
+
 AC_ARG_ENABLE([single-compilation-unit],
   [AS_HELP_STRING([--enable-single-compilation-unit],
                   [enable compilation as a single unit (default: on)])],
@@ -214,19 +250,6 @@ AC_ARG_ENABLE([single-compilation-unit],
        *)      AC_MSG_ERROR(bad value ${enable_single_compilation_unit} for --enable-single-compilation-unit) ;;
       esac],
   [enable_single_compilation_unit=yes])
-
-AC_ARG_ENABLE([static-ncurses],
-     [AS_HELP_STRING([--enable-static-ncurses],
-		     [force static linkage of ncurses libraries (default=auto)])],
-     [case "${enable_static_ncurses}" in
-       yes|no) ;;
-       *)      AC_MSG_ERROR(bad value ${enable_static_ncurses} for --enable-static-ncurses) ;;
-      esac],
-     [enable_static_ncurses=no])
-
-if test "$enable_static_ncurses" = "yes"; then
-   ncurses_static=yes
-fi
 
 ################
 # module stuff #
@@ -250,7 +273,7 @@ AC_ARG_WITH([libssh2-dir],
   [with_libssh2_dir="$LIBSSH2_DIR"])
 
 AC_MSG_CHECKING([for libssh2 libraries and header files])
-for dir in "${with_libssh2_dir}" "${find_prefix}" /usr /usr/local /opt/libssh2 /opt/local /sw /usr/sfw /opt/sfw /opt/gnu /opt/qore /usr/local/qore ; do
+for dir in "${with_libssh2_dir}" "${with_lib_prefix}" "${find_prefix}" /usr /usr/local /opt/libssh2 /opt/local /sw /usr/sfw /opt/sfw /opt/gnu /opt/qore /usr/local/qore ; do
     find_libssh2 $dir
     if test -n "$LIBSSH2_LDFLAGS"; then
         break
@@ -259,60 +282,9 @@ done
 if test -z "$LIBSSH2_LDFLAGS"; then
     AC_MSG_ERROR([no libssh2 libraries found])
 else
-    AC_MSG_RESULT([libssh2 version ${libssh2_version} OK])
+    AC_MSG_RESULT([libssh2 version ${libssh2_version} OK (include: ${LIBSSH2_CPPFLAGS})])
     AC_SUBST(LIBSSH2_LDFLAGS)
     AC_SUBST(LIBSSH2_CPPFLAGS)
-fi
-
-####################
-# openssl includes #
-####################
-
-set_openssl_cppflags() {
-    openssl_found=yes
-    if test "$1" != "/usr/include"; then
-        OPENSSL_CPPFLAGS=-I$1
-    fi
-}
-
-find_openssl() {
-    dir="$1"
-    if test -z "$dir" -o "$dir" = "/"; then
-        dir="/"
-	lib=/lib
-	inc=/usr/include
-    else
-        lib="$dir/lib${LIBSUFFIX}"
-        inc="$dir/include"
-    fi
-
-    # try to find include files
-    if test -f "$inc/openssl/ssl.h"; then
-        AC_MSG_RESULT([found: $inc/openssl])
-        set_openssl_cppflags $inc
-    else
-	AC_MSG_ERROR([not found])
-    fi
-
-    QORE_LIB_CPPFLAGS="$QORE_LIB_CPPFLAGS $OPENSSL_CPPFLAGS"
-}
-
-# see if we can figure out where the openssl library is
-AC_ARG_WITH([openssl-dir],
-  [AS_HELP_STRING([--with-openssl-dir@<:@=DIR@:>@],
-                  [openssl directory])],
-  [if test ! -d "${with_openssl_dir}"; then AC_MSG_ERROR(bad value ${with_openssl_dir} for --with-openssl-dir); unset with_openssl_dir; fi], 
-  [with_openssl_dir="$OPENSSL_DIR"])
-
-AC_MSG_CHECKING([for openssl header files])
-for dir in "${with_openssl_dir}" "${find_prefix}" /usr / /usr/local /opt/gnu /opt/openssl /usr/local/openssl /opt/local /sw /usr/sfw /opt/sfw; do
-    find_openssl $dir
-    if test -n "$openssl_found"; then
-        break
-    fi
-done
-if test -z "$openssl_found"; then
-    AC_MSG_ERROR([no openssl headers found])
 fi
 
 #################
@@ -359,6 +331,12 @@ find_qore() {
         fi
     else
         if test -f "$lib/libqore.${SHLIB_SUFFIX}"; then
+            if test "$lib" != "/lib" -a "$lib" != "/usr/lib"; then
+                QORE_LDFLAGS="-L$lib"
+            fi
+            QORE_LDFLAGS="$QORE_LDFLAGS -lqore"
+            AC_MSG_RESULT([$lib (shared)])
+        elif test "$mingw" = yes -a -f "$lib/libqore.${SHLIB_SUFFIX}.a"; then
             if test "$lib" != "/lib" -a "$lib" != "/usr/lib"; then
                 QORE_LDFLAGS="-L$lib"
             fi
@@ -620,3 +598,13 @@ show_library_feature()
 show_library_feature optimizations $enable_optimization
 show_library_feature debug $enable_debug
 show_library_feature profiling $enable_profile
+
+# hack to use our libtool if on mingw to enable static libs to be linked in to the module
+if test "$mingw" = yes; then
+   # backup generated libtool
+   if test ! -e libtool.orig ; then
+      cp libtool libtool.orig
+   fi
+   sed -e 's/deplibs_check_method=.*/deplibs_check_method=pass_all/g' -e 's/allow_undefined_flag=.*/allow_undefined_flag=yes/g' libtool > libtool.tmp
+   mv libtool.tmp libtool
+fi

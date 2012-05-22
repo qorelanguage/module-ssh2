@@ -28,7 +28,9 @@
 #include <map>
 #include <utility>
 #include <sys/types.h>
+#ifdef HAVE_PWD_H
 #include <pwd.h>
+#endif
 
 #include <assert.h>
 #include <unistd.h>
@@ -148,8 +150,10 @@ QoreHashNode *SFTPClient::sftp_list(const char *path, ExceptionSink *xsink) {
          // contains st_mode() from sys/stat.h
          if (S_ISDIR(attrs.permissions))
             dirs->push(new QoreStringNode(buff));
+#ifdef S_ISLNK
          else if (S_ISLNK(attrs.permissions))
             links->push(new QoreStringNode(buff));
+#endif
          else // everything else is a file
             files->push(new QoreStringNode(buff));
       }
