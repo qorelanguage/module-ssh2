@@ -3,14 +3,14 @@ MNAME=ssh2
 .qpp.cpp:
 	qpp $<
 
-GENERATED_SRC = QC_SSH2Base.cpp QC_SSH2Client.cpp QC_SSH2Channel.cpp
+GENERATED_SRC = QC_SSH2Base.cpp QC_SSH2Client.cpp QC_SSH2Channel.cpp QC_SFTPClient.cpp
 CLEANFILES = $(GENERATED_SRC)
 
 #if COND_SINGLE_COMPILATION_UNIT
 #single-compilation-unit.cpp: $(GENERATED_SRC)
 #SSH2_SOURCES = single-compilation-unit.cpp
 #else
-SSH2_SOURCES = ssh2-module.cpp SSH2Client.cpp SFTPClient.cpp SSH2Channel.cpp QC_SFTPClient.cpp
+SSH2_SOURCES = ssh2-module.cpp SSH2Client.cpp SFTPClient.cpp SSH2Channel.cpp
 nodist_ssh2_la_SOURCES = $(GENERATED_SRC)
 #endif
 

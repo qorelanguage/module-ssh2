@@ -1,0 +1,315 @@
+/* -*- mode: c++; indent-tabs-mode: nil -*- */
+/** @file SFTPClient.qpp defines the SFTPClient class */
+/*
+  SFTPClient.qpp
+
+  libssh2 SFTP client integration into qore
+
+  Copyright 2009 Wolfgang Ritzinger
+
+  This library is free software; you can redistribute it and/or
+  modify it under the terms of the GNU Lesser General Public
+  License as published by the Free Software Foundation; either
+  version 2.1 of the License, or (at your option) any later version.
+
+  This library is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  Lesser General Public License for more details.
+
+  You should have received a copy of the GNU Lesser General Public
+  License along with this library; if not, write to the Free Software
+  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+#include "SFTPClient.h"
+
+DLLLOCAL extern QoreClass* QC_SSH2BASE;
+
+static QoreHashNode *attr2hash(const LIBSSH2_SFTP_ATTRIBUTES &attr) {
+   QoreHashNode *ret = new QoreHashNode;
+
+   if (attr.flags & LIBSSH2_SFTP_ATTR_SIZE)
+      ret->setKeyValue("size", new QoreBigIntNode(attr.filesize), 0);
+   if (attr.flags & LIBSSH2_SFTP_ATTR_ACMODTIME) {
+      ret->setKeyValue("atime", DateTimeNode::makeAbsolute(currentTZ(), (int64)attr.atime), 0);
+      ret->setKeyValue("mtime", DateTimeNode::makeAbsolute(currentTZ(), (int64)attr.mtime), 0);
+   }
+   if (attr.flags & LIBSSH2_SFTP_ATTR_UIDGID) {
+      ret->setKeyValue("uid", new QoreBigIntNode(attr.uid), 0);
+      ret->setKeyValue("gid", new QoreBigIntNode(attr.gid), 0);
+   }
+   if (attr.flags & LIBSSH2_SFTP_ATTR_PERMISSIONS) {
+      ret->setKeyValue("mode", new QoreBigIntNode(attr.permissions), 0);
+      ret->setKeyValue("permissions", new QoreStringNode(mode2str(attr.permissions)), 0);
+   }
+  
+   return ret;
+}
+
+//! allows Qore programs to use the sftp protocol with a remote server
+/** 
+ */
+qclass SFTPClient [arg=SFTPClient* myself; ns=Qore::SSH2; dom=NETWORK; vparent=SSH2BASE];
+
+//! Creates the object with the given URL
+/** @param url the remote host to connect to - can also be a url like \c "sftp://user:pass@hostname:port"; if any scheme is given in the URL, then it must be \c "sftp" or an \c SFTPCLIENT-PARAMETER-ERROR exception will be thrown
+    @param port the port number on the remote host to connect to; if the port is 0, then the port given in the url argument is used; if none is given there, then the default port is used (22)
+
+    @throw SFTPCLIENT-PARAMETER-ERROR unknown protocol passed in URL; no hostname in URL
+
+    @par Example:
+    @code my $sftpclient SFTPClient("sftp://user:pass@host:4022"); @endcode
+ */
+SFTPClient::constructor(string url, softint port = 0) {
+   QoreURL qurl(url);
+
+   if (!qurl.getHost()) {
+      xsink->raiseException("SFTPCLIENT-PARAMETER-ERROR", "no hostname found in URL '%s'", url->getBuffer());
+      return;
+   }
+
+   if (qurl.getProtocol() && strcasecmp("sftp", qurl.getProtocol()->getBuffer())) {
+      xsink->raiseException("SFTPCLIENT-PARAMETER-ERROR", "URL given in the first argument to SFTPClient::constructor() specifies invalid protocol '%s' (expecting 'sftp')", qurl.getProtocol()->getBuffer());
+      return;
+   }
+
+   // create private data object
+   self->setPrivate(CID_SFTPCLIENT, new SFTPClient(qurl, (int)port));
+}
+
+//! Throws an exception; currently SFTPClient objects cannot be copied
+/** @throw SFTPCLIENT-COPY-ERROR copying SFTPClient objects is not currently implemented
+ */
+SFTPClient::copy() {
+   xsink->raiseException("SFTPCLIENT-COPY-ERROR", "copying sftp connection objects is not allowed");
+}
+
+//! Returns a hash with information about the current connection status
+/** this method is safe to call when not connected
+
+    @return a hash with the following keys:
+    - \c ssh2host: (string) the host name of the remote server
+    - \c ssh2port: (int) the port number of the remote server
+    - \c ssh2user: (string) the user name used for the connection
+    - \c keyfile_priv: (string) the filename of the local private key file used
+    - \c keyfile_pub: (string) the filename of the local public key file used
+    - \c fingerprint: (*string) The fingerprint of the public host key of the remote server as a string of hex digit pairs separated by colons (:), ex: \c "AC:AA:DF:3F:49:82:5A:1A:DE:C9:ED:14:00:7D:65:9E" or \c NOTHING if not connected
+    - \c authenticated: (*string) a string giving the authentication mechanism used: \c "publickey", \c "password", \c "keyboard-interactive" or \c NOTHING if not connected
+    - \c connected: (bool) tells if the connection is currently active or not
+    - \c methods: (hash) a hash of strings giving the crytographic methods used for the connection
+    - \c path: (*string) a string giving the path name set in the object or \c NOTHING if no path is set
+
+    @par Example:
+    @code my hash $h = $sftpclient.info(); @endcode
+*/
+hash SFTPClient::info() [flags=CONSTANT] {
+   return myself->sftp_info();
+}
+
+//! Returns the current path as a string or \c NOTHING if no path is set
+/** @return the current path as a string or \c NOTHING if no path is set
+
+    @par Example:
+    @code my *string $path = $sftpclient.path(); @endcode
+*/
+*string SFTPClient::path() [flags=CONSTANT] {
+   return myself->sftp_path();
+}
+
+//! Returns a hash of directory information; throws an exception if any errors occur
+/** @param path The pathname of the directory to list; if no path is given, then information about the current directory is returned
+
+    @return a hash with the following keys containing  and sorted lists of directory, file, or symbolic link names, respectively: 
+    - \c path: the path used
+    - \c directories: sorted list of subdirectory names in the directory
+    - \c files: sorted list of file names in the directory
+    - \c links: sorted list of symbolic links in the directory
+
+    @throw SFTPCLIENT-NOT-CONNECTED client is not connected
+    @throw SFTPCLIENT-LIST-ERROR failed to list directory
+
+    @par Example:
+    @code my hash $h = $sftpclient.list($path); @endcode
+*/
+hash SFTPClient::list(*string path) [flags=RET_VALUE_ONLY] {
+   return myself->sftp_list(path ? path->getBuffer() : 0, xsink);
+}
+
+//! Returns a hash of information about a file or \c NOTHING if the file cannot be found
+/** @param path the pathname of the file to stat
+
+    @return \c NOTHING if the path was not found or a hash with the following keys (note that some hash keys may not be present if the data was not returned from the remote server):
+    - \c size: (int) the size of the file in bytes
+    - \c atime: (date) the date/time the file was last accessed
+    - \c mtime: (date) the date/time the file was last modified
+    - \c uid: (int) the userid of the file's owner
+    - \c gid: (int) the groupid of the file
+    - \c mode: (int) the mode of the file as an integer
+    - \c permissions: (string) a string giving the symbolic mode of the file
+
+    @throw SFTPCLIENT-NOT-CONNECTED no connection has been established
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message    
+
+    @par Example:
+    @code my *hash $h = $sftpclient.stat($path); @endcode
+*/
+*hash SFTPClient::stat(string path) [flags=RET_VALUE_ONLY] {
+   LIBSSH2_SFTP_ATTRIBUTES attr;
+   int rc = myself->sftp_getAttributes(path->getBuffer(), &attr, xsink);
+   return rc < 0 ? 0 : attr2hash(attr);
+}
+
+//! Deletes a file on the server side; throws an exception if any errors occur
+/** @param path the pathname of the file to delete
+
+    @throw SFTPCLIENT-NOT-CONNECTED no connection has been established
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message    
+
+    @par Example:
+    @code $sftpclient.removeFile($path); @endcode
+*/
+nothing SFTPClient::removeFile(string path) {
+   myself->sftp_unlink(path->getBuffer(), xsink);
+}
+
+//! Renames or moves a remote file; throws an exception if any errors occur
+/** Note that this command is executed with the \c LIBSSH2_SFTP_RENAME_OVERWRITE option set to \c True, but that this option is commonly ignored by sshd servers, in which case i the target file already exists, an \c SSH2-ERROR exception will be raised
+
+    @param old_name the old pathname of the file
+    @param new_name the new pathname of the file
+
+    @throw SFTPCLIENT-NOT-CONNECTED no connection has been established
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message; file exists and server does not allow overwriting
+
+    @par Example:
+    @code $sftpclient.name("file.txt", "file.txt.orig"); @endcode
+*/
+nothing SFTPClient::rename(string old_name, string new_name) {
+   myself->sftp_rename(old_name->getBuffer(), new_name->getBuffer(), xsink);
+}
+
+//! Changes the mode of a remote file or directory; sticky bits may not be set; throws an exception if any errors occur
+/** @param path the pathname of the file or directory to update
+    @param mode the new mode to set
+
+    @throw SFTPCLIENT-PARAMETER-ERROR mode setting is only possible for user, group and other (no sticky bits)
+    @throw SFTPCLIENT-NOT-CONNECTED no connection has been established
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message    
+
+    @par Example:
+    @code $sftpclient.chmod("file.txt", 0600); @endcode
+*/
+nothing SFTPClient::chmod(string path, int mode) {
+   // check if mode is in range
+   if (mode != (mode & SFTP_UGOMASK)) {
+      xsink->raiseException("SFTPCLIENT-PARAMETER-ERROR", "mode setting is only possible for user, group and other (no sticky bits)");
+      return 0;
+   }
+
+   myself->sftp_chmod(path->getBuffer(), (int)mode, xsink);
+}
+
+//! Retrieves a remote file and returns it as a binary object; throws an exception if any errors occur
+/** @param path the pathname of the file to retrieve
+
+    @throw SFTPCLIENT-NOT-CONNECTED no connection has been established
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message    
+
+    @par Example:
+    @code my binary $b = $sftpclient.getFile("file.bin"); @endcode
+*/
+binary SFTPClient::getFile(string path) {
+   return myself->sftp_getFile(path->getBuffer(), xsink);
+}
+
+//! Retrieves a remote file and returns it as a string; throws an exception if any errors occur
+/** @param path the pathname of the file to retrieve
+
+    @throw SFTPCLIENT-NOT-CONNECTED no connection has been established
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message    
+
+    @par Example:
+    @code my string $str = $sftpclient.getTextFile("file.txt"); @endcode
+*/
+string SFTPClient::getTextFile(string path) {
+   return myself->sftp_getTextFile(path->getBuffer(), xsink);
+}
+
+//! Saves a file on the remote server from a binary argument and returns the number of bytes sent; throws an exception if any errors occur
+/** @param bin the file data as a binary object
+    @param path the remote path name on the server
+    @param mode the mode of the file on the server
+
+    @return the number of bytes actually sent
+
+    @throw SFTPCLIENT-NOT-CONNECTED no connection has been established
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
+
+    @par Example:
+    @code my int $size = $sftpclient.putFile($bin, "file.bin", 0600); @endcode
+*/
+int SFTPClient::putFile(binary bin, string path, int mode = 0644) {
+   // transfer the file
+   return myself->sftp_putFile((const char *)bin->getPtr(), bin->size(), path->getBuffer(), (int)mode, xsink);
+}
+
+//! Saves a file on the remote server from a string argument and returns the number of bytes sent; throws an exception if any errors occur
+/** @param data the file data as a string
+    @param path the remote path name on the server
+    @param mode the mode of the file on the server
+
+    @return the number of bytes actually sent
+
+    @throw SFTPCLIENT-NOT-CONNECTED no connection has been established
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
+
+    @par Example:
+    @code my int $size = $sftpclient.putFile($str, "file.bin", 0600); @endcode
+*/
+int SFTPClient::putFile(string data, string path, int mode = 0644) {
+   // transfer the file
+   return myself->sftp_putFile(data->getBuffer(), data->strlen(), path->getBuffer(), (int)mode, xsink);
+}
+
+//! Makes a directory on the remote server; throws an exception if any errors occur
+/** @param path The pathname of the new directory
+    @param mode the mode of the new directory
+
+    @throw SFTPCLIENT-MKDIR-ERROR directory name is an empty string
+    @throw SFTPCLIENT-NOT-CONNECTED no connection has been established
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
+
+    @par Example:
+    @code $sftpclient.mkdir($path, 0700); @endcode
+*/
+nothing SFTPClient::mkdir(string path, int mode = 0755) {
+   myself->sftp_mkdir(path->getBuffer(), (int)mode, xsink);
+}
+
+//! Removes a directory on the remote server; throws an exception if any errors occur
+/** @param path The pathname of the directory to remove
+
+    @throw SFTPCLIENT-RMDIR-ERROR directory name is an empty string
+    @throw SFTPCLIENT-NOT-CONNECTED no connection has been established
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
+
+    @par Example:
+    @code $sftpclient.rmdir($path); @endcode
+*/
+nothing SFTPClient::rmdir(string path) {
+   myself->sftp_rmdir(path->getBuffer(), xsink);
+}
+
+//! Changes the directory on the remote server and returns the new directory; throws an exception if any errors occur
+/** @param path The pathname of the directory to change to
+
+    @throw SFTPCLIENT-NOT-CONNECTED no connection has been established
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
+
+    @par Example:
+    @code $sftpclient.chdir($path); @endcode
+*/
+string SFTPClient::chdir(string path) {
+   return myself->sftp_chdir(path->getBuffer(), xsink);
+}

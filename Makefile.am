@@ -16,6 +16,7 @@ EXTRA_DIST = COPYING ChangeLog AUTHORS README \
 	src/QC_SSH2Base.qpp \
 	src/QC_SSH2Client.qpp \
 	src/QC_SSH2Channel.qpp \
+	src/QC_SFTPClient.qpp \
 	test/ssh2-test.q \
 	qore-ssh2-module.spec
 
@@ -25,12 +26,7 @@ if COND_DOXYGEN
 DOX = ssh2
 DOXYGEN_OUTPUT=docs/ssh2/html
 
-DOXYFILES = docs/doxyfile \
-	docs/mainpage.doxygen \
-	docs/SSH2Base.qc \
-	docs/SSH2Client.qc \
-	docs/SFTPClient.qc \
-	docs/SSH2Channel.qc
+DOXYFILES = docs/doxyfile docs/mainpage.doxygen
 DOXYFILES_SRC = docs/doxyfile.tmpl docs/footer_template.html
 QDX = qdx
 DX_CLEANFILES = ${DOXYFILES}

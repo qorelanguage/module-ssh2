@@ -36,7 +36,7 @@ qclass SSH2Client [arg=SSH2Client* c; ns=Qore::SSH2; dom=NETWORK; vparent=SSH2BA
 /** @param url the remote host to connect to - can also be a url like \c "ssh://user:pass@hostname:port"
     @param port the port number on the remote host to connect to; if the port is 0, then the port given in the url argument is used; if none is given there, then the default port is used (22)
 
-    @throw SSH2CLIENT-PARAMETER-ERROR empty hostname passed
+    @throw SSH2CLIENT-PARAMETER-ERROR empty url passed
 
     @par Example:
     @code my $ssh2client SSH2Client("host", 4022); @endcode
@@ -55,7 +55,7 @@ SSH2Client::constructor(string url, softint port = 0) {
    }
 
    // create private data object
-   SSH2Client* mySSH2Client = new SSH2Client(qurl, port);
+   SSH2Client* mySSH2Client = new SSH2Client(qurl, (int)port);
    self->setPrivate(CID_SSH2CLIENT, mySSH2Client);
 }
 
@@ -137,7 +137,7 @@ SSH2Channel SSH2Client::openDirectTcpipChannel(string host, softint port, string
 
     @param path the path of the remote file to get
     @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
-    @param info an optional reference to a hash for file status info with the following keys:
+    @param statinfo an optional reference to a hash for file status info with the following keys:
     - \c "mode": the file's mode
     - \c "permissions": a string of the file's mode (ex: \c "drwxr-xr-x")
     - \c "size": the size of the file in bytes

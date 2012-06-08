@@ -1,3 +1,4 @@
+%define mod_ver 0.9.7
 %define module_api %(qore --latest-module-api 2>/dev/null)
 %define module_dir %{_libdir}/qore-modules
 
@@ -34,7 +35,7 @@
 
 Summary: SSH2 module for Qore
 Name: qore-ssh2-module
-Version: 0.9.7
+Version: %{mod_ver}
 Release: 1%{dist}
 License: LGPL
 Group: Development/Languages
@@ -43,7 +44,7 @@ Source: http://prdownloads.sourceforge.net/qore/%{name}-%{version}.tar.bz2
 #Source0: %{name}-%{version}.tar.bz2
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: gcc-c++
-BuildRequires: qore-devel
+BuildRequires: qore-devel >= 0.8.5
 BuildRequires: qore
 BuildRequires: libssh2-devel >= 1.1
 BuildRequires: openssl-devel
@@ -97,7 +98,10 @@ This RPM provides API documentation, test and example programs
 %doc docs/ssh2/html test/ 
 
 %changelog
-* Mon Dec 19 2011 David Nichols <david@qore.org>
+* Fri Jun 8 2012 David Nichols <david@qore.org> - 0.9.7
+- updated for qpp build
+
+* Mon Dec 19 2011 David Nichols <david@qore.org> - 0.9.7
 - updated to version 0.9.7
 
 * Mon Dec 20 2010 David Nichols <david@qore.org>
