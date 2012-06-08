@@ -1,6 +1,18 @@
+MNAME=ssh2
 
+.qpp.cpp:
+	qpp $<
 
-SSH2_SOURCES = ssh2-module.cc SSH2Client.cc SFTPClient.cc SSH2Channel.cc QC_SSH2Channel.cc QC_SSH2Client.cc QC_SFTPClient.cc QC_SSH2Base.cc
+GENERATED_SRC = QC_SSH2Base.cpp QC_SSH2Client.cpp QC_SSH2Channel.cpp
+CLEANFILES = $(GENERATED_SRC)
+
+#if COND_SINGLE_COMPILATION_UNIT
+#single-compilation-unit.cpp: $(GENERATED_SRC)
+#SSH2_SOURCES = single-compilation-unit.cpp
+#else
+SSH2_SOURCES = ssh2-module.cpp SSH2Client.cpp SFTPClient.cpp SSH2Channel.cpp QC_SFTPClient.cpp
+nodist_ssh2_la_SOURCES = $(GENERATED_SRC)
+#endif
 
 lib_LTLIBRARIES = ssh2.la
 ssh2_la_SOURCES = $(SSH2_SOURCES)
@@ -16,10 +28,10 @@ AM_CXXFLAGS = -g
 endif
 endif
 
-#libtool: $(LIBTOOL_DEPS)
-#	$(SHELL) ./config.status --recheck
+if COND_MINGW
+RM_OTHER=$(DESTDIR)$(libdir)/$(MNAME).dll.a
+endif
 
 install-exec-hook:
-	mv $(DESTDIR)$(libdir)/ssh2.$(MODULE_SUFFIX) $(DESTDIR)$(libdir)/ssh2-api-$(MODULE_API).qmod
-	rm -f $(DESTDIR)$(libdir)/ssh2.la
-
+	mv $(DESTDIR)$(libdir)/$(MNAME).$(MODULE_SUFFIX) $(DESTDIR)$(libdir)/$(MNAME)-api-$(MODULE_API).qmod
+	$(RM) $(DESTDIR)$(libdir)/$(MNAME).la $(RM_OTHER)

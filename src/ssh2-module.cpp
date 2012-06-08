@@ -1,5 +1,5 @@
 /*
-  modules/ssh2/ssh2-module.cc
+  modules/ssh2/ssh2-module.cpp
 
   SSH2/SFTP integration to QORE
 
@@ -35,14 +35,11 @@
 // thread-local storage for password for faked keyboard-interactive authentication
 TLKeyboardPassword keyboardPassword;
 
-// maybe needed for the hidden classes...
-
 static QoreNamespace ssh2ns("SSH2"); // namespace
 
 // for verifying the minimum required version of the library
 static const char *qore_libssh2_version = 0;
 
-#ifndef QORE_MONOLITHIC
 static QoreStringNode *ssh2_module_init();
 static void ssh2_module_ns_init(QoreNamespace *rns, QoreNamespace *qns);
 static void ssh2_module_delete();
@@ -58,22 +55,6 @@ DLLEXPORT qore_module_init_t qore_module_init = ssh2_module_init;
 DLLEXPORT qore_module_ns_init_t qore_module_ns_init = ssh2_module_ns_init;
 DLLEXPORT qore_module_delete_t qore_module_delete = ssh2_module_delete;
 DLLEXPORT qore_license_t qore_module_license = QL_LGPL;
-#endif
-
-static void setup_namespace() {
-   // setup static "master" namespace
-
-   QoreClass *SSH2Base, *SSH2Channel;
-
-  // all classes belonging to here
-   ssh2ns.addSystemClass((SSH2Base = initSSH2BaseClass()));
-   ssh2ns.addSystemClass((SSH2Channel = initSSH2ChannelClass()));
-   ssh2ns.addSystemClass(initSSH2ClientClass(SSH2Base, SSH2Channel));
-   ssh2ns.addSystemClass(initSFTPClientClass(SSH2Base));
-
-   // constants
-   ssh2ns.addConstant("Version", new QoreStringNode(qore_libssh2_version));
-}
 
 static QoreStringNode *ssh2_module_init() {
    qore_libssh2_version = libssh2_version(LIBSSH2_VERSION_NUM);
@@ -84,11 +65,18 @@ static QoreStringNode *ssh2_module_init() {
       return err;
    }
 
-   setup_namespace();
+   QoreClass* SSH2Channel;
 
-   // add builtin functions
-   //builtinFunctions.add("tibae_type", f_tibae_type);
-   return NULL;
+   // all classes belonging to here
+   ssh2ns.addSystemClass(initSSH2BaseClass(ssh2ns));
+   ssh2ns.addSystemClass((SSH2Channel = initSSH2ChannelClass()));
+   ssh2ns.addSystemClass(initSSH2ClientClass(QC_SSH2BASE, SSH2Channel));
+   ssh2ns.addSystemClass(initSFTPClientClass(QC_SSH2BASE));
+
+   // constants
+   ssh2ns.addConstant("Version", new QoreStringNode(qore_libssh2_version));
+
+   return 0;
 }
 
 static void ssh2_module_ns_init(QoreNamespace *rns, QoreNamespace *qns) {

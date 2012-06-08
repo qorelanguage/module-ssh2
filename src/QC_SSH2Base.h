@@ -29,7 +29,7 @@
 
 #include "ssh2-module.h"
 
-DLLLOCAL QoreClass *initSSH2BaseClass();
-DLLLOCAL extern qore_classid_t CID_SSH2_BASE;
+DLLLOCAL QoreClass* initSSH2BaseClass(QoreNamespace& ns);
+DLLLOCAL extern QoreClass* QC_SSH2BASE;
 
 #endif

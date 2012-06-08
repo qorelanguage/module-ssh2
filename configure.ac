@@ -251,6 +251,28 @@ AC_ARG_ENABLE([single-compilation-unit],
       esac],
   [enable_single_compilation_unit=yes])
 
+AC_ARG_WITH([doxygen],
+    [AS_HELP_STRING([--with-doxygen@<:@=PATH@:>@],
+                    [path to doxygen binary])],
+    [if test "${with_doxygen}" != "no" -a ! -x "${with_doxygen}"; then AC_MSG_ERROR(${with_doxygen} is not an executable in --with-doxygen); unset with_doxygen; fi ],
+    [with_doxygen=auto])
+
+if test "${with_doxygen}" = "auto"; then
+   AC_MSG_CHECKING([for doxygen to build API documentation])
+   # check for doxygen
+   with_doxygen=`which doxygen 2>/dev/null | grep -v "no doxygen in.*"`
+   if test -n "$with_doxygen"; then
+      doxy_version=`$with_doxygen --version`
+      AC_MSG_RESULT([found $with_doxygen $doxy_version])
+   else
+      AC_MSG_RESULT([not found])
+   fi
+fi
+
+if test -n "${with_doxygen}"; then
+   AC_SUBST(DOXYGEN_CMD, $with_doxygen)
+fi
+
 ################
 # module stuff #
 ################
@@ -290,28 +312,6 @@ fi
 #################
 # qore includes #
 #################
-
-AC_ARG_WITH([doxygen],
-    [AS_HELP_STRING([--with-doxygen@<:@=PATH@:>@],
-                    [path to doxygen binary])],
-    [if test "${with_doxygen}" != "no" -a ! -x "${with_doxygen}"; then AC_MSG_ERROR(${with_doxygen} is not an executable in --with-doxygen); unset with_doxygen; fi ],
-    [with_doxygen=auto])
-
-if test "${with_doxygen}" = "auto"; then
-   AC_MSG_CHECKING([for doxygen to build API documentation])
-   # check for doxygen
-   with_doxygen=`which doxygen 2>/dev/null | grep -v "no doxygen in.*"`
-   if test -n "$with_doxygen"; then
-      doxy_version=`$with_doxygen --version`
-      AC_MSG_RESULT([found $with_doxygen $doxy_version])
-   else
-      AC_MSG_RESULT([not found])
-   fi
-fi
-
-if test -n "${with_doxygen}"; then
-   AC_SUBST(DOXYGEN_CMD, $with_doxygen)
-fi
 
 set_qore_cppflags() {
     QORE_INC_DIR=$1
@@ -416,8 +416,8 @@ else
       AC_DEFINE_UNQUOTED([QORE_VERSION_CODE], $qvc, [define when missing in Qore headers])
    fi
 
-   if test $qvc -lt 801; then
-      AC_MSG_ERROR([found $qore_version; this module requires at least version 0.8.1])
+   if test $qvc -lt 805; then
+      AC_MSG_ERROR([found $qore_version; this module requires at least version 0.8.5])
    fi
 
    AC_MSG_RESULT([${qore_version} OK])
@@ -557,6 +557,10 @@ MODULE_VERSION_MAJOR=`echo $PACKAGE_VERSION | cut -f3 -d\  | sed s/\"//g | cut -
 MODULE_VERSION_MINOR=`echo $PACKAGE_VERSION | cut -f3 -d\  | sed s/\"//g | cut -f2 -d.`
 MODULE_VERSION_SUB=`echo $PACKAGE_VERSION | cut -f3 -d\  | sed s/\"//g | cut -f3 -d.`
 
+# set user module directory
+mymodverdir=${qore_version}
+AC_SUBST([mymodverdir])
+
 # set version information
 AC_DEFINE_UNQUOTED([MODULE_VERSION_MAJOR], $MODULE_VERSION_MAJOR, [major version number])
 AC_DEFINE_UNQUOTED([MODULE_VERSION_MINOR], $MODULE_VERSION_MINOR, [minor version number])
@@ -569,6 +573,7 @@ AM_CONDITIONAL([COND_DOXYGEN],    [test -n "$with_doxygen"])
 AM_CONDITIONAL([COND_DEBUG],      [test "$enable_debug" = yes])
 AM_CONDITIONAL([COND_PROFILE],    [test "$enable_profile" = yes])
 AM_CONDITIONAL([COND_SINGLE_COMPILATION_UNIT], [test "$enable_single_compilation_unit" = yes])
+AM_CONDITIONAL([COND_MINGW],      [test "$mingw" = yes])
 
 AC_CONFIG_FILES([Makefile src/Makefile])
 AC_OUTPUT
@@ -581,8 +586,7 @@ else
    printf " (32-bit)\n"
 fi
 
-show_library_feature()
-{
+show_library_feature() {
    printf "%-24s: " "$1"
    if test "$2" = "yes"; then
       printf "%-8s" yes

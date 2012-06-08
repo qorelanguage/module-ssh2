@@ -16,17 +16,17 @@
 
     This module provides the following classes:
     |!Class|!Description
-    |SSH2::SSH2Base|base class for SSH2::SFTPClient and SSH2::SSH2Client
-    |SSH2::SSH2Client|allows Qore programs to establish an ssh2 connection to a remote server
-    |SSH2::SFTPClient|allows Qore programs to use the sftp protocol
-    |SSH2::SSH2Channel|allows Qore programs to send and receive data through an ssh2 channel
+    |Qore::SSH2::SSH2Base|base class for SSH2::SFTPClient and SSH2::SSH2Client
+    |Qore::SSH2::SSH2Client|allows Qore programs to establish an ssh2 connection to a remote server
+    |Qore::SSH2::SFTPClient|allows Qore programs to use the sftp protocol
+    |Qore::SSH2::SSH2Channel|allows Qore programs to send and receive data through an ssh2 channel
 
     When connecting the module will try to:
 
     - connect to the server with the given port or with port 22 if no port is given
-    - login as the given user (user is set in the URL given to SSH2::SSH2Client::constructor() or SSH2::SFTPClient::constructor() or can be modified with SSH2::SSH2Base::setUser()) using:
-      - publickey authentification (public and private key files can be modified with SSH2::SSH2Base::setKeys())
-      - password authentification (password can be set in the URL given to SSH2::SSH2Client::constructor() or SSH2::SFTPClient::constructor() or can be set afterwards with SSH2::SSH2Base::setPassword())
+    - login as the given user (user is set in the URL given to SSH2::SSH2Client::constructor() or SSH2::SFTPClient::constructor() or can be modified with @ref Qore::SSH2::SSH2Base::setUser() "SSH2Base::setUser()") using:
+      - publickey authentification (public and private key files can be modified with @ref Qore::SSH2::SSH2Base::setKeys() "SSH2Base::setKeys()")
+      - password authentification (password can be set in the URL given to SSH2::SSH2Client::constructor() or SSH2::SFTPClient::constructor() or can be set afterwards with @ref Qore::SSH2::SSH2Base::setPassword() "SSH2Base::setPassword()")
 
     See some examples here: @ref examples
 
