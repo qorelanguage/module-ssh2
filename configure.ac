@@ -606,9 +606,7 @@ show_library_feature profiling $enable_profile
 # hack to use our libtool if on mingw to enable static libs to be linked in to the module
 if test "$mingw" = yes; then
    # backup generated libtool
-   if test ! -e libtool.orig ; then
-      cp libtool libtool.orig
-   fi
+   if test ! -e libtool.orig ; then cp libtool libtool.orig; fi
    sed -e 's/deplibs_check_method=.*/deplibs_check_method=pass_all/g' -e 's/allow_undefined_flag=.*/allow_undefined_flag=yes/g' libtool > libtool.tmp
    mv libtool.tmp libtool
 fi

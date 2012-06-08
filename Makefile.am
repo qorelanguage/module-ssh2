@@ -42,7 +42,7 @@ docs/mainpage.doxygen: docs/mainpage.doxygen.tmpl
 docs/doxyfile: docs/doxyfile.tmpl
 	sed s/__VERSION__/${VERSION}/ $< > $@
 
-doxygen-doc: docs/ssh2/html
+doxygen-doc: $(DOXYGEN_OUTPUT)
 
 EXTRA_DIST += $(DOXYGEN_OUTPUT)
 
