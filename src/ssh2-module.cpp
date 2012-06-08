@@ -65,12 +65,10 @@ static QoreStringNode *ssh2_module_init() {
       return err;
    }
 
-   QoreClass* SSH2Channel;
-
    // all classes belonging to here
    ssh2ns.addSystemClass(initSSH2BaseClass(ssh2ns));
-   ssh2ns.addSystemClass((SSH2Channel = initSSH2ChannelClass()));
-   ssh2ns.addSystemClass(initSSH2ClientClass(QC_SSH2BASE, SSH2Channel));
+   ssh2ns.addSystemClass(initSSH2ChannelClass(ssh2ns));
+   ssh2ns.addSystemClass(initSSH2ClientClass(ssh2ns));
    ssh2ns.addSystemClass(initSFTPClientClass(QC_SSH2BASE));
 
    // constants

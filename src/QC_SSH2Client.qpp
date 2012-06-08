@@ -56,7 +56,7 @@ SSH2Client::constructor(string url, softint port = 0) {
 
    // create private data object
    SSH2Client* mySSH2Client = new SSH2Client(qurl, port);
-   self->setPrivate(CID_SSH2_CLIENT, mySSH2Client);
+   self->setPrivate(CID_SSH2CLIENT, mySSH2Client);
 }
 
 //! throws an exception; currently SSH2Client objects cannot be copied

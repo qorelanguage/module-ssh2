@@ -41,8 +41,8 @@
 #include <set>
 #include <string>
 
-DLLLOCAL QoreClass *initSSH2ClientClass(QoreClass *parent, const QoreClass *SSH2Channel);
-DLLLOCAL extern qore_classid_t CID_SSH2_CLIENT;
+DLLLOCAL QoreClass *initSSH2ClientClass(QoreNamespace& ns);
+DLLLOCAL extern qore_classid_t CID_SSH2CLIENT;
 
 DLLLOCAL std::string mode2str(const int mode);
 

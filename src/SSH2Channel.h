@@ -31,9 +31,9 @@
 #include <qore/Qore.h>
 
 DLLLOCAL extern qore_classid_t CID_SSH2_CHANNEL;
-DLLLOCAL extern QoreClass *QC_SSH2CHANNEL;
+DLLLOCAL extern QoreClass* QC_SSH2CHANNEL;
 
-DLLLOCAL QoreClass *initSSH2ChannelClass();
+DLLLOCAL QoreClass* initSSH2ChannelClass(QoreNamespace& ns);
 
 class SSH2Client;
 
