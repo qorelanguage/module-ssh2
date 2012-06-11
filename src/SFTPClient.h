@@ -35,7 +35,7 @@
 
 #include <time.h>
 
-DLLLOCAL QoreClass *initSFTPClientClass(QoreClass *parent);
+DLLLOCAL QoreClass *initSFTPClientClass(QoreNamespace& ns);
 DLLLOCAL extern qore_classid_t CID_SFTP_CLIENT;
 
 // the mask for user/group/other permissions

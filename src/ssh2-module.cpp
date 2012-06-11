@@ -69,7 +69,7 @@ static QoreStringNode *ssh2_module_init() {
    ssh2ns.addSystemClass(initSSH2BaseClass(ssh2ns));
    ssh2ns.addSystemClass(initSSH2ChannelClass(ssh2ns));
    ssh2ns.addSystemClass(initSSH2ClientClass(ssh2ns));
-   ssh2ns.addSystemClass(initSFTPClientClass(QC_SSH2BASE));
+   ssh2ns.addSystemClass(initSFTPClientClass(ssh2ns));
 
    // constants
    ssh2ns.addConstant("Version", new QoreStringNode(qore_libssh2_version));
