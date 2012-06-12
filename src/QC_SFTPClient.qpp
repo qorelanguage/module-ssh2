@@ -23,8 +23,7 @@
 */
 
 #include "SFTPClient.h"
-
-DLLLOCAL extern QoreClass* QC_SSH2BASE;
+#include "QC_SSH2Base.h"
 
 static QoreHashNode *attr2hash(const LIBSSH2_SFTP_ATTRIBUTES &attr) {
    QoreHashNode *ret = new QoreHashNode;
