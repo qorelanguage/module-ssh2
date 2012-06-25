@@ -278,10 +278,15 @@ fi
 ################
 
 find_libssh2() {
-    if test -f "$1/include/libssh2.h" -a -f "$1/include/libssh2_sftp.h" ; then
-        LIBSSH2_CPPFLAGS="-I$1/include"
-	LIBSSH2_LDFLAGS="-L$1/lib -lssh2"
-	libssh2_version=$( grep "^\#define LIBSSH2_VERSION " $1/include/libssh2.h | cut -d'"' -f2 )
+    a="$1"
+    if test \( "$a" = "/" -o -z "$a" \) -a -h "$a/lib${LIBSUFFIX}"; then
+        a=/usr
+    fi
+
+    if test -f "$a/include/libssh2.h" -a -f "$a/include/libssh2_sftp.h" ; then
+        LIBSSH2_CPPFLAGS="-I$a/include"
+	LIBSSH2_LDFLAGS="-L$a/lib${LIBSUFFIX} -lssh2"
+	libssh2_version=$( grep "^\#define LIBSSH2_VERSION " $a/include/libssh2.h | cut -d'"' -f2 )
     else
 	return
     fi
@@ -321,7 +326,11 @@ set_qore_cppflags() {
 }
 
 find_qore() {
-    lib=$1/lib${LIBSUFFIX}
+    a="$1"
+    if test \( "$a" = "/" -o -z "$a" \) -a -h "$a/lib${LIBSUFFIX}"; then
+        a=/usr
+    fi
+    lib=$a/lib${LIBSUFFIX}
 
     # if we only want the static qore libraries
     if test -n "$qore_static"; then
@@ -356,10 +365,10 @@ find_qore() {
 
     AC_MSG_CHECKING([for qore include files])
     # try to find include files
-    if test "$1" = "/"; then
+    if test "$a" = "/"; then
         inc=/usr/include
     else
-        inc=$1/include
+        inc=$a/include
     fi
     if test -f "$inc/qore/Qore.h"; then
         AC_MSG_RESULT([found: $inc])
