@@ -30,7 +30,7 @@ extern QoreClass* QC_SSH2CHANNEL;
 //! allows Qore programs to establish an ssh2 connection to a remote server
 /** 
  */
-qclass SSH2Client [arg=SSH2Client* c; ns=Qore::SSH2; dom=NETWORK; vparent=SSH2BASE];
+qclass SSH2Client [arg=SSH2Client* c; ns=Qore::SSH2; dom=NETWORK; vparent=SSH2Base];
 
 //! creates the object with the given hostname and port number
 /** @param url the remote host to connect to - can also be a url like \c "ssh://user:pass@hostname:port"

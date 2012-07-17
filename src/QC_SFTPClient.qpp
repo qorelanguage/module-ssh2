@@ -49,7 +49,7 @@ static QoreHashNode *attr2hash(const LIBSSH2_SFTP_ATTRIBUTES &attr) {
 //! allows Qore programs to use the sftp protocol with a remote server
 /** 
  */
-qclass SFTPClient [arg=SFTPClient* myself; ns=Qore::SSH2; dom=NETWORK; vparent=SSH2BASE];
+qclass SFTPClient [arg=SFTPClient* myself; ns=Qore::SSH2; dom=NETWORK; vparent=SSH2Base];
 
 //! Creates the object with the given URL
 /** @param url the remote host to connect to - can also be a url like \c "sftp://user:pass@hostname:port"; if any scheme is given in the URL, then it must be \c "sftp" or an \c SFTPCLIENT-PARAMETER-ERROR exception will be thrown
