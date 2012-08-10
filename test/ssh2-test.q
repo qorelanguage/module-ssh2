@@ -17,9 +17,11 @@ const FileMode = 0755;
 
 const FileNameLen = 40;
 
-const opts = ( "iters": "i,iters=i",
-               "threads": "t,threads=i",
-               "help": "h,help"
+const opts = (
+    "iters": "i,iters=i",
+    "privkey": "k,private-key=s",
+    "threads": "t,threads=i",
+    "help": "h,help"
     );
 
 sub get_random_filename() returns string {    
@@ -63,6 +65,9 @@ sub ssh_test(string $url) {
 
     my SSH2Client $sc($url);
 
+    if ($o.privkey.val())
+        $sc.setKeys($o.privkey);
+    
     $sc.connect();
 
     my hash $info = $sc.info();
@@ -183,6 +188,9 @@ sub sftp_test_intern(SFTPClient $sc) {
 
 sub sftp_test(string $url) {
     my SFTPClient $sc($url);
+    if ($o.privkey.val())
+        $sc.setKeys($o.privkey);
+    
     $sc.connect();
 
     my Counter $c();
@@ -214,9 +222,10 @@ sub main() {
   url examples:
     ssh://user:password@host  (for SSH2 tests)
     sftp://user:password@host (for SFTP tests)
- -i,--iters=ARG    iterations per test
- -t,--threads=ARG  number of threads
- -h,--help         for this help test\n", get_script_name());
+ -i,--iters=ARG        iterations per test
+ -k,--private-key=ARG  set private key to use for authentication
+ -t,--threads=ARG      number of threads
+ -h,--help             for this help test\n", get_script_name());
 	exit(1);
     }
     srand(now());
