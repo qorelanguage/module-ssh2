@@ -201,7 +201,7 @@ nothing SFTPClient::rename(string old_name, string new_name) {
 */
 nothing SFTPClient::chmod(string path, int mode) {
    // check if mode is in range
-   if (mode != (mode & SFTP_UGOMASK)) {
+  if (mode != (mode & (int64)SFTP_UGOMASK)) {
       xsink->raiseException("SFTPCLIENT-PARAMETER-ERROR", "mode setting is only possible for user, group and other (no sticky bits)");
       return 0;
    }
