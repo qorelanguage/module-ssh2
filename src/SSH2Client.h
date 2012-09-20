@@ -62,14 +62,16 @@ class SSH2Client : public AbstractPrivateData {
 private:
    typedef std::set<SSH2Channel *> channel_set_t;
 
-   // connection
-   char *sshhost;
+   // connection host
+   std::string sshhost, 
+      // authentication
+      sshuser,
+      sshpass,
+      sshkeys_pub,
+      sshkeys_priv;
+
+   // connection port
    uint32_t sshport;
-   // authentification
-   char *sshuser;
-   char *sshpass;
-   char *sshkeys_pub;
-   char *sshkeys_priv;
 
    // server info
    const char *sshauthenticatedwith;
@@ -85,6 +87,8 @@ protected:
     * free ressources
     */
    DLLLOCAL virtual ~SSH2Client();
+
+   DLLLOCAL void setKeysIntern();
 
    DLLLOCAL virtual void deref(ExceptionSink*);
    DLLLOCAL int ssh_connected_unlocked();
@@ -189,7 +193,7 @@ public:
    DLLLOCAL SSH2Client(QoreURL &url, const uint32_t = 0);
    DLLLOCAL int setUser(const char *);
    DLLLOCAL int setPassword(const char *);
-   DLLLOCAL int setKeys(const char *, const char *);
+   DLLLOCAL int setKeys(const char *, const char *, ExceptionSink* xsink);
    DLLLOCAL QoreStringNode *fingerprint();
 
    DLLLOCAL virtual int connect(int timeout_ms, ExceptionSink *xsink) {

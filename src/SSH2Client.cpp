@@ -1,6 +1,6 @@
 /* -*- indent-tabs-mode: nil -*- */
 /*
-  SSH2Client.cc
+  SSH2Client.cpp
 
   libssh2 ssh2 client integration into qore
 
@@ -107,70 +107,30 @@ static void map_ssh2_sbuf_to_hash(QoreHashNode *h, struct stat *sbuf) {
  *
  * this just prefills the values for connection with hostname and port
  */
-SSH2Client::SSH2Client(const char *hostname, const uint32_t port) {
-   // remember host settings
-   sshhost=strdup(hostname);
-   sshport=port;
-   sshuser=(char *)NULL;
-   sshpass=(char *)NULL;
-   sshkeys_pub=(char *)NULL;
-   sshkeys_priv=(char *)NULL;
-   sshauthenticatedwith=NULL; // will be filled on connect
-
-#ifdef HAVE_PWD_H
-   // prefill the user and 'estimate' the key files for rsa
-   struct passwd *usrpwd = getpwuid(getuid());
-   if(usrpwd!=NULL) {
-      char thome[PATH_MAX];
-      sshuser=strdup(usrpwd->pw_name);
-      strncpy(thome, usrpwd->pw_dir, sizeof(thome)-1);
-      sshkeys_pub=strdup(strncat(thome, "/.ssh/id_rsa.pub", sizeof(thome)-1));
-      strncpy(thome, usrpwd->pw_dir, sizeof(thome)-1);
-      sshkeys_priv=strdup(strncat(thome, "/.ssh/id_rsa", sizeof(thome)-1));
-   }
-#endif
-    
-   ssh_session=NULL;
+SSH2Client::SSH2Client(const char *hostname, const uint32_t port) : sshhost(hostname), sshport(port), sshauthenticatedwith(0), ssh_session(0) {
+   setKeysIntern();
 }
 
-SSH2Client::SSH2Client(QoreURL &url, const uint32_t port) {
-   // remember host settings
-   sshhost = url.take_host();
-   sshport = port ? port : url.getPort();
+SSH2Client::SSH2Client(QoreURL &url, const uint32_t port) : 
+   sshhost(url.getHost() ? url.getHost()->getBuffer() : ""), 
+   sshuser(url.getUserName() ? url.getUserName()->getBuffer() : ""),
+   sshpass(url.getPassword() ? url.getPassword()->getBuffer() : ""),
+   sshport(port ? port : (uint32_t)url.getPort()),
+   sshauthenticatedwith(0),
+   ssh_session(0) {
    if (!sshport)
       sshport = DEFAULT_SSH_PORT;
-   sshuser = url.take_username();
-   sshpass = url.take_password();
-   sshkeys_pub = 0;
-   sshkeys_priv = 0;
-   sshauthenticatedwith = 0; // will be filled on connect
 
-#ifdef HAVE_PWD_H
-   // prefill the user if not already set and 'estimate' the key files for rsa
-   struct passwd *usrpwd = getpwuid(getuid());
-   if (usrpwd) {
-      char thome[PATH_MAX];
-      if (!sshuser)
-         sshuser = strdup(usrpwd->pw_name);
-      strncpy(thome, usrpwd->pw_dir, sizeof(thome) - 1);
-      sshkeys_pub = strdup(strncat(thome, "/.ssh/id_rsa.pub", sizeof(thome) - 1));
-      strncpy(thome, usrpwd->pw_dir, sizeof(thome) - 1);
-      sshkeys_priv = strdup(strncat(thome, "/.ssh/id_rsa", sizeof(thome) - 1));
-
-      //printd(5, "keys='%s' priv='%s'\n", sshkeys_pub, sshkeys_priv);
-   }
-#endif
-    
-   ssh_session = 0;
+   setKeysIntern();
 }
 
 /*
  * close session/connection
- * free ressources
+ * free resources
  */
 SSH2Client::~SSH2Client() {
    QORE_TRACE("SSH2Client::~SSH2Client()");
-   printd(5, "SSH2Client::~SSH2Client() this=%08p\n", this);
+   printd(5, "SSH2Client::~SSH2Client() this: %p\n", this);
 
    // first close all open channels
    {
@@ -180,19 +140,41 @@ SSH2Client::~SSH2Client() {
       }
    }
    
-   // close up
-   
    // disconnect
    ssh_disconnect_unlocked(true);
-   
-   // free
-   free_string(sshhost);
-   free_string(sshuser);
-   free_string(sshpass);
-   free_string(sshkeys_pub);
-   free_string(sshkeys_priv);
-   
-   sshauthenticatedwith = 0;
+}
+
+void SSH2Client::setKeysIntern() {
+#ifdef HAVE_PWD_H
+   // only set if the current user has access to the filesystem
+   if (getProgram()->getParseOptions64() & PO_NO_FILESYSTEM)
+      return;
+
+   // prefill the user and 'estimate' the key files for rsa
+   struct passwd *usrpwd = getpwuid(getuid());
+   if (usrpwd) {
+      sshuser = usrpwd->pw_name;
+      sshkeys_priv = usrpwd->pw_dir;
+      sshkeys_priv += "/.ssh/id_rsa";
+#ifdef _QORE_HAS_PATH_IS_READABLE
+      if (!q_path_is_readable(sshkeys_priv.c_str())) {
+         printd(5, "SSH2Client::setKeysIntern() skipping automatic setting of keys because '%s' is not readable\n", sshkeys_priv.c_str());
+         sshkeys_priv.clear();
+         return;
+      }
+#endif
+      sshkeys_pub = usrpwd->pw_dir;
+      sshkeys_pub += "/.ssh/id_rsa.pub";
+#ifdef _QORE_HAS_PATH_IS_READABLE
+      if (!q_path_is_readable(sshkeys_pub.c_str())) {
+         printd(5, "SSH2Client::setKeysIntern() skipping automatic setting of keys because '%s' is not readable\n", sshkeys_pub.c_str());
+         sshkeys_priv.clear();
+         sshkeys_pub.clear();
+         return;
+      }
+#endif
+   }
+#endif    
 }
 
 /**
@@ -213,7 +195,7 @@ int SSH2Client::ssh_disconnect_unlocked(bool force, ExceptionSink *xsink) {
       // close ssh session if not null
       libssh2_session_disconnect(ssh_session, (char*)"qore program disconnect");
       libssh2_session_free(ssh_session);
-      ssh_session = NULL;
+      ssh_session = 0;
    }
 
    socket.close();
@@ -247,7 +229,7 @@ QoreObject *SSH2Client::register_channel_unlocked(LIBSSH2_CHANNEL *channel) {
 }
 
 const char *SSH2Client::getHost() {
-   return sshhost;
+   return sshhost.c_str();
 }
 
 const uint32_t SSH2Client::getPort() {
@@ -270,13 +252,12 @@ int SSH2Client::setUser(const char *user) {
    if (ssh_connected_unlocked())
       return -1;
 
-   free_string(sshuser);
-   sshuser=strdup(user);
+   sshuser = user;
    return 0;
 }
 
 const char *SSH2Client::getUser() {
-   return sshuser;
+   return sshuser.c_str();
 }
 
 int SSH2Client::setPassword(const char *pwd) {
@@ -285,44 +266,62 @@ int SSH2Client::setPassword(const char *pwd) {
    if (ssh_connected_unlocked())
       return -1;
 
-   free_string(sshpass);
-   sshpass=strdup(pwd);
+   sshpass = pwd;
    return 0;
 }
 
 const char *SSH2Client::getPassword() {
-   return sshpass;
+   return sshpass.c_str();
 }
 
-int SSH2Client::setKeys(const char *priv, const char *pub) {
+int SSH2Client::setKeys(const char *priv, const char *pub, ExceptionSink* xsink) {
    AutoLocker al(m);
 
-   if (ssh_connected_unlocked())
+   if (ssh_connected_unlocked()) {
+      xsink->raiseException(SSH2_CONNECTED, "usage of SSH2Base::setKeys() is not allowed when connected");
       return -1;
+   }
 
-   free_string(sshkeys_priv);
-   free_string(sshkeys_pub);
+   sshkeys_priv.clear();
+   sshkeys_pub.clear();
 
    // if the strings are null then ignore
-   if(priv) {
-      sshkeys_priv=strdup(priv);
-      if(pub) {
-         sshkeys_pub=strdup(pub);
+   if (priv && strlen(priv)) {
+      sshkeys_priv = priv;
+#ifdef _QORE_HAS_PATH_IS_READABLE
+      if (!q_path_is_readable(sshkeys_priv.c_str())) {
+         xsink->raiseException("SSH2-SETKEYS-ERROR", "private key '%s' is not readable", sshkeys_priv.c_str());
+         sshkeys_priv.clear();
+         return -1;
       }
-      else if(strlen(priv)) {
-         std::string str=std::string(priv) + std::string(".pub");
-         sshkeys_pub=strdup(str.c_str());
+#endif
+
+      if (pub)
+         sshkeys_pub = pub;
+      else {
+         sshkeys_pub = priv;
+         sshkeys_pub += ".pub";
       }
+
+#ifdef _QORE_HAS_PATH_IS_READABLE
+      if (!q_path_is_readable(sshkeys_pub.c_str())) {
+         xsink->raiseException("SSH2-SETKEYS-ERROR", "public key '%s' is not readable", sshkeys_pub.c_str());
+         sshkeys_priv.clear();
+         sshkeys_pub.clear();
+         return -1;
+      }
+#endif
+
    }
    return 0;
 }
 
 const char *SSH2Client::getKeyPriv() {
-   return sshkeys_priv;
+   return sshkeys_priv.c_str();
 }
 
 const char *SSH2Client::getKeyPub() {
-   return sshkeys_pub;
+   return sshkeys_pub.c_str();
 }
 
 QoreStringNode *SSH2Client::fingerprint_unlocked() {
@@ -388,10 +387,10 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
 
    QORE_TRACE("SSH2Client::connect()");
 
-   printd(1, "SSH2Client::connect(%s:%d, %dms)\n", sshhost, sshport, timeout_ms);
+   printd(1, "SSH2Client::connect(%s:%d, %dms)\n", sshhost.c_str(), sshport, timeout_ms);
   
    // sanity check of data
-   if (!sshuser) {
+   if (sshuser.empty()) {
       xsink && xsink->raiseException(SSH2CLIENT_CONNECT_ERROR, "ssh user must not be NOTHING");
       return -1;
    }
@@ -400,13 +399,13 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
    char *userauthlist;
    int rc;
 
-   int loggedin=0; // tells us if we are logged in (or at least think so)
+   bool loggedin = false; // tells us if we are logged in (or at least think so)
 
    // force disconnect session if already connected
    if (ssh_session)
       ssh_disconnect_unlocked(true);
   
-   if (socket.connectINET(sshhost, sshport, timeout_ms, xsink))
+   if (socket.connectINET(sshhost.c_str(), sshport, timeout_ms, xsink))
       return -1;
   
    // Create a session instance
@@ -430,7 +429,7 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
    }
   
    // check what types are available for authentifcation
-   userauthlist = libssh2_userauth_list(ssh_session, sshuser, strlen(sshuser));
+   userauthlist = libssh2_userauth_list(ssh_session, sshuser.c_str(), sshuser.size());
    // remove the info how we are actual authenticated (should be NULL anyway)
    sshauthenticatedwith = 0;
 
@@ -446,10 +445,10 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
 
    // try auth 
    // try publickey if available
-   if (!loggedin && (auth_pw & QAUTH_PUBLICKEY) && (sshkeys_priv && sshkeys_pub)) {
-      printd(5, "SSH2Client::connect(): try pubkey auth: %s %s\n", sshkeys_priv, sshkeys_pub);
-      if(libssh2_userauth_publickey_fromfile(ssh_session, sshuser, sshkeys_pub, sshkeys_priv, sshpass? sshpass: "") == 0) {
-         loggedin=1;
+   if (!loggedin && (auth_pw & QAUTH_PUBLICKEY) && (!sshkeys_priv.empty() && !sshkeys_pub.empty())) {
+      printd(5, "SSH2Client::connect(): try pubkey auth: %s %s\n", sshkeys_priv.c_str(), sshkeys_pub.c_str());
+      if(libssh2_userauth_publickey_fromfile(ssh_session, sshuser.c_str(), sshkeys_pub.c_str(), sshkeys_priv.c_str(), sshpass.c_str()) == 0) {
+         loggedin = true;
          sshauthenticatedwith = "publickey";
          printd(5, "publickey authentication succeeded\n");
       }
@@ -461,9 +460,9 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
 
    // try password and keyboard-interactive first if a password was given
    if (!loggedin && (auth_pw & QAUTH_PASSWORD)) {
-      printd(5, "SSH2Client::connect(): try user/pass auth: %s/%s\n", sshuser, sshpass ? sshpass : "");
-      if (!libssh2_userauth_password(ssh_session, sshuser, sshpass ? sshpass : "")) {
-         loggedin=1;
+      printd(5, "SSH2Client::connect(): try user/pass auth: %s/%s\n", sshuser.c_str(), sshpass.c_str());
+      if (!libssh2_userauth_password(ssh_session, sshuser.c_str(), sshpass.c_str())) {
+         loggedin = true;
          sshauthenticatedwith = "password";
          printd(5, "password authentication succeeded\n");
       }
@@ -474,11 +473,11 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
    }
 
    if (!loggedin && (auth_pw & QAUTH_KEYBOARD_INTERACTIVE)) {
-      printd(5, "SSH2Client::connect(): try user/pass with keyboard-interactive auth: %s/%s\n", sshuser, sshpass ? sshpass : "");
+      printd(5, "SSH2Client::connect(): try user/pass with keyboard-interactive auth: %s/%s\n", sshuser.c_str(), sshpass.c_str());
       // thread thread-local storage for password for fake keyboard-interactive authentication
-      keyboardPassword.set(sshpass ? sshpass : "");
-      if (!libssh2_userauth_keyboard_interactive(ssh_session, sshuser, &kbd_callback)) {
-         loggedin=1;
+      keyboardPassword.set(sshpass.c_str());
+      if (!libssh2_userauth_keyboard_interactive(ssh_session, sshuser.c_str(), &kbd_callback)) {
+         loggedin = true;
          sshauthenticatedwith = "keyboard-interactive";
          printd(5, "keyboard-interactive authentication succeeded\n");
       }
@@ -489,7 +488,7 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
    }
   
    // could we auth?
-   if(!loggedin) {
+   if (!loggedin) {
       ssh_disconnect_unlocked(true); // clean up connection
       xsink && xsink->raiseException("SSH2CLIENT-AUTH-ERROR", "No proper authentication method found");
       return -1;
