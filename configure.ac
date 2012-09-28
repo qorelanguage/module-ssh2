@@ -27,6 +27,9 @@ if test "$OS" = "HP-UX"; then
    fi
 else
    ARCH=`uname -p`
+   if test "$ARCH" = unknown; then
+      ARCH=`uname -m`
+   fi
    if test $ARCH = i686 -o $ARCH = i586 -o $ARCH = athlon ; then
       ARCH=i386
    fi
@@ -41,6 +44,7 @@ fi
 # get CPU family
 case "${host_cpu}" in
    i[[3456]]86) cpu_family=i386 ;;
+   amd64)       cpu_family=x86_64 ;;
    *)           cpu_family=${host_cpu} ;;
 esac
 
@@ -168,6 +172,10 @@ if test "$enable_64bit" = "yes"; then
 		if test -d /usr/lib64; then
 		   LIBSUFFIX=64
                 fi
+                target="${host_cpu}-${host_os}"
+                if test -d /usr/lib/$target; then
+                   LIBSUFFIX=/$target
+                fi
 		AC_SUBST(LIBSUFFIX)
 		;;
       *hpux*)	if test "$host_cpu" = "ia64"; then
@@ -201,6 +209,11 @@ else
      *linux*)	if test "$GXX" = "yes"; then
 		   CXXFLAGS="$CXXFLAGS -m32"
 		fi
+                # multiarch
+                if test -a "$host_cpu" = "x86_64" -a -d /usr/lib32; then
+                   LIBSUFFIX=32
+                fi
+                AC_SUBST(LIBSUFFIX)
 		;;
      *hpux*)	if test "$host_cpu" != "ia64"; then
 		    if test "$GXX" = "yes"; then
