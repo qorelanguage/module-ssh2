@@ -5,7 +5,8 @@ INTRODUCTION
 This module provides access to ssh2 sessions and the sftp protocol via libssh2
 (http://www.libssh2.org) in the Qore programming language.
 
-This version requires qore 0.8.1+ as it uses new types introduced in qore 0.8.1
+This version requires qore 0.8.5+ as it requires qpp to build (qpp is the Qore
+Pre-Processor)
 
 BINARIES
 --------
@@ -19,7 +20,7 @@ For OS/X, use macports: http://www.macports.org
 
 BUILDING
 --------
-Requires qore 0.8.1+ and libssh2 1.1+ to build and run
+Requires qore 0.8.6+ and libssh2 1.1+ to build and run
 
 to configure the build, execute
         configure --disable-debug

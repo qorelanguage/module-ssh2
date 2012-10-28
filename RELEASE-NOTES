@@ -2,8 +2,11 @@
 version 0.9.7
 *************
 
-fixed another deadlock in the SFTPClient::disconnect() method (oops)
-minor doc updates
+* an exception will be thrown if a key file is set and either the public or
+  private key is not available or readable; previously such errors would
+  cause hard-to-debug connection problems
+* fixed another deadlock in the SFTPClient::disconnect() method (oops)
+* minor doc updates
 
 
 *************

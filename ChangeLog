@@ -1,3 +1,153 @@
+2012-10-22 07:05  david_nichols
+
+	* src/SSH2Channel.h: minor correction in a header (for a
+	  declaration that's not used anyway)
+
+2012-09-28 16:19  david_nichols
+
+	* configure.ac: applied reini urban's multi-arch patches for debian
+	  to all modules
+
+2012-09-20 13:48  david_nichols
+
+	* src/QC_SSH2Base.qpp, src/SSH2Client.cpp, src/SSH2Client.h: * use
+	  std::string for connection parameters instead of dynamically
+	  managed char*s
+	  * throw an exception if trying to use key files where one or both
+	  of the key files do not exist or are not readable
+
+2012-09-05 09:24  david_nichols
+
+	* docs/doxyfile.tmpl: disable the collaboration graph because it's
+	  redundant
+
+2012-08-19 06:58  david_nichols
+
+	* src/QC_SFTPClient.qpp: fixed a compile warning
+
+2012-08-10 13:56  david_nichols
+
+	* test/ssh2-test.q: allow setting the private key for key-based
+	  authentication
+
+2012-07-17 11:51  david_nichols
+
+	* src/QC_SFTPClient.qpp, src/QC_SSH2Client.qpp: fixed class
+	  inheritance in dox
+
+2012-06-25 08:51  david_nichols
+
+	* configure.ac: updated configure.ac logic to deal with /lib ->
+	  /usr/lib and /lib64 -> /usr/lib64 as with Fedora 17 - the
+	  previous logic was too clever for its own good
+
+2012-06-12 07:37  david_nichols
+
+	* src/QC_SFTPClient.qpp: fixed warnings
+
+2012-06-11 17:08  david_nichols
+
+	* src/SFTPClient.h, src/ssh2-module.cpp: build fixes
+
+2012-06-08 14:58  david_nichols
+
+	* src/single-compilation-unit.cpp: checked in missing file
+
+2012-06-08 12:59  david_nichols
+
+	* Makefile.am, configure.ac: minor updates
+
+2012-06-08 10:49  david_nichols
+
+	* docs/doxygen-api-filter.q: removed unneeded/deprecated script
+
+2012-06-08 09:33  david_nichols
+
+	* src/Makefile.am: enabled single compilation unit build
+
+2012-06-08 09:23  david_nichols
+
+	* Makefile.am, docs/mainpage.doxygen.tmpl, qore-ssh2-module.spec,
+	  src/Makefile.am, src/QC_SFTPClient.cpp, src/QC_SFTPClient.qpp,
+	  src/QC_SSH2Client.qpp: completed migration to qpp; doc updates
+
+2012-06-08 08:51  david_nichols
+
+	* src/QC_SSH2Client.qpp, src/SSH2Channel.h, src/SSH2Client.h,
+	  src/ssh2-module.cpp: fixed bugs in last commit
+
+2012-06-08 08:29  david_nichols
+
+	* Makefile.am, configure.ac, docs/doxyfile.tmpl,
+	  docs/mainpage.doxygen.tmpl, src/Makefile.am,
+	  src/QC_SFTPClient.cc, src/QC_SFTPClient.cpp, src/QC_SSH2Base.cc,
+	  src/QC_SSH2Base.h, src/QC_SSH2Base.qpp, src/QC_SSH2Channel.cc,
+	  src/QC_SSH2Channel.qpp, src/QC_SSH2Client.cc,
+	  src/QC_SSH2Client.qpp, src/SFTPClient.cc, src/SFTPClient.cpp,
+	  src/SSH2Channel.cc, src/SSH2Channel.cpp, src/SSH2Client.cc,
+	  src/SSH2Client.cpp, src/ssh2-module.cc, src/ssh2-module.cpp: ssh2
+	  module partially converted to qpp
+
+2012-05-22 13:38  david_nichols
+
+	* configure.ac, src/SFTPClient.cc, src/SSH2Client.cc: patches to
+	  allow compilation for windows with mxe (mingw cross compiler)
+
+2012-01-16 13:07  david_nichols
+
+	* configure.ac: updated configure scripts to only set LIBSUFFIX=64
+	  on 64-bit platfiorms if /usr/lib64 exists
+
+2011-12-19 18:31  david_nichols
+
+	* RELEASE-NOTES, configure.ac, qore-ssh2-module.spec,
+	  src/SFTPClient.cc: updated to v 0.9.7 updated release notes, etc
+
+2011-12-06 18:57  david_nichols
+
+	* src/QC_SSH2Base.cc: fixed a typo in the docs
+
+2011-12-06 18:49  david_nichols
+
+	* docs/doxyfile.tmpl, src/QC_SFTPClient.cc, src/QC_SSH2Client.cc:
+	  fixed doc generation
+
+2011-12-06 18:41  david_nichols
+
+	* docs/doxygen-api-filter.q: restored old version
+
+2011-12-06 18:18  david_nichols
+
+	* docs/doxyfile.tmpl, docs/doxygen-api-filter.q,
+	  src/QC_SFTPClient.cc, src/QC_SSH2Client.cc: doc updates
+
+2011-09-12 16:44  david_nichols
+
+	* configure.ac, src/SSH2Client.h: check for stdint.h before
+	  including (not available on solaris 8 for example)
+
+2011-09-12 16:26  david_nichols
+
+	* configure.ac: added -mt to compile and link lines when building
+	  on solaris with CC
+
+2011-08-29 14:09  subik
+
+	* src/SSH2Client.h: compile fix
+
+2011-06-13 19:05  david_nichols
+
+	* src/SSH2Client.cc: cosmetic change
+
+2010-12-28 08:31  david_nichols
+
+	* ChangeLog: updated xml module to 1.1, updated release notes,
+	  updated ssh2 changelog
+
+2010-12-26 20:58  david_nichols
+
+	* README, RELEASE-NOTES: doc updates
+
 2010-12-26 20:54  david_nichols
 
 	* src/QC_SFTPClient.cc, src/QC_SSH2Channel.cc: doc fixes
