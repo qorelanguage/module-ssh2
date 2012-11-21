@@ -444,7 +444,7 @@ else
 
    AC_MSG_RESULT([${qore_version} OK])
 
-   MODULE_API=`qore --module-api`
+   MODULE_API=`qore --latest-module-api`
    AC_SUBST(MODULE_API)
 
    if test -z "${prefix}" -o "${prefix}" = "NONE"; then
