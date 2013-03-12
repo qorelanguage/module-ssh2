@@ -35,9 +35,6 @@
 
 #include <time.h>
 
-// this is for opening files in read-only mode where a broken server will also set the mode of the existing file
-#define DEFAULT_READ_MODE 0644
-
 DLLLOCAL QoreClass *initSFTPClientClass(QoreNamespace& ns);
 DLLLOCAL extern qore_classid_t CID_SFTP_CLIENT;
 

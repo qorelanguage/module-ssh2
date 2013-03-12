@@ -95,7 +95,7 @@ stdout.printf("exit status: %d\n", $chan.getExitStatus());@endcode
     @section releasenotes Release Notes
 
     @subsection v098 Version 0.9.8
-    - send a mode when opening files read-only in case broken servers will erroneously set the remote file's mode to 0 and then the file will not be readable
+    - send the file mode when opening files read-only in case broken servers will erroneously set the remote file's mode to 0 and then the file will not be readable
 
     @subsection v097 Version 0.9.7
     - an exception will be thrown if a key file is set and either the public or private key is not available or readable; previously such errors would cause hard-to-debug connection problems (for instance, see: http://comments.gmane.org/gmane.network.ssh.libssh2.devel/5873; note that the patch mentioned in the linked thread was subsequently reverted)

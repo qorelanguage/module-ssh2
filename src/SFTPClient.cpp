@@ -466,10 +466,11 @@ BinaryNode *SFTPClient::sftp_getFile(const char *file, ExceptionSink *xsink) {
       do_session_err_unlocked(xsink, "SFTPClient::getFile() raised an error in libssh2_sftp_stat(%s)", fname.c_str());
       return NULL;
    }
+   //printd(0, "SFTPClient::sftp_getFile() permissions: %lo\n", attrs.permissions);
    size_t fsize = attrs.filesize;
 
    // open handle
-   LIBSSH2_SFTP_HANDLE *sftp_handle = libssh2_sftp_open(sftp_session, fname.c_str(), LIBSSH2_FXF_READ, DEFAULT_READ_MODE);
+   LIBSSH2_SFTP_HANDLE *sftp_handle = libssh2_sftp_open(sftp_session, fname.c_str(), LIBSSH2_FXF_READ, attrs.permissions);
    if (!sftp_handle) {
       do_session_err_unlocked(xsink, "SFTPClient::getFile() raised an error in libssh2_sftp_open(%s)", fname.c_str());
       return NULL;
@@ -519,7 +520,7 @@ QoreStringNode *SFTPClient::sftp_getTextFile(const char *file, ExceptionSink *xs
    size_t fsize = attrs.filesize;
    
    // open handle
-   LIBSSH2_SFTP_HANDLE *sftp_handle = libssh2_sftp_open(sftp_session, fname.c_str(), LIBSSH2_FXF_READ, DEFAULT_READ_MODE);
+   LIBSSH2_SFTP_HANDLE *sftp_handle = libssh2_sftp_open(sftp_session, fname.c_str(), LIBSSH2_FXF_READ, attrs.permissions);
    if (!sftp_handle) {
       do_session_err_unlocked(xsink, "SFTPClient::getTextFile() raised an error in libssh2_sftp_open(%s)", fname.c_str());
       return NULL;
