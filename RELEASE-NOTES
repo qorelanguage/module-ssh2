@@ -1,4 +1,12 @@
 *************
+version 0.9.8
+*************
+
+* send a mode when opening files read-only in case broken servers will
+  erroneously set the remote file's mode to 0 and then the file will not be readable
+    
+
+*************
 version 0.9.7
 *************
 

@@ -1,9 +1,6 @@
 /** @mainpage %Qore %SSH2 Module
 
-    Contents of this documentation:
-    - @ref intro
-    - @ref examples
-    - @ref codetags
+    @tableofcontents
 
     @section intro Introduction
 
@@ -63,7 +60,7 @@ stdout.printf("exit status: %d\n", $chan.getExitStatus());@endcode
 
     @section codetags Function and Method Tags
 
-    @subsection NOOP
+    @subsection NOOP NOOP
 
     Code with this flag makes no calculations, but rather returns a constant value. This flag is given to function and method variants that return a default value depending on the type of argument(s).  When variants with this flag are resolved at parse time, a \c "call-with-type-errors" warning is raised (assuming this warning is enabled), unless \c PO_REQUIRE_TYPES or \c PO_STRICT_ARGS is set.  If \c PO_REQUIRE_TYPES or \c PO_STRICT_ARGS is set, then these variants are inaccessible at parse time; resolving to a variant with this flag set at parse time causes an exception to be thrown.
 
@@ -71,7 +68,7 @@ stdout.printf("exit status: %d\n", $chan.getExitStatus());@endcode
 
     This tag is equal to @ref RUNTIME_NOOP, except no runtime effect is caused by resolving a function or method tagged with \c NOOP at runtime; this tag only affects parse time resolution.
 
-    @subsection RUNTIME_NOOP
+    @subsection RUNTIME_NOOP RUNTIME_NOOP
 
     Code with this flag makes no calculations, but rather returns a constant value.  This flag is given to function and method variants that return a default value depending on the type of argument(s).  When variants with this flag are resolved at parse time, a \c "call-with-type-errors" warning is raised (assuming this warning is enabled), unless \c PO_REQUIRE_TYPES or \c PO_STRICT_ARGS is set.  If \c PO_REQUIRE_TYPES or \c PO_STRICT_ARGS is set, then these variants are inaccessible; resolving to a variant with this flag set at parse time or run time causes an exception to be thrown.
 
@@ -79,19 +76,40 @@ stdout.printf("exit status: %d\n", $chan.getExitStatus());@endcode
 
     This tag is equal to @ref NOOP, except that \c RUNTIME_NOOP is also enforced at runtime.
 
-    @subsection RET_VALUE_ONLY
+    @subsection RET_VALUE_ONLY RET_VALUE_ONLY
 	
     This flag indicates that the function or method has no side effects; it only returns a value, for example.
 
     This tag is identical to @ref CONSTANT except that functions or methods tagged with \c RET_VALUE_ONLY could throw exceptions.
 
-    @subsection CONSTANT
+    @subsection CONSTANT CONSTANT
 	
     This flag indicates that the function or method has no side effects and does not throw any exceptions.
 
     This tag is identical to @ref RET_VALUE_ONLY except that functions or methods tagged with \c CONSTANT do not throw exceptions.
 
-    @subsection DEPRECATED
+    @subsection DEPRECATED DEPRECATED
 	
     Code with this flag is deprecated and may be removed in a future version of this module; if a variant with this flag is resolved at parse time, a \c "deprecated" warning is raised (assuming this warning is enabled).
+
+    @section releasenotes Release Notes
+
+    @subsection v098 Version 0.9.8
+    - send a mode when opening files read-only in case broken servers will erroneously set the remote file's mode to 0 and then the file will not be readable
+
+    @subsection v097 Version 0.9.7
+    - an exception will be thrown if a key file is set and either the public or private key is not available or readable; previously such errors would cause hard-to-debug connection problems (for instance, see: http://comments.gmane.org/gmane.network.ssh.libssh2.devel/5873; note that the patch mentioned in the linked thread was subsequently reverted)
+    - fixed another deadlock in the @ref Qore::SSH2::SFTPClient::disconnect() "SFTPClient::disconnect()" method
+    - minor doc updates
+    - requires qore 0.8.5+ to build and run
+
+    @subsection v096 Version 0.9.6
+    - major documentation updates; now using doxygen
+    - fixed a deadlock in the @ref Qore::SSH2::SFTPClient::disconnect() "SFTPClient::disconnect()" method
+    - requires qore 0.8.1+ to build and run
+
+    @subsection v095 Version 0.9.5
+    - Initial release of the ssh2 module
+    - Requires qore 0.8.0+ to build and run
+
 */
