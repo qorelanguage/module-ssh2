@@ -57,7 +57,7 @@ SSH2Base::constructor() {
     @par Example:
     @code $sftpclient.connect(30s); @endcode
  */
-nothing SSH2Base::connect(timeout timeout = -1) {
+nothing SSH2Base::connect(timeout timeout = 1m) {
    myself->connect(timeout, xsink);
 }
 

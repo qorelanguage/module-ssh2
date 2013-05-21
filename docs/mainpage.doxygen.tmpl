@@ -95,6 +95,7 @@ stdout.printf("exit status: %d\n", $chan.getExitStatus());@endcode
     @section releasenotes Release Notes
 
     @subsection v098 Version 0.9.8
+    - default timeout of 60 seconds added to connect methods to avoid hanging connections indefinitely
     - send the file mode when opening files read-only in case broken servers will erroneously set the remote file's mode to 0 and then the file will not be readable
 
     @subsection v097 Version 0.9.7
@@ -111,5 +112,4 @@ stdout.printf("exit status: %d\n", $chan.getExitStatus());@endcode
     @subsection v095 Version 0.9.5
     - Initial release of the ssh2 module
     - Requires qore 0.8.0+ to build and run
-
 */

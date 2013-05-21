@@ -2,6 +2,7 @@
 version 0.9.8
 *************
 
+* default connect timeout values are set to 60 seconds
 * send the file mode when opening files read-only in case broken servers will
   erroneously set the remote file's mode to 0 and then the file will not be
   readable
