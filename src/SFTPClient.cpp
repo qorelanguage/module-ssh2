@@ -811,13 +811,13 @@ void SFTPClient::do_session_err_unlocked(ExceptionSink* xsink, const char* fmt, 
    if (err == LIBSSH2_ERROR_SFTP_PROTOCOL) {
       unsigned long serr = libssh2_sftp_last_error(sftp_session);
 
-      desc->sprintf(": sftp error code %lu: ", serr);
+      desc->sprintf(": sftp error code %lu", serr);
 
       edmap_t::const_iterator i = sftp_emap.find((int)serr);
       if (i != sftp_emap.end())
-         desc->sprintf(" %s: %s", i->second.err, i->second.desc);
+         desc->sprintf(" (%s): %s", i->second.err, i->second.desc);
       else
-         desc->concat(" unknown sftp error code");
+         desc->concat(": unknown sftp error code");
    }
    else
       desc->sprintf(": ssh2 error %d: %s", err, get_session_err_unlocked());
