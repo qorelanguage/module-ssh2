@@ -6,6 +6,7 @@
   libssh2 SFTP client integration into qore
 
   Copyright 2009 Wolfgang Ritzinger
+  Copyright 2010 - 2013 Qore Technologies, sro
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -118,6 +119,7 @@ hash SFTPClient::info() [flags=CONSTANT] {
 
 //! Returns a hash of directory information; throws an exception if any errors occur
 /** @param path The pathname of the directory to list; if no path is given, then information about the current directory is returned
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
 
     @return a hash with the following keys containing  and sorted lists of directory, file, or symbolic link names, respectively: 
     - \c path: the path used
@@ -127,16 +129,18 @@ hash SFTPClient::info() [flags=CONSTANT] {
 
     @throw SFTPCLIENT-NOT-CONNECTED client is not connected
     @throw SFTPCLIENT-LIST-ERROR failed to list directory
+    @throw SFTPCLIENT-TIMEOUT timeout in network operation
 
     @par Example:
     @code my hash $h = $sftpclient.list($path); @endcode
 */
-hash SFTPClient::list(*string path) [flags=RET_VALUE_ONLY] {
-   return myself->sftp_list(path ? path->getBuffer() : 0, xsink);
+hash SFTPClient::list(*string path, timeout timeout = 60s) [flags=RET_VALUE_ONLY] {
+   return myself->sftp_list(path ? path->getBuffer() : 0, (int)timeout, xsink);
 }
 
 //! Returns a hash of information about a file or \c NOTHING if the file cannot be found
 /** @param path the pathname of the file to stat
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
 
     @return \c NOTHING if the path was not found or a hash with the following keys (note that some hash keys may not be present if the data was not returned from the remote server):
     - \c size: (int) the size of the file in bytes
@@ -149,166 +153,187 @@ hash SFTPClient::list(*string path) [flags=RET_VALUE_ONLY] {
 
     @throw SFTPCLIENT-NOT-CONNECTED no connection has been established
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message    
+    @throw SFTPCLIENT-TIMEOUT timeout in network operation
 
     @par Example:
     @code my *hash $h = $sftpclient.stat($path); @endcode
 */
-*hash SFTPClient::stat(string path) [flags=RET_VALUE_ONLY] {
+*hash SFTPClient::stat(string path, timeout timeout = 60s) [flags=RET_VALUE_ONLY] {
    LIBSSH2_SFTP_ATTRIBUTES attr;
-   int rc = myself->sftp_getAttributes(path->getBuffer(), &attr, xsink);
+   int rc = myself->sftp_getAttributes(path->getBuffer(), &attr, (int)timeout, xsink);
    return rc < 0 ? 0 : attr2hash(attr);
 }
 
 //! Deletes a file on the server side; throws an exception if any errors occur
 /** @param path the pathname of the file to delete
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
 
     @throw SFTPCLIENT-NOT-CONNECTED no connection has been established
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message    
+    @throw SFTPCLIENT-TIMEOUT timeout in network operation
 
     @par Example:
     @code $sftpclient.removeFile($path); @endcode
 */
-nothing SFTPClient::removeFile(string path) {
-   myself->sftp_unlink(path->getBuffer(), xsink);
+nothing SFTPClient::removeFile(string path, timeout timeout = 60s) {
+   myself->sftp_unlink(path->getBuffer(), (int)timeout, xsink);
 }
 
 //! Renames or moves a remote file; throws an exception if any errors occur
-/** Note that this command is executed with the \c LIBSSH2_SFTP_RENAME_OVERWRITE option set to \c True, but that this option is commonly ignored by sshd servers, in which case i the target file already exists, an \c SSH2-ERROR exception will be raised
+/** Note that this command is executed with the \c LIBSSH2_SFTP_RENAME_OVERWRITE option set to \c True, but that this option is commonly ignored by sshd servers, in which case if the target file already exists, an \c SSH2-ERROR exception will be raised
 
     @param old_name the old pathname of the file
     @param new_name the new pathname of the file
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
 
     @throw SFTPCLIENT-NOT-CONNECTED no connection has been established
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message; file exists and server does not allow overwriting
+    @throw SFTPCLIENT-TIMEOUT timeout in network operation
 
     @par Example:
     @code $sftpclient.name("file.txt", "file.txt.orig"); @endcode
 */
-nothing SFTPClient::rename(string old_name, string new_name) {
-   myself->sftp_rename(old_name->getBuffer(), new_name->getBuffer(), xsink);
+nothing SFTPClient::rename(string old_name, string new_name, timeout timeout = 60s) {
+   myself->sftp_rename(old_name->getBuffer(), new_name->getBuffer(), (int)timeout, xsink);
 }
 
 //! Changes the mode of a remote file or directory; sticky bits may not be set; throws an exception if any errors occur
 /** @param path the pathname of the file or directory to update
-    @param mode the new mode to set
+    @param mode the new mode to se
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
 
     @throw SFTPCLIENT-PARAMETER-ERROR mode setting is only possible for user, group and other (no sticky bits)
     @throw SFTPCLIENT-NOT-CONNECTED no connection has been established
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message    
+    @throw SFTPCLIENT-TIMEOUT timeout in network operation
 
     @par Example:
     @code $sftpclient.chmod("file.txt", 0600); @endcode
 */
-nothing SFTPClient::chmod(string path, int mode) {
+nothing SFTPClient::chmod(string path, int mode, timeout timeout = 60s) {
    // check if mode is in range
   if (mode != (mode & (int64)SFTP_UGOMASK)) {
       xsink->raiseException("SFTPCLIENT-PARAMETER-ERROR", "mode setting is only possible for user, group and other (no sticky bits)");
       return 0;
    }
 
-   myself->sftp_chmod(path->getBuffer(), (int)mode, xsink);
+  myself->sftp_chmod(path->getBuffer(), (int)mode, (int)timeout, xsink);
 }
 
 //! Retrieves a remote file and returns it as a binary object; throws an exception if any errors occur
 /** @param path the pathname of the file to retrieve
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
 
     @throw SFTPCLIENT-NOT-CONNECTED no connection has been established
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message    
+    @throw SFTPCLIENT-TIMEOUT timeout in network operation
 
     @par Example:
     @code my binary $b = $sftpclient.getFile("file.bin"); @endcode
 */
-binary SFTPClient::getFile(string path) {
-   return myself->sftp_getFile(path->getBuffer(), xsink);
+binary SFTPClient::getFile(string path, timeout timeout = 60s) {
+   return myself->sftp_getFile(path->getBuffer(), (int)timeout, xsink);
 }
 
 //! Retrieves a remote file and returns it as a string; throws an exception if any errors occur
 /** @param path the pathname of the file to retrieve
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
 
     @throw SFTPCLIENT-NOT-CONNECTED no connection has been established
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message    
+    @throw SFTPCLIENT-TIMEOUT timeout in network operation
 
     @par Example:
     @code my string $str = $sftpclient.getTextFile("file.txt"); @endcode
 */
-string SFTPClient::getTextFile(string path) {
-   return myself->sftp_getTextFile(path->getBuffer(), xsink);
+string SFTPClient::getTextFile(string path, timeout timeout = 60s) {
+   return myself->sftp_getTextFile(path->getBuffer(), (int)timeout, xsink);
 }
 
 //! Saves a file on the remote server from a binary argument and returns the number of bytes sent; throws an exception if any errors occur
 /** @param bin the file data as a binary object
     @param path the remote path name on the server
     @param mode the mode of the file on the server
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
 
     @return the number of bytes actually sent
 
     @throw SFTPCLIENT-NOT-CONNECTED no connection has been established
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
+    @throw SFTPCLIENT-TIMEOUT timeout in network operation
 
     @par Example:
     @code my int $size = $sftpclient.putFile($bin, "file.bin", 0600); @endcode
 */
-int SFTPClient::putFile(binary bin, string path, int mode = 0644) {
+int SFTPClient::putFile(binary bin, string path, int mode = 0644, timeout timeout = 60s) {
    // transfer the file
-   return myself->sftp_putFile((const char *)bin->getPtr(), bin->size(), path->getBuffer(), (int)mode, xsink);
+   return myself->sftp_putFile((const char *)bin->getPtr(), bin->size(), path->getBuffer(), (int)mode, (int)timeout, xsink);
 }
 
 //! Saves a file on the remote server from a string argument and returns the number of bytes sent; throws an exception if any errors occur
 /** @param data the file data as a string
     @param path the remote path name on the server
     @param mode the mode of the file on the server
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
 
     @return the number of bytes actually sent
 
     @throw SFTPCLIENT-NOT-CONNECTED no connection has been established
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
+    @throw SFTPCLIENT-TIMEOUT timeout in network operation
 
     @par Example:
     @code my int $size = $sftpclient.putFile($str, "file.bin", 0600); @endcode
 */
-int SFTPClient::putFile(string data, string path, int mode = 0644) {
+int SFTPClient::putFile(string data, string path, int mode = 0644, timeout timeout = 60s) {
    // transfer the file
-   return myself->sftp_putFile(data->getBuffer(), data->strlen(), path->getBuffer(), (int)mode, xsink);
+   return myself->sftp_putFile(data->getBuffer(), data->strlen(), path->getBuffer(), (int)mode, (int)timeout, xsink);
 }
 
 //! Makes a directory on the remote server; throws an exception if any errors occur
 /** @param path The pathname of the new directory
     @param mode the mode of the new directory
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
 
     @throw SFTPCLIENT-MKDIR-ERROR directory name is an empty string
     @throw SFTPCLIENT-NOT-CONNECTED no connection has been established
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
+    @throw SFTPCLIENT-TIMEOUT timeout in network operation
 
     @par Example:
     @code $sftpclient.mkdir($path, 0700); @endcode
 */
-nothing SFTPClient::mkdir(string path, int mode = 0755) {
-   myself->sftp_mkdir(path->getBuffer(), (int)mode, xsink);
+nothing SFTPClient::mkdir(string path, int mode = 0755, timeout timeout = 60s) {
+   myself->sftp_mkdir(path->getBuffer(), (int)mode, (int)timeout, xsink);
 }
 
 //! Removes a directory on the remote server; throws an exception if any errors occur
 /** @param path The pathname of the directory to remove
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
 
     @throw SFTPCLIENT-RMDIR-ERROR directory name is an empty string
     @throw SFTPCLIENT-NOT-CONNECTED no connection has been established
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
+    @throw SFTPCLIENT-TIMEOUT timeout in network operation
 
     @par Example:
     @code $sftpclient.rmdir($path); @endcode
 */
-nothing SFTPClient::rmdir(string path) {
-   myself->sftp_rmdir(path->getBuffer(), xsink);
+nothing SFTPClient::rmdir(string path, timeout timeout = 60s) {
+   myself->sftp_rmdir(path->getBuffer(), (int)timeout, xsink);
 }
 
 //! Changes the directory on the remote server and returns the new directory; throws an exception if any errors occur
 /** @param path The pathname of the directory to change to
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
 
     @throw SFTPCLIENT-NOT-CONNECTED no connection has been established
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
+    @throw SFTPCLIENT-TIMEOUT timeout in network operation
 
     @par Example:
     @code $sftpclient.chdir($path); @endcode
 */
-string SFTPClient::chdir(string path) {
-   return myself->sftp_chdir(path->getBuffer(), xsink);
+string SFTPClient::chdir(string path, timeout timeout = 60s) {
+   return myself->sftp_chdir(path->getBuffer(), (int)timeout, xsink);
 }

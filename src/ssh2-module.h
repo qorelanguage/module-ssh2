@@ -33,5 +33,19 @@
 // include libssh2 API
 #include "ssh2.h"
 
-#endif
+#include <map>
 
+typedef std::map<int, const char*> emap_t;
+DLLLOCAL extern emap_t ssh2_emap;
+
+struct ErrDesc {
+   const char* err;
+   const char* desc;
+
+   DLLLOCAL ErrDesc(const char* e, const char* d) : err(e), desc(d) {
+   }
+};
+typedef std::map<int, ErrDesc> edmap_t;
+DLLLOCAL extern edmap_t sftp_emap;
+
+#endif

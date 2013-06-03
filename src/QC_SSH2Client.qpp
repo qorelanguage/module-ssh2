@@ -6,6 +6,7 @@
   libssh2 ssh2 client integration into qore
 
   Copyright 2009 Wolfgang Ritzinger
+  Copyright 2010 - 2013 Qore Technologies, sro
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -97,7 +98,7 @@ hash SSH2Client::info() [flags=CONSTANT] {
     @par Example:
     @code my SSH2Channel $chan = $ssh2client.openSessionChannel(30s); @endcode
  */
-SSH2Channel SSH2Client::openSessionChannel(timeout timeout = -1) {
+SSH2Channel SSH2Client::openSessionChannel(timeout timeout = 60s) {
    return c->openSessionChannel(xsink, timeout);
 }
 
@@ -116,7 +117,7 @@ SSH2Channel SSH2Client::openSessionChannel(timeout timeout = -1) {
     @par Example:
     @code my SS2Channel $chan = $ssh2client.("host", 4022, NOTHING, NOTHING, 30s); @endcode
  */
-SSH2Channel SSH2Client::openDirectTcpipChannel(string host, softint port, string source_host = "127.0.0.1", softint source_port = 22, timeout timeout = -1) {
+SSH2Channel SSH2Client::openDirectTcpipChannel(string host, softint port, string source_host = "127.0.0.1", softint source_port = 22, timeout timeout = 60s) {
    static const char *SSH2CLIENT_OPENDIRECTTCPIPCHANNEL_ERR = "SSH2CLIENT-OPENDIRECTTCPIPCHANNEL-ERROR";
    
    if (!port) {
@@ -153,7 +154,7 @@ SSH2Channel SSH2Client::openDirectTcpipChannel(string host, softint port, string
 my hash $info;
 my SS2Channel $chan = $ssh2client.scpGet("/tmp/file.txt", 30s, \$info); @endcode
  */
-SSH2Channel SSH2Client::scpGet(string path, timeout timeout = -1, *reference statinfo) {
+SSH2Channel SSH2Client::scpGet(string path, timeout timeout = 60s, *reference statinfo) {
    ReferenceHolder<QoreHashNode> ref(statinfo ? new QoreHashNode : 0, xsink);
 
    ReferenceHolder<QoreObject> o(c->scpGet(xsink, path->getBuffer(), timeout, *ref), xsink);
@@ -181,7 +182,7 @@ SSH2Channel SSH2Client::scpGet(string path, timeout timeout = -1, *reference sta
     @par Example:
     @code my SS2Channel $chan = $ssh2client.scpPut("/tmp/file.txt", $size, 0644, 2010-12-25, 2010-12-25, 30s); @endcode
  */
-SSH2Channel SSH2Client::scpPut(string remote_path, softint size, softint mode = 0644, *date mtime, *date atime, timeout timeout = -1) {
+SSH2Channel SSH2Client::scpPut(string remote_path, softint size, softint mode = 0644, *date mtime, *date atime, timeout timeout = 60s) {
    static const char *SSH2CLIENT_SCPPUT_ERR = "SSH2CLIENT-SCPPUT-ERROR";
    
    if (size <= 0) {

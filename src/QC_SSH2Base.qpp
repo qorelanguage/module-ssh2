@@ -63,12 +63,13 @@ nothing SSH2Base::connect(timeout timeout = 1m) {
 
 //! Disconnects from the remote system; throws an exception if the object is not currently connected
 /** @throw SSH2CLIENT-NOT-CONNECTED the client is not connected
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
 
     @par Example:
     @code $sftpclient.disconnect(); @endcode
  */
-nothing SSH2Base::disconnect() {
-   myself->disconnect(0, xsink);
+nothing SSH2Base::disconnect(timeout timeout = 1m) {
+   myself->disconnect(0, timeout, xsink);
 }
 
 //! Sets the user name for the next connection; can only be called when a connection is not established, otherwise an exception is thrown

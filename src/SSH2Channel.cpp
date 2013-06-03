@@ -6,6 +6,7 @@
   Qore Programming Language
 
   Copyright 2010 Wolfgang Ritzinger
+  Copyright 2010 - 2013 Qore Technologies, sro
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -47,7 +48,7 @@ int SSH2Channel::setenv(const char *name, const char *value, int timeout_ms, Exc
    while (true) {
       rc = libssh2_channel_setenv(channel, (char *)name, value);
       if (rc == LIBSSH2_ERROR_EAGAIN) {
-	 if ((rc = parent->check_timeout(timeout_ms, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-SETENV-ERROR", xsink)))
+	 if ((rc = parent->waitsocket_unlocked(xsink, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-SETENV-ERROR", "SSH2Channel::setenv", timeout_ms)))
 	    break;
 	 continue;
       }
@@ -72,7 +73,7 @@ int SSH2Channel::requestPty(ExceptionSink *xsink, const QoreString &term, const 
    while (true) {
       rc = libssh2_channel_request_pty_ex(channel, term.getBuffer(), term.strlen(), modes.strlen() ? modes.getBuffer() : 0, modes.strlen(), width, height, width_px, height_px);
       if (rc == LIBSSH2_ERROR_EAGAIN) {
-	 if ((rc = parent->check_timeout(timeout_ms, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-REQUESTPTY-ERROR", xsink)))
+	 if ((rc = parent->waitsocket_unlocked(xsink, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-REQUESTPTY-ERROR", "SSH2Channel::requestPty", timeout_ms)))
 	    break;
 	 continue;
       }
@@ -95,7 +96,7 @@ int SSH2Channel::shell(ExceptionSink *xsink, int timeout_ms) {
    while (true) {
       rc = libssh2_channel_shell(channel);
       if (rc == LIBSSH2_ERROR_EAGAIN) {
-	 if ((rc = parent->check_timeout(timeout_ms, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-SHELL-ERROR", xsink)))
+	 if ((rc = parent->waitsocket_unlocked(xsink, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-SHELL-ERROR", "SSH2Channel::shell", timeout_ms)))
 	    break;
 	 continue;
       }
@@ -126,7 +127,7 @@ int SSH2Channel::waitEof(ExceptionSink *xsink, int timeout_ms) {
    while (true) {
       rc = libssh2_channel_wait_eof(channel);
       if (rc == LIBSSH2_ERROR_EAGAIN) {
-	 if ((rc = parent->check_timeout(timeout_ms, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-WAITEOF-ERROR", xsink)))
+	 if ((rc = parent->waitsocket_unlocked(xsink, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-WAITEOF-ERROR", "SSH2Channel::waitEof", timeout_ms)))
 	    break;
 	 continue;
       }
@@ -149,7 +150,7 @@ int SSH2Channel::sendEof(ExceptionSink *xsink, int timeout_ms) {
    while (true) {
       rc = libssh2_channel_send_eof(channel);
       if (rc == LIBSSH2_ERROR_EAGAIN) {
-	 if ((rc = parent->check_timeout(timeout_ms, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-SENDEOF-ERROR", xsink)))
+	 if ((rc = parent->waitsocket_unlocked(xsink, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-SENDEOF-ERROR", "SSH2Channel::sendEof", timeout_ms)))
 	    break;
 	 continue;
       }
@@ -173,7 +174,7 @@ int SSH2Channel::exec(const char *command, int timeout_ms, ExceptionSink *xsink)
       rc = libssh2_channel_exec(channel, command);
       //printd(5, "SSH2Channel::exec() cmd=%s rc=%d\n", command, rc);
       if (rc == LIBSSH2_ERROR_EAGAIN) {
-	 if ((rc = parent->check_timeout(timeout_ms, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-EXEC-ERROR", xsink)))
+	 if ((rc = parent->waitsocket_unlocked(xsink, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-EXEC-ERROR", "SSH2Channel::exec", timeout_ms)))
 	    break;
 	 continue;
       }
@@ -197,7 +198,7 @@ int SSH2Channel::subsystem(const char *command, int timeout_ms, ExceptionSink *x
       rc = libssh2_channel_subsystem(channel, command);
       //printd(5, "SSH2Channel::subsystem() cmd=%s rc=%d\n", command, rc);
       if (rc == LIBSSH2_ERROR_EAGAIN) {
-	 if ((rc = parent->check_timeout(timeout_ms, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-SUBSYSTEM-ERROR", xsink)))
+	 if ((rc = parent->waitsocket_unlocked(xsink, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-SUBSYSTEM-ERROR", "SSH2Channel::subsystem", timeout_ms)))
 	    break;
 	 continue;
       }
@@ -233,7 +234,7 @@ QoreStringNode *SSH2Channel::read(ExceptionSink *xsink, int stream_id, int timeo
       }
       else if (rc == LIBSSH2_ERROR_EAGAIN && !str->strlen() && first) {
 	 first = false;
-	 if ((rc = parent->check_timeout(timeout_ms, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-READ-ERROR", xsink)))
+	 if ((rc = parent->waitsocket_unlocked(xsink, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-READ-ERROR", "SSH2Channel::read", timeout_ms)))
 	    return 0;
 	 goto loop0;
       }
@@ -320,7 +321,7 @@ BinaryNode *SSH2Channel::readBinary(ExceptionSink *xsink, int stream_id, int tim
       }
       else if (rc == LIBSSH2_ERROR_EAGAIN && !bin->size() && first) {
 	 first = false;
-	 if ((rc = parent->check_timeout(timeout_ms, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-READBINARY-ERROR", xsink)))
+	 if ((rc = parent->waitsocket_unlocked(xsink, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-READBINARY-ERROR", "SSH2Channel::readBinary", timeout_ms)))
 	    return 0;
 	 goto loop0;
       }
@@ -437,7 +438,7 @@ int SSH2Channel::close(ExceptionSink *xsink, int timeout_ms) {
    while (true) {
       rc = libssh2_channel_close(channel);
       if (rc == LIBSSH2_ERROR_EAGAIN) {
-	 if ((rc = parent->check_timeout(timeout_ms, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-CLOSE-ERROR", xsink)))
+	 if ((rc = parent->waitsocket_unlocked(xsink, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-CLOSE-ERROR", "SSH2Channel::close", timeout_ms)))
 	    break;
 	 continue;
       }
@@ -460,7 +461,7 @@ int SSH2Channel::waitClosed(ExceptionSink *xsink, int timeout_ms) {
    while (true) {
       rc = libssh2_channel_wait_closed(channel);
       if (rc == LIBSSH2_ERROR_EAGAIN) {
-	 if ((rc = parent->check_timeout(timeout_ms, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-WAITCLOSED-ERROR", xsink)))
+	 if ((rc = parent->waitsocket_unlocked(xsink, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-WAITCLOSED-ERROR", "SSH2Channel::waitClosed", timeout_ms)))
 	    break;
 	 continue;
       }
@@ -492,7 +493,7 @@ int SSH2Channel::requestX11Forwarding(ExceptionSink *xsink, int screen_number, b
    while (true) {
       rc = libssh2_channel_x11_req_ex(channel, (int)single_connection, auth_proto, auth_cookie, screen_number);
       if (rc == LIBSSH2_ERROR_EAGAIN) {
-	 if ((rc = parent->check_timeout(timeout_ms, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-REQUESTX11FORWARDING-ERROR", xsink)))
+	 if ((rc = parent->waitsocket_unlocked(xsink, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-REQUESTX11FORWARDING-ERROR", "SSH2Channel::requestX11Forwarding", timeout_ms)))
 	    break;
 	 continue;
       }
@@ -512,7 +513,7 @@ int SSH2Channel::extendedDataNormal(ExceptionSink *xsink, int timeout_ms) {
    while (true) {
       rc = libssh2_channel_handle_extended_data2(channel, LIBSSH2_CHANNEL_EXTENDED_DATA_NORMAL); 
       if (rc == LIBSSH2_ERROR_EAGAIN) {
-	 if ((rc = parent->check_timeout(timeout_ms, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-EXTENDEDDATANORMAL-ERROR", xsink)))
+	 if ((rc = parent->waitsocket_unlocked(xsink, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-EXTENDEDDATANORMAL-ERROR", "SSH2Channel::extendedDataNormal", timeout_ms)))
 	    break;
 	 continue;
       }
@@ -532,7 +533,7 @@ int SSH2Channel::extendedDataMerge(ExceptionSink *xsink, int timeout_ms) {
    while (true) {
       rc = libssh2_channel_handle_extended_data2(channel, LIBSSH2_CHANNEL_EXTENDED_DATA_MERGE); 
       if (rc == LIBSSH2_ERROR_EAGAIN) {
-	 if ((rc = parent->check_timeout(timeout_ms, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-EXTENDEDDATAMERGE-ERROR", xsink)))
+	 if ((rc = parent->waitsocket_unlocked(xsink, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-EXTENDEDDATAMERGE-ERROR", "SSH2Channel::extendedDataMerge", timeout_ms)))
 	    break;
 	 continue;
       }
@@ -552,7 +553,7 @@ int SSH2Channel::extendedDataIgnore(ExceptionSink *xsink, int timeout_ms) {
    while (true) {
       rc = libssh2_channel_handle_extended_data2(channel, LIBSSH2_CHANNEL_EXTENDED_DATA_IGNORE); 
       if (rc == LIBSSH2_ERROR_EAGAIN) {
-	 if ((rc = parent->check_timeout(timeout_ms, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-EXTENDEDDATAIGNORE-ERROR", xsink)))
+	 if ((rc = parent->waitsocket_unlocked(xsink, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-EXTENDEDDATAIGNORE-ERROR", "SSH2Channel::extendedDataIgnore", timeout_ms)))
 	    break;
 	 continue;
       }

@@ -1,3 +1,11 @@
+2012-11-21 08:17  david_nichols
+
+	* configure.ac: use the latest module API for the ssh2 module
+
+2012-10-28 19:04  david_nichols
+
+	* ChangeLog, README, RELEASE-NOTES: updated for 0.9.7 release
+
 2012-10-22 07:05  david_nichols
 
 	* src/SSH2Channel.h: minor correction in a header (for a

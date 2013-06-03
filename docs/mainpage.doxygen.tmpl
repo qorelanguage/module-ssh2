@@ -96,6 +96,7 @@ stdout.printf("exit status: %d\n", $chan.getExitStatus());@endcode
 
     @subsection v098 Version 0.9.8
     - default timeout of 60 seconds added to connect methods to avoid hanging connections indefinitely
+    - non-blocking I/O implemented for all SFTPClient methods, default timeout set to 60s
     - send the file mode when opening files read-only in case broken servers will erroneously set the remote file's mode to 0 and then the file will not be readable
 
     @subsection v097 Version 0.9.7

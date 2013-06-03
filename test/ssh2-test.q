@@ -8,6 +8,7 @@
 our hash $ehash;
 our int $errors = 0;
 our int $iters = 1;
+our timeout $timeout = 10s;
 our hash $o;
 
 const FileContents = "hi there";
@@ -21,6 +22,7 @@ const opts = (
     "iters": "i,iters=i",
     "privkey": "k,private-key=s",
     "threads": "t,threads=i",
+    "timeout": "T,timeout=i",
     "help": "h,help"
     );
 
@@ -134,14 +136,14 @@ sub sftp_test_intern(SFTPClient $sc) {
     stdout.printf("SFTP %s@%s:%d auth: %s, hostkey: %n, crypt_cs: %n, tmp: %s\n", $info.ssh2user, $info.ssh2host, $info.ssh2port, $info.authenticated, $info.methods.HOSTKEY, $info.methods.CRYPT_CS, $fn);
     
     test_value($info.connected, True, "SFTPClient::info()");
-    test_value(type($sc.list()), Type::Hash, "SFTPClient::list()");
+    test_value(type($sc.list(NOTHING, $timeout)), Type::Hash, "SFTPClient::list()");
 
     # create a file: seems that sshd ignores the mode when creating a file
-    my int $rc = $sc.putFile(FileContents, $fn);
+    my int $rc = $sc.putFile(FileContents, $fn, NOTHING, $timeout);
     test_value($rc, strlen(FileContents), "SFTPClient::putFile()");
 
-    $sc.chmod($fn, FileMode);
-    $info = $sc.stat($fn);
+    $sc.chmod($fn, FileMode, $timeout);
+    $info = $sc.stat($fn, $timeout);
     test_value($info.size, strlen(FileContents), "SFTPClient::stat() size");
     test_value($info.mode & 0777, FileMode, "SFTPClient::stat() mode");
     test_value($info.permissions, "-rwxr-xr-x", "SFTPClient::stat() permissions");
@@ -149,41 +151,41 @@ sub sftp_test_intern(SFTPClient $sc) {
     test_value("/tmp", $sc.chdir("/tmp"), "(before getFile()) SFTPClient::chdir()");
 
     # retrieve the file as a binary object
-    my binary $b = $sc.getFile(basename($fn));
+    my binary $b = $sc.getFile(basename($fn), $timeout);
     test_value($b, BinContents, "SFTPClient::getFile()");
 
     # retrieve the file as a string
-    my string $s = $sc.getTextFile($fn);
+    my string $s = $sc.getTextFile($fn, $timeout);
     test_value($s, FileContents, "SFTPClient::getTextFile()");
 
     # make new file name
     my string $nfn = $fn + ".new";
 
     # move (rename) file
-    $sc.rename($fn, $nfn);
-    $info = $sc.stat($nfn);
+    $sc.rename($fn, $nfn, $timeout);
+    $info = $sc.stat($nfn, $timeout);
     test_value($info.size, strlen(FileContents), "SFTPClient::rename() and SFTPClient::stat() size");
-    test_value($sc.stat($fn), NOTHING, "SFTPClient::stat() on non-existent file");
+    test_value($sc.stat($fn, $timeout), NOTHING, "SFTPClient::stat() on non-existent file");
 
     # delete file
-    $sc.removeFile($nfn);
-    test_value($sc.stat($nfn), NOTHING, "SFTPClient::removeFile()");
+    $sc.removeFile($nfn, $timeout);
+    test_value($sc.stat($nfn, $timeout), NOTHING, "SFTPClient::removeFile()");
 
-    $sc.mkdir($fn);
-    $info = $sc.stat($fn);
+    $sc.mkdir($fn, NOTHING, $timeout);
+    $info = $sc.stat($fn, $timeout);
 
     # move (rename) directory
-    $sc.rename($fn, $nfn);
-    $info = $sc.stat($nfn);
+    $sc.rename($fn, $nfn, $timeout);
+    $info = $sc.stat($nfn, $timeout);
     test_value(type($info.atime), Type::Date, "SFTPClient::rename() and SFTPClient::stat() on dir");
-    test_value($sc.stat($fn), NOTHING, "SFTPClient::stat() on non-existent file");
+    test_value($sc.stat($fn, $timeout), NOTHING, "SFTPClient::stat() on non-existent file");
 
-    my $np = $sc.chdir("/tmp");
+    my $np = $sc.chdir("/tmp", $timeout);
     test_value("/tmp", $np, "SFTPClient::chdir()");
 
     # remove directory
-    $sc.rmdir($file + ".new");
-    test_value($sc.stat($nfn), NOTHING, "SFTPClient::rmdir()");
+    $sc.rmdir($file + ".new", $timeout);
+    test_value($sc.stat($nfn, $timeout), NOTHING, "SFTPClient::rmdir()");
 }
 
 sub sftp_test(string $url) {
@@ -191,16 +193,16 @@ sub sftp_test(string $url) {
     if ($o.privkey.val())
         $sc.setKeys($o.privkey);
     
-    $sc.connect();
+    $sc.connect($timeout);
 
     my Counter $c();
 
     my code $test = sub () {
+        on_exit $c.dec();
         my int $iters = $o.iters;
         while ($iters--) {
             sftp_test_intern($sc);
         }
-        $c.dec();
     };
 
     while ($o.threads--) {
@@ -225,7 +227,8 @@ sub main() {
  -i,--iters=ARG        iterations per test
  -k,--private-key=ARG  set private key to use for authentication
  -t,--threads=ARG      number of threads
- -h,--help             for this help test\n", get_script_name());
+ -T,--timeout=ARG      set timeout in seconds (def: %y)
+ -h,--help             for this help test\n", get_script_name(), $timeout);
 	exit(1);
     }
     srand(now());
@@ -234,6 +237,9 @@ sub main() {
         $o.iters = 1;
     if (!$o.threads)
         $o.threads = 1;
+
+    if ($o.timeout)
+        $timeout = $o.timeout * 1000;
 
     printf("using libssh2 version: %s\n", SSH2::Version);
 

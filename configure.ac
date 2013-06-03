@@ -299,6 +299,7 @@ find_libssh2() {
     if test -f "$a/include/libssh2.h" -a -f "$a/include/libssh2_sftp.h" ; then
         LIBSSH2_CPPFLAGS="-I$a/include"
 	LIBSSH2_LDFLAGS="-L$a/lib${LIBSUFFIX} -lssh2"
+	libssh2h=$a/include/libssh2.h
 	libssh2_version=$( grep "^\#define LIBSSH2_VERSION " $a/include/libssh2.h | cut -d'"' -f2 )
     else
 	return
@@ -325,6 +326,14 @@ else
     AC_MSG_RESULT([libssh2 version ${libssh2_version} OK (include: ${LIBSSH2_CPPFLAGS})])
     AC_SUBST(LIBSSH2_LDFLAGS)
     AC_SUBST(LIBSSH2_CPPFLAGS)
+
+    AC_MSG_CHECKING([for libssh2_session_handshake()])
+    if test -n "`grep libssh2_session_handshake $libssh2h 2>/dev/null`"; then
+       AC_MSG_RESULT([yes])
+       AC_DEFINE(HAVE_LIBSSH2_SESSION_HANDSHAKE, 1, [define if libssh2_session_handshake() is available])
+    else
+       AC_MSG_RESULT([no])
+    fi
 fi
 
 #################

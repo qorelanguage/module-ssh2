@@ -41,6 +41,8 @@
 #include <set>
 #include <string>
 
+#define DEFAULT_TIMEOUT 2000
+
 DLLLOCAL QoreClass *initSSH2ClientClass(QoreNamespace& ns);
 DLLLOCAL extern qore_classid_t CID_SSH2CLIENT;
 
@@ -92,7 +94,7 @@ protected:
 
    DLLLOCAL virtual void deref(ExceptionSink*);
    DLLLOCAL int ssh_connected_unlocked();
-   DLLLOCAL int ssh_disconnect_unlocked(bool force, ExceptionSink *xsink = 0);
+   DLLLOCAL int ssh_disconnect_unlocked(bool force, int timeout_ms = DEFAULT_TIMEOUT, ExceptionSink *xsink = 0);
    DLLLOCAL int ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink);
    DLLLOCAL void channel_deleted_unlocked(SSH2Channel *channel) {
 #ifdef DEBUG
@@ -110,18 +112,22 @@ protected:
    DLLLOCAL const char *getKeyPriv();
    DLLLOCAL const char *getKeyPub();
    DLLLOCAL const char *getAuthenticatedWith();
+
    DLLLOCAL QoreStringNode *fingerprint_unlocked();
+
    DLLLOCAL const char *get_session_err_unlocked() {
       assert(ssh_session);
-      char *msg = 0;
+      char* msg = 0;
       libssh2_session_last_error(ssh_session, &msg, 0, 0);
       assert(msg);
       return msg;
    }
-   DLLLOCAL void do_session_err_unlocked(ExceptionSink *xsink) {
+
+   DLLLOCAL void do_session_err_unlocked(ExceptionSink* xsink) {
       xsink->raiseException(SSH2_ERROR, "libssh2 returned error %d: %s", libssh2_session_last_errno(ssh_session), get_session_err_unlocked());
    }
-   DLLLOCAL void do_session_err_unlocked(ExceptionSink *xsink, const char *fmt, ...) {
+
+   DLLLOCAL void do_session_err_unlocked(ExceptionSink* xsink, const char *fmt, ...) {
       va_list args;
       QoreStringNode *desc = new QoreStringNode;
 
@@ -141,6 +147,22 @@ protected:
       assert(ssh_session);
       libssh2_session_set_blocking(ssh_session, (int)block);
    }
+
+   DLLLOCAL int waitsocket_unlocked(ExceptionSink* xsink, const char *toerr, const char *err, const char* m, int timeout_ms = DEFAULT_TIMEOUT_MS) {
+      int rc = waitsocket_unlocked(timeout_ms);
+      if (!rc) {
+         if (xsink)
+            xsink->raiseException(toerr, "network timeout after %dms in %s()", timeout_ms, m);
+         return -1;
+      }
+      if (rc < 0) {
+         if (xsink)
+            xsink->raiseErrnoException(err, errno, "error waiting for network (timeout: %dms) in %s()", timeout_ms, m);
+         return -1;
+      }
+      return 0;
+   }
+
    DLLLOCAL int waitsocket_unlocked(int timeout_ms = DEFAULT_TIMEOUT_MS) {
       assert(ssh_session);
 
@@ -170,23 +192,12 @@ protected:
       //printd(5, "waitsocket_unlocked() sock=%d readfd=%p writefd=%p timeout_ms=%d\n", socket.getSocket() + 1, readfd, writefd, timeout_ms);
       return select(socket.getSocket() + 1, readfd, writefd, 0, timeout_ms >= 0 ? &timeout : 0);
    }
+
    DLLLOCAL QoreObject *register_channel_unlocked(LIBSSH2_CHANNEL *channel);
-   DLLLOCAL int check_timeout(int timeout_ms, const char *toerr, const char *err, ExceptionSink *xsink) {
-      int rc = waitsocket_unlocked(timeout_ms);
-      if (!rc) {
-	 xsink->raiseException(toerr, "timeout after %dms waiting for response to request", timeout_ms);
-	 return -1;
-      }
-      if (rc < 0) {
-	 xsink->raiseException(err, strerror(errno));
-	 return -1;
-      }
-      return 0;
-   }
 
    // to ensure thread-safe operations
    QoreThreadLock m;
-   LIBSSH2_SESSION *ssh_session;
+   LIBSSH2_SESSION* ssh_session;
 
 public:
    DLLLOCAL SSH2Client(const char*, const uint32_t);
@@ -200,11 +211,11 @@ public:
       return ssh_connect(timeout_ms, xsink);
    }
    
-   DLLLOCAL virtual int disconnect(bool force = false, ExceptionSink *xsink = 0) {
-      return ssh_disconnect(force, xsink);
+   DLLLOCAL virtual int disconnect(bool force = false, int timeout_ms = DEFAULT_TIMEOUT, ExceptionSink *xsink = 0) {
+      return ssh_disconnect(force, timeout_ms, xsink);
    }
 
-   DLLLOCAL int ssh_disconnect(bool force = false, ExceptionSink *xsink = 0);
+   DLLLOCAL int ssh_disconnect(bool force = false, int timeout_ms = DEFAULT_TIMEOUT, ExceptionSink *xsink = 0);
    DLLLOCAL int ssh_connect(int timeout_ms, ExceptionSink *xsink);
 
    DLLLOCAL int ssh_connected();
@@ -220,10 +231,10 @@ public:
 
 class BlockingHelper {
 protected:
-   SSH2Client *client;
+   SSH2Client* client;
 
 public:
-   DLLLOCAL BlockingHelper(SSH2Client *n_client) : client(n_client) {
+   DLLLOCAL BlockingHelper(SSH2Client* n_client) : client(n_client) {
       client->set_blocking_unlocked(false);
    }
    DLLLOCAL ~BlockingHelper() {

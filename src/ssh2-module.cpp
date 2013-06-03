@@ -6,6 +6,7 @@
   Qore Programming Language
 
   Copyright 2009 Wolfgang Ritzinger
+  Copyright 2010 - 2013 Qore Technologies, sro
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -48,13 +49,16 @@ DLLEXPORT char qore_module_name[] = "ssh2";
 DLLEXPORT char qore_module_version[] = PACKAGE_VERSION;
 DLLEXPORT char qore_module_description[] = "SSH2/SFTP client module";
 DLLEXPORT char qore_module_author[] = "Wolfgang Ritzinger";
-DLLEXPORT char qore_module_url[] = "http://qore.sourceforge.net";
+DLLEXPORT char qore_module_url[] = "http://qore.org";
 DLLEXPORT int qore_module_api_major = QORE_MODULE_API_MAJOR;
 DLLEXPORT int qore_module_api_minor = QORE_MODULE_API_MINOR;
 DLLEXPORT qore_module_init_t qore_module_init = ssh2_module_init;
 DLLEXPORT qore_module_ns_init_t qore_module_ns_init = ssh2_module_ns_init;
 DLLEXPORT qore_module_delete_t qore_module_delete = ssh2_module_delete;
 DLLEXPORT qore_license_t qore_module_license = QL_LGPL;
+
+emap_t ssh2_emap;
+edmap_t sftp_emap;
 
 static QoreStringNode *ssh2_module_init() {
    qore_libssh2_version = libssh2_version(LIBSSH2_VERSION_NUM);
@@ -64,6 +68,88 @@ static QoreStringNode *ssh2_module_init() {
       err->concat('\'');
       return err;
    }
+
+   // setup ssh2 error map
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_SOCKET_NONE, "LIBSSH2_ERROR_SOCKET_NONE"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_BANNER_RECV, "LIBSSH2_ERROR_BANNER_RECV"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_BANNER_SEND, "LIBSSH2_ERROR_BANNER_SEND"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_INVALID_MAC, "LIBSSH2_ERROR_INVALID_MAC"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_KEX_FAILURE, "LIBSSH2_ERROR_KEX_FAILURE"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_ALLOC, "LIBSSH2_ERROR_ALLOC"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_SOCKET_SEND, "LIBSSH2_ERROR_SOCKET_SEND"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_KEY_EXCHANGE_FAILURE, "LIBSSH2_ERROR_KEY_EXCHANGE_FAILURE"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_TIMEOUT, "LIBSSH2_ERROR_TIMEOUT"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_HOSTKEY_INIT, "LIBSSH2_ERROR_HOSTKEY_INIT"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_HOSTKEY_SIGN, "LIBSSH2_ERROR_HOSTKEY_SIGN"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_DECRYPT, "LIBSSH2_ERROR_DECRYPT"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_SOCKET_DISCONNECT, "LIBSSH2_ERROR_SOCKET_DISCONNECT"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_PROTO, "LIBSSH2_ERROR_PROTO"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_PASSWORD_EXPIRED, "LIBSSH2_ERROR_PASSWORD_EXPIRED"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_FILE, "LIBSSH2_ERROR_FILE"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_METHOD_NONE, "LIBSSH2_ERROR_METHOD_NONE"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_AUTHENTICATION_FAILED, "LIBSSH2_ERROR_AUTHENTICATION_FAILED"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_PUBLICKEY_UNRECOGNIZED, "LIBSSH2_ERROR_PUBLICKEY_UNRECOGNIZED"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_PUBLICKEY_UNVERIFIED, "LIBSSH2_ERROR_PUBLICKEY_UNVERIFIED"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_CHANNEL_OUTOFORDER, "LIBSSH2_ERROR_CHANNEL_OUTOFORDER"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_CHANNEL_FAILURE, "LIBSSH2_ERROR_CHANNEL_FAILURE"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_CHANNEL_REQUEST_DENIED, "LIBSSH2_ERROR_CHANNEL_REQUEST_DENIED"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_CHANNEL_UNKNOWN, "LIBSSH2_ERROR_CHANNEL_UNKNOWN"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_CHANNEL_WINDOW_EXCEEDED, "LIBSSH2_ERROR_CHANNEL_WINDOW_EXCEEDED"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_CHANNEL_PACKET_EXCEEDED, "LIBSSH2_ERROR_CHANNEL_PACKET_EXCEEDED"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_CHANNEL_CLOSED, "LIBSSH2_ERROR_CHANNEL_CLOSED"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_CHANNEL_EOF_SENT, "LIBSSH2_ERROR_CHANNEL_EOF_SENT"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_SCP_PROTOCOL, "LIBSSH2_ERROR_SCP_PROTOCOL"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_ZLIB, "LIBSSH2_ERROR_ZLIB"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_SOCKET_TIMEOUT, "LIBSSH2_ERROR_SOCKET_TIMEOUT"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_SFTP_PROTOCOL, "LIBSSH2_ERROR_SFTP_PROTOCOL"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_REQUEST_DENIED, "LIBSSH2_ERROR_REQUEST_DENIED"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_METHOD_NOT_SUPPORTED, "LIBSSH2_ERROR_METHOD_NOT_SUPPORTED"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_INVAL, "LIBSSH2_ERROR_INVAL"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_INVALID_POLL_TYPE, "LIBSSH2_ERROR_INVALID_POLL_TYPE"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_PUBLICKEY_PROTOCOL, "LIBSSH2_ERROR_PUBLICKEY_PROTOCOL"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_EAGAIN, "LIBSSH2_ERROR_EAGAIN"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_BUFFER_TOO_SMALL, "LIBSSH2_ERROR_BUFFER_TOO_SMALL"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_BAD_USE, "LIBSSH2_ERROR_BAD_USE"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_COMPRESS, "LIBSSH2_ERROR_COMPRESS"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_OUT_OF_BOUNDARY, "LIBSSH2_ERROR_OUT_OF_BOUNDARY"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_AGENT_PROTOCOL, "LIBSSH2_ERROR_AGENT_PROTOCOL"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_SOCKET_RECV, "LIBSSH2_ERROR_SOCKET_RECV"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_ENCRYPT, "LIBSSH2_ERROR_ENCRYPT"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_BAD_SOCKET, "LIBSSH2_ERROR_BAD_SOCKET"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_KNOWN_HOSTS, "LIBSSH2_ERROR_KNOWN_HOSTS"));
+   ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_BANNER_NONE, "LIBSSH2_ERROR_BANNER_NONE"));
+
+   // setup sftp error map
+   sftp_emap.insert(edmap_t::value_type(LIBSSH2_FX_OK, ErrDesc("LIBSSH2_FX_OK", "success")));
+   sftp_emap.insert(edmap_t::value_type(LIBSSH2_FX_EOF, ErrDesc("LIBSSH2_FX_EOF", "EOF: end of file")));
+   sftp_emap.insert(edmap_t::value_type(LIBSSH2_FX_NO_SUCH_FILE, ErrDesc("LIBSSH2_FX_NO_SUCH_FILE", "file does not exist")));
+   sftp_emap.insert(edmap_t::value_type(LIBSSH2_FX_PERMISSION_DENIED, ErrDesc("LIBSSH2_FX_PERMISSION_DENIED", "permission denied")));
+   sftp_emap.insert(edmap_t::value_type(LIBSSH2_FX_FAILURE, ErrDesc("LIBSSH2_FX_FAILURE", "command failed")));
+   sftp_emap.insert(edmap_t::value_type(LIBSSH2_FX_BAD_MESSAGE, ErrDesc("LIBSSH2_FX_BAD_MESSAGE", "bad message")));
+   sftp_emap.insert(edmap_t::value_type(LIBSSH2_FX_NO_CONNECTION, ErrDesc("LIBSSH2_FX_NO_CONNECTION", "no connection")));
+   sftp_emap.insert(edmap_t::value_type(LIBSSH2_FX_CONNECTION_LOST, ErrDesc("LIBSSH2_FX_CONNECTION_LOST", "connection lost")));
+   sftp_emap.insert(edmap_t::value_type(LIBSSH2_FX_OP_UNSUPPORTED, ErrDesc("LIBSSH2_FX_OP_UNSUPPORTED", "sshd sftp server does not support this operation")));
+   sftp_emap.insert(edmap_t::value_type(LIBSSH2_FX_INVALID_HANDLE, ErrDesc("LIBSSH2_FX_INVALID_HANDLE", "invalid handle")));
+   sftp_emap.insert(edmap_t::value_type(LIBSSH2_FX_NO_SUCH_PATH, ErrDesc("LIBSSH2_FX_NO_SUCH_PATH", "path does not exist")));
+   sftp_emap.insert(edmap_t::value_type(LIBSSH2_FX_FILE_ALREADY_EXISTS, ErrDesc("LIBSSH2_FX_FILE_ALREADY_EXISTS", "file already exists")));
+   sftp_emap.insert(edmap_t::value_type(LIBSSH2_FX_WRITE_PROTECT, ErrDesc("LIBSSH2_FX_WRITE_PROTECT", "write protected")));
+   sftp_emap.insert(edmap_t::value_type(LIBSSH2_FX_NO_MEDIA, ErrDesc("LIBSSH2_FX_NO_MEDIA", "no media")));
+   sftp_emap.insert(edmap_t::value_type(LIBSSH2_FX_NO_SPACE_ON_FILESYSTEM, ErrDesc("LIBSSH2_FX_NO_SPACE_ON_FILESYSTEM", "filesystem full")));
+   sftp_emap.insert(edmap_t::value_type(LIBSSH2_FX_QUOTA_EXCEEDED, ErrDesc("LIBSSH2_FX_QUOTA_EXCEEDED", "quota exceeded")));
+#ifdef LIBSSH2_FX_UNKNOWN_PRINCIPAL
+   sftp_emap.insert(edmap_t::value_type(LIBSSH2_FX_UNKNOWN_PRINCIPAL, ErrDesc("LIBSSH2_FX_UNKNOWN_PRINCIPAL", "unknown principal")));
+#else
+   sftp_emap.insert(edmap_t::value_type(LIBSSH2_FX_UNKNOWN_PRINCIPLE, ErrDesc("LIBSSH2_FX_UNKNOWN_PRINCIPAL", "unknown principal")));
+#endif
+#ifdef LIBSSH2_FX_LOCK_CONFLICT
+   sftp_emap.insert(edmap_t::value_type(LIBSSH2_FX_LOCK_CONFLICT, ErrDesc("LIBSSH2_FX_LOCK_CONFLICT", "lock conflict")));
+#else
+   sftp_emap.insert(edmap_t::value_type(LIBSSH2_FX_LOCK_CONFlICT, ErrDesc("LIBSSH2_FX_LOCK_CONFLICT", "lock conflict")));
+#endif
+   sftp_emap.insert(edmap_t::value_type(LIBSSH2_FX_DIR_NOT_EMPTY, ErrDesc("LIBSSH2_FX_DIR_NOT_EMPTY", "directory not empty")));
+   sftp_emap.insert(edmap_t::value_type(LIBSSH2_FX_NOT_A_DIRECTORY, ErrDesc("LIBSSH2_FX_NOT_A_DIRECTORY", "not a directory")));
+   sftp_emap.insert(edmap_t::value_type(LIBSSH2_FX_INVALID_FILENAME, ErrDesc("LIBSSH2_FX_INVALID_FILENAME", "invalid filename")));
+   sftp_emap.insert(edmap_t::value_type(LIBSSH2_FX_LINK_LOOP, ErrDesc("LIBSSH2_FX_LINK_LOOP", "link loop")));
 
    // all classes belonging to here
    ssh2ns.addSystemClass(initSSH2BaseClass(ssh2ns));

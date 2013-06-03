@@ -5,6 +5,7 @@
   libssh2 ssh2 client integration into qore
 
   Copyright 2009 Wolfgang Ritzinger
+  Copyright 2010 - 2013 Qore Technologies, sro
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -185,28 +186,40 @@ void SSH2Client::setKeysIntern() {
  * return 0 on ok.
  * sets errno
  */
-int SSH2Client::ssh_disconnect_unlocked(bool force, ExceptionSink *xsink) {
-   if (!ssh_session && !force) {
-      errno = EINVAL;
-      xsink && xsink->raiseException(SSH2CLIENT_NOT_CONNECTED, "disconnect(): %s", strerror(errno));
+int SSH2Client::ssh_disconnect_unlocked(bool force, int timeout_ms, ExceptionSink *xsink) {
+   if (!ssh_session) {
+      if (!force) {
+         errno = EINVAL;
+         xsink && xsink->raiseException(SSH2CLIENT_NOT_CONNECTED, "disconnect(): %s", strerror(errno));
+      }
    }
+   else {
+      set_blocking_unlocked(false);
 
-   if (ssh_session) {
       // close ssh session if not null
-      libssh2_session_disconnect(ssh_session, (char*)"qore program disconnect");
-      libssh2_session_free(ssh_session);
+      int rc;
+      while ((rc = libssh2_session_disconnect(ssh_session, (char*)"qore program disconnect")) == LIBSSH2_ERROR_EAGAIN) {
+         if (waitsocket_unlocked(xsink, SSH2CLIENT_TIMEOUT, "SSSHCLIENT-DISCONNECT", "SSHClient::disconnect", timeout_ms))
+            break;
+      }
+
+      while ((rc = libssh2_session_free(ssh_session)) == LIBSSH2_ERROR_EAGAIN) {
+         // there can be a memory leak here, but there is no other way to free memory without waiting for the remote socket
+         if (waitsocket_unlocked(xsink, SSH2CLIENT_TIMEOUT, "SSSHCLIENT-DISCONNECT", "SSHClient::disconnect", timeout_ms))
+            break;
+      }
+
       ssh_session = 0;
    }
 
    socket.close();
-
    return 0;
 }
 
-int SSH2Client::ssh_disconnect(bool force, ExceptionSink *xsink) {
+int SSH2Client::ssh_disconnect(bool force, int timeout_ms, ExceptionSink *xsink) {
    AutoLocker al(m);
 
-   return ssh_disconnect_unlocked(force, xsink);
+   return ssh_disconnect_unlocked(force, timeout_ms, xsink);
 }
 
 /**
@@ -421,13 +434,17 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
   
    // ... start it up. This will trade welcome banners, exchange keys,
    // and setup crypto, compression, and MAC layers
+#ifdef HAVE_LIBSSH2_SESSION_HANDSHAKE
+   rc = libssh2_session_handshake(ssh_session, socket.getSocket());
+#else
    rc = libssh2_session_startup(ssh_session, socket.getSocket());
-   if(rc) {
+#endif
+   if (rc) {
       ssh_disconnect_unlocked(true); // clean up connection
       xsink && xsink->raiseException(SSH2_ERROR, "failure establishing SSH session: %d", rc);
       return -1;
    }
-  
+
    // check what types are available for authentifcation
    userauthlist = libssh2_userauth_list(ssh_session, sshuser.c_str(), sshuser.size());
    // remove the info how we are actual authenticated (should be NULL anyway)
@@ -435,56 +452,64 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
 
    printd(5, "userauthlist: %s\n", userauthlist);
 
-   // set flags for use with authentification
-   if (strstr(userauthlist, "publickey"))
-      auth_pw |= QAUTH_PUBLICKEY;
-   if (strstr(userauthlist, "password"))
-      auth_pw |= QAUTH_PASSWORD;
-   if (strstr(userauthlist, "keyboard-interactive"))
-      auth_pw |= QAUTH_KEYBOARD_INTERACTIVE;
-
-   // try auth 
-   // try publickey if available
-   if (!loggedin && (auth_pw & QAUTH_PUBLICKEY) && (!sshkeys_priv.empty() && !sshkeys_pub.empty())) {
-      printd(5, "SSH2Client::connect(): try pubkey auth: %s %s\n", sshkeys_priv.c_str(), sshkeys_pub.c_str());
-      if(libssh2_userauth_publickey_fromfile(ssh_session, sshuser.c_str(), sshkeys_pub.c_str(), sshkeys_priv.c_str(), sshpass.c_str()) == 0) {
-         loggedin = true;
-         sshauthenticatedwith = "publickey";
-         printd(5, "publickey authentication succeeded\n");
-      }
+   {
+      // make sure we are in non-blocking mode
+      BlockingHelper bh(this);
+  
+      // set flags for use with authentification
+      if (strstr(userauthlist, "publickey"))
+         auth_pw |= QAUTH_PUBLICKEY;
+      if (strstr(userauthlist, "password"))
+         auth_pw |= QAUTH_PASSWORD;
+      if (strstr(userauthlist, "keyboard-interactive"))
+         auth_pw |= QAUTH_KEYBOARD_INTERACTIVE;
+      
+      // try auth 
+      // try publickey if available
+      if (!loggedin && (auth_pw & QAUTH_PUBLICKEY) && (!sshkeys_priv.empty() && !sshkeys_pub.empty())) {
+         printd(5, "SSH2Client::connect(): try pubkey auth: %s %s\n", sshkeys_priv.c_str(), sshkeys_pub.c_str());
+         while ((rc = libssh2_userauth_publickey_fromfile(ssh_session, sshuser.c_str(), sshkeys_pub.c_str(), sshkeys_priv.c_str(), sshpass.c_str())) == LIBSSH2_ERROR_EAGAIN) {}
+         if (!rc) {
+            loggedin = true;
+            sshauthenticatedwith = "publickey";
+            printd(5, "publickey authentication succeeded\n");
+         }
 #ifdef DEBUG
-      else
-         printd(5, "publickey authentication failed\n");
+         else
+            printd(5, "publickey authentication failed\n");
 #endif	
-   }
-
-   // try password and keyboard-interactive first if a password was given
-   if (!loggedin && (auth_pw & QAUTH_PASSWORD)) {
-      printd(5, "SSH2Client::connect(): try user/pass auth: %s/%s\n", sshuser.c_str(), sshpass.c_str());
-      if (!libssh2_userauth_password(ssh_session, sshuser.c_str(), sshpass.c_str())) {
-         loggedin = true;
-         sshauthenticatedwith = "password";
-         printd(5, "password authentication succeeded\n");
       }
+
+      // try password and keyboard-interactive first if a password was given
+      if (!loggedin && (auth_pw & QAUTH_PASSWORD)) {
+         printd(5, "SSH2Client::connect(): try user/pass auth: %s/%s\n", sshuser.c_str(), sshpass.c_str());
+         while ((rc = libssh2_userauth_password(ssh_session, sshuser.c_str(), sshpass.c_str())) == LIBSSH2_ERROR_EAGAIN) {}
+         if (!rc) {
+            loggedin = true;
+            sshauthenticatedwith = "password";
+            printd(5, "password authentication succeeded\n");
+         }
 #ifdef DEBUG
-      else
-         printd(5, "password authentication failed\n");
+         else
+            printd(5, "password authentication failed\n");
 #endif
-   }
-
-   if (!loggedin && (auth_pw & QAUTH_KEYBOARD_INTERACTIVE)) {
-      printd(5, "SSH2Client::connect(): try user/pass with keyboard-interactive auth: %s/%s\n", sshuser.c_str(), sshpass.c_str());
-      // thread thread-local storage for password for fake keyboard-interactive authentication
-      keyboardPassword.set(sshpass.c_str());
-      if (!libssh2_userauth_keyboard_interactive(ssh_session, sshuser.c_str(), &kbd_callback)) {
-         loggedin = true;
-         sshauthenticatedwith = "keyboard-interactive";
-         printd(5, "keyboard-interactive authentication succeeded\n");
       }
+      
+      if (!loggedin && (auth_pw & QAUTH_KEYBOARD_INTERACTIVE)) {
+         printd(5, "SSH2Client::connect(): try user/pass with keyboard-interactive auth: %s/%s\n", sshuser.c_str(), sshpass.c_str());
+         // thread thread-local storage for password for fake keyboard-interactive authentication
+         keyboardPassword.set(sshpass.c_str());
+         while ((rc = libssh2_userauth_keyboard_interactive(ssh_session, sshuser.c_str(), &kbd_callback)) == LIBSSH2_ERROR_EAGAIN) {}
+         if (!rc) {
+            loggedin = true;
+            sshauthenticatedwith = "keyboard-interactive";
+            printd(5, "keyboard-interactive authentication succeeded\n");
+         }
 #ifdef DEBUG
-      else
-         printd(5, "keyboard-interactive authentication failed\n");
-#endif	
+         else
+            printd(5, "keyboard-interactive authentication failed\n");
+#endif
+      }
    }
   
    // could we auth?
@@ -600,7 +625,7 @@ QoreObject *SSH2Client::openSessionChannel(ExceptionSink *xsink, int timeout_ms)
       //printd(0, "SSH2Client::openSessionChannel(timeout_ms = %d) channel=%p rc=%d\n", timeout_ms, channel, libssh2_session_last_errno(ssh_session));
       if (!channel) {
 	 if (libssh2_session_last_error(ssh_session, 0, 0, 0) == LIBSSH2_ERROR_EAGAIN) {
-	    if (check_timeout(timeout_ms, SSH2CLIENT_TIMEOUT, SSH2CLIENT_OPENSESSIONCHANNEL_ERROR, xsink))
+	    if (waitsocket_unlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2CLIENT_OPENSESSIONCHANNEL_ERROR, "SSH2Client::openSessionChannel", timeout_ms))
 	       return 0;
 	    continue;
 	 }
@@ -630,7 +655,7 @@ QoreObject *SSH2Client::openDirectTcpipChannel(ExceptionSink *xsink, const char 
       channel = libssh2_channel_direct_tcpip_ex(ssh_session, host, port, shost, sport);
       if (!channel) {
 	 if (libssh2_session_last_error(ssh_session, 0, 0, 0) == LIBSSH2_ERROR_EAGAIN) {
-	    if (check_timeout(timeout_ms, SSH2CLIENT_TIMEOUT, SSH2CLIENT_OPENDIRECTTCPIPCHANNEL_ERROR, xsink))
+	    if (waitsocket_unlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2CLIENT_OPENDIRECTTCPIPCHANNEL_ERROR, "SSH2Client::openDirectTcpipChannel", timeout_ms))
 	       return 0;
 	    continue;
 	 }
@@ -653,16 +678,15 @@ QoreObject *SSH2Client::scpGet(ExceptionSink *xsink, const char *path, int timeo
       return 0;
    }
    
+   BlockingHelper bh(this);
+
    struct stat sb;
    LIBSSH2_CHANNEL *channel;
-
-   //printd(5, "sizeof(struct stat)=%d\n", sizeof(struct stat));
-
    while (true) {
       channel = libssh2_scp_recv(ssh_session, path, &sb);
       if (!channel) {
 	 if (libssh2_session_last_error(ssh_session, 0, 0, 0) == LIBSSH2_ERROR_EAGAIN) {
-	    if (check_timeout(timeout_ms, SSH2CLIENT_TIMEOUT, SSH2CLIENT_SCPGET_ERROR, xsink))
+	    if (waitsocket_unlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2CLIENT_SCPGET_ERROR, "SSH2Client::scpGet", timeout_ms))
 	       return 0;
 	    continue;
 	 }
@@ -688,14 +712,15 @@ QoreObject *SSH2Client::scpPut(ExceptionSink *xsink, const char *path, size_t si
       xsink->raiseException(SSH2CLIENT_NOT_CONNECTED, "cannot call SSH2Client::scpPut() while client is not connected");
       return 0;
    }
+
+   BlockingHelper bh(this);
    
    LIBSSH2_CHANNEL *channel;
-
    while (true) {
       channel = libssh2_scp_send_ex(ssh_session, path, mode, size, mtime, atime);
       if (!channel) {
 	 if (libssh2_session_last_error(ssh_session, 0, 0, 0) == LIBSSH2_ERROR_EAGAIN) {
-	    if (check_timeout(timeout_ms, SSH2CLIENT_TIMEOUT, SSH2CLIENT_SCPPUT_ERROR, xsink))
+	    if (waitsocket_unlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2CLIENT_SCPPUT_ERROR, "SSH2Client::scpPut", timeout_ms))
 	       return 0;
 	    continue;
 	 }
@@ -707,5 +732,3 @@ QoreObject *SSH2Client::scpPut(ExceptionSink *xsink, const char *path, size_t si
 
    return register_channel_unlocked(channel);   
 }
-
-// EOF //
