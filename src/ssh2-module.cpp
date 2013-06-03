@@ -116,7 +116,9 @@ static QoreStringNode *ssh2_module_init() {
    ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_SOCKET_RECV, "LIBSSH2_ERROR_SOCKET_RECV"));
    ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_ENCRYPT, "LIBSSH2_ERROR_ENCRYPT"));
    ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_BAD_SOCKET, "LIBSSH2_ERROR_BAD_SOCKET"));
+#ifdef LIBSSH2_ERROR_KNOWN_HOSTS
    ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_KNOWN_HOSTS, "LIBSSH2_ERROR_KNOWN_HOSTS"));
+#endif
    ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_BANNER_NONE, "LIBSSH2_ERROR_BANNER_NONE"));
 
    // setup sftp error map
