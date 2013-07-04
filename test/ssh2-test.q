@@ -11,7 +11,7 @@ our int $iters = 1;
 our timeout $timeout = 10s;
 our hash $o;
 
-const FileContents = "hi there";
+const FileContents = "hi there ýčšěáýžšěčéářčě";
 const BinContents = binary(FileContents);
 const FileLen = strlen(FileContents);
 const FileMode = 0755;
@@ -157,6 +157,12 @@ sub sftp_test_intern(SFTPClient $sc) {
     # retrieve the file as a string
     my string $s = $sc.getTextFile($fn, $timeout);
     test_value($s, FileContents, "SFTPClient::getTextFile()");
+
+    # test various encodings
+    my string $sutf8 = $sc.getTextFile($fn, $timeout, "utf8");
+    test_value($sutf8.encoding(), "UTF-8", "SFTPClient::getTextFile(utf8)");
+    my string $siso88592 = $sc.getTextFile($fn, $timeout, "iso-8859-2");
+    test_value($siso88592.encoding(), "ISO-8859-2", "SFTPClient::getTextFile(iso-8859-2)");
 
     # make new file name
     my string $nfn = $fn + ".new";

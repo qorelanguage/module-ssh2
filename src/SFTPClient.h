@@ -93,7 +93,7 @@ public:
    DLLLOCAL int sftp_chmod(const char* file, const int mode, int timeout_ms, ExceptionSink* xsink);
 
    DLLLOCAL BinaryNode *sftp_getFile(const char* file, int timeout_ms, ExceptionSink* xsink);
-   DLLLOCAL QoreStringNode *sftp_getTextFile(const char* file, int timeout_ms, ExceptionSink* xsink);
+   DLLLOCAL QoreStringNode *sftp_getTextFile(const char* file, int timeout_ms, const QoreEncoding *encoding, ExceptionSink* xsink);
    DLLLOCAL qore_size_t sftp_putFile(const char* data, qore_size_t len, const char* fname, int mode, int timeout_ms, ExceptionSink* xsink);
 
    DLLLOCAL int sftp_getAttributes(const char* fname, LIBSSH2_SFTP_ATTRIBUTES *attrs, int timeout_ms, ExceptionSink* xsink);

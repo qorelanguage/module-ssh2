@@ -610,7 +610,7 @@ BinaryNode *SFTPClient::sftp_getFile(const char* file, int timeout_ms, Exception
    return bn.release();
 }
 
-QoreStringNode *SFTPClient::sftp_getTextFile(const char* file, int timeout_ms, ExceptionSink* xsink) {
+QoreStringNode *SFTPClient::sftp_getTextFile(const char* file, int timeout_ms, const QoreEncoding *encoding, ExceptionSink* xsink) {
    AutoLocker al(m);
 
    if (!sftp_connected_unlocked()) {
@@ -655,7 +655,7 @@ QoreStringNode *SFTPClient::sftp_getTextFile(const char* file, int timeout_ms, E
    ON_BLOCK_EXIT(libssh2_sftp_close_handle, sftp_handle);
 
    // create buffer for return with the size the server gave us on stat + 1 byte for termination char
-   SimpleRefHolder<QoreStringNode> str(new QoreStringNode);
+   SimpleRefHolder<QoreStringNode> str(new QoreStringNode(encoding));
    str->allocate(fsize + 1);
    
    size_t tot = 0;
