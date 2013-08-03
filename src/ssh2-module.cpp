@@ -71,7 +71,9 @@ static QoreStringNode *ssh2_module_init() {
 
    // setup ssh2 error map
    ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_SOCKET_NONE, "LIBSSH2_ERROR_SOCKET_NONE"));
+#ifdef LIBSSH2_ERROR_BANNER_RECV
    ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_BANNER_RECV, "LIBSSH2_ERROR_BANNER_RECV"));
+#endif
    ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_BANNER_SEND, "LIBSSH2_ERROR_BANNER_SEND"));
    ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_INVALID_MAC, "LIBSSH2_ERROR_INVALID_MAC"));
    ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_KEX_FAILURE, "LIBSSH2_ERROR_KEX_FAILURE"));
@@ -87,7 +89,9 @@ static QoreStringNode *ssh2_module_init() {
    ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_PASSWORD_EXPIRED, "LIBSSH2_ERROR_PASSWORD_EXPIRED"));
    ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_FILE, "LIBSSH2_ERROR_FILE"));
    ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_METHOD_NONE, "LIBSSH2_ERROR_METHOD_NONE"));
+#ifdef LIBSSH2_ERROR_AUTHENTICATION_FAILED
    ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_AUTHENTICATION_FAILED, "LIBSSH2_ERROR_AUTHENTICATION_FAILED"));
+#endif
    ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_PUBLICKEY_UNRECOGNIZED, "LIBSSH2_ERROR_PUBLICKEY_UNRECOGNIZED"));
    ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_PUBLICKEY_UNVERIFIED, "LIBSSH2_ERROR_PUBLICKEY_UNVERIFIED"));
    ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_CHANNEL_OUTOFORDER, "LIBSSH2_ERROR_CHANNEL_OUTOFORDER"));
@@ -112,10 +116,18 @@ static QoreStringNode *ssh2_module_init() {
    ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_BAD_USE, "LIBSSH2_ERROR_BAD_USE"));
    ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_COMPRESS, "LIBSSH2_ERROR_COMPRESS"));
    ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_OUT_OF_BOUNDARY, "LIBSSH2_ERROR_OUT_OF_BOUNDARY"));
+#ifdef LIBSSH2_ERROR_AGENT_PROTOCOL
    ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_AGENT_PROTOCOL, "LIBSSH2_ERROR_AGENT_PROTOCOL"));
+#endif
+#ifdef LIBSSH2_ERROR_SOCKET_RECV
    ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_SOCKET_RECV, "LIBSSH2_ERROR_SOCKET_RECV"));
+#endif
+#ifdef LIBSSH2_ERROR_ENCRYPT
    ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_ENCRYPT, "LIBSSH2_ERROR_ENCRYPT"));
+#endif
+#ifdef LIBSSH2_ERROR_BAD_SOCKET
    ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_BAD_SOCKET, "LIBSSH2_ERROR_BAD_SOCKET"));
+#endif
 #ifdef LIBSSH2_ERROR_KNOWN_HOSTS
    ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_KNOWN_HOSTS, "LIBSSH2_ERROR_KNOWN_HOSTS"));
 #endif
