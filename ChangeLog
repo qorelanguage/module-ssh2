@@ -1,3 +1,54 @@
+2013-07-04 11:53  subik
+
+	* docs/mainpage.doxygen.tmpl, src/QC_SFTPClient.qpp,
+	  src/SFTPClient.cpp, src/SFTPClient.h, test/ssh2-test.q:
+	  sftpclient: getTextFile optional encoding
+
+2013-06-03 17:40  david_nichols
+
+	* src/ssh2-module.cpp: fixed for compiling with older libssh2
+	  versions
+
+2013-06-03 17:29  david_nichols
+
+	* src/SFTPClient.cpp: minor error msg fixes
+
+2013-06-03 17:09  david_nichols
+
+	* ChangeLog, RELEASE-NOTES, configure.ac,
+	  docs/mainpage.doxygen.tmpl, src/QC_SFTPClient.qpp,
+	  src/QC_SSH2Base.qpp, src/QC_SSH2Client.qpp, src/SFTPClient.cpp,
+	  src/SFTPClient.h, src/SSH2Channel.cpp, src/SSH2Client.cpp,
+	  src/SSH2Client.h, src/ssh2-module.cpp, src/ssh2-module.h,
+	  test/ssh2-test.q: implemented non-blocking I/O for all sftpclient
+	  methods and disconnections, even favoring memory leaks over
+	  shutdown/disconnection calls that do not return in the timeout
+	  period
+
+2013-05-21 13:11  david_nichols
+
+	* RELEASE-NOTES, docs/mainpage.doxygen.tmpl, src/QC_SSH2Base.qpp:
+	  added a default timeout to the connect method
+
+2013-03-12 13:06  david_nichols
+
+	* RELEASE-NOTES, docs/mainpage.doxygen.tmpl, src/SFTPClient.cpp,
+	  src/SFTPClient.h: updated to send the same mode as retrieved from
+	  the stat() call
+
+2013-03-12 12:34  david_nichols
+
+	* RELEASE-NOTES, configure.ac, docs/mainpage.doxygen.tmpl,
+	  qore-ssh2-module.spec, src/SFTPClient.cpp, src/SFTPClient.h:
+	  updated to v0.9.8; send mode 0644 when opening files read-only in
+	  case broken servers will erroneously set the remote file's mode
+	  to 0 and then the file will not be readable; updated docs
+
+2013-02-27 10:10  david_nichols
+
+	* README-BINARIES: updated binary location (and changelog for
+	  pgsql)
+
 2012-11-21 08:17  david_nichols
 
 	* configure.ac: use the latest module API for the ssh2 module
