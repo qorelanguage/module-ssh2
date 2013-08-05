@@ -233,8 +233,8 @@ sub main() {
  -i,--iters=ARG        iterations per test
  -k,--private-key=ARG  set private key to use for authentication
  -t,--threads=ARG      number of threads
- -T,--timeout=ARG      set timeout in seconds (def: %y)
- -h,--help             for this help test\n", get_script_name(), $timeout);
+ -T,--timeout=ARG      set timeout in seconds (def: %ds)
+ -h,--help             for this help test\n", get_script_name(), $timeout / 1000);
 	exit(1);
     }
     srand(now());
