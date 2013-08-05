@@ -93,6 +93,8 @@ protected:
    DLLLOCAL void setKeysIntern();
 
    DLLLOCAL virtual void deref(ExceptionSink*);
+
+   DLLLOCAL int startup_unlocked();
    DLLLOCAL int ssh_connected_unlocked();
    DLLLOCAL int ssh_disconnect_unlocked(bool force, int timeout_ms = DEFAULT_TIMEOUT, ExceptionSink *xsink = 0);
    DLLLOCAL int ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink);

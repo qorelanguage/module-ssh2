@@ -1,3 +1,11 @@
+***************
+version 0.9.8.1
+***************
+
+* closed some gaps in the non-blocking I/O solution introduced in the last
+  release
+
+
 *************
 version 0.9.8
 *************

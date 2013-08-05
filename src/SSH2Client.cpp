@@ -48,44 +48,44 @@ std::string mode2str(const int mode) {
    std::string ret=std::string("----------");
    int tmode=mode;
    for(int i=2; i>=0; i--) {
-      if(tmode & 001) {
+      if (tmode & 001) {
          ret[1+2+i*3]='x';
       }
-      if(tmode & 002) {
+      if (tmode & 002) {
          ret[1+1+i*3]='w';
       }
-      if(tmode & 004) {
+      if (tmode & 004) {
          ret[1+0+i*3]='r';
       }
       tmode>>=3;
    }
 #ifdef S_ISDIR
-   if(S_ISDIR(mode)) {
+   if (S_ISDIR(mode)) {
       ret[0]='d';
    }
 #endif
 #ifdef S_ISBLK
-   if(S_ISBLK(mode)) {
+   if (S_ISBLK(mode)) {
       ret[0]='b';
    }
 #endif
 #ifdef S_ISCHR
-   if(S_ISCHR(mode)) {
+   if (S_ISCHR(mode)) {
       ret[0]='c';
    }
 #endif
 #ifdef S_ISFIFO
-   if(S_ISFIFO(mode)) {
+   if (S_ISFIFO(mode)) {
       ret[0]='p';
    }
 #endif
 #ifdef S_ISLNK
-   if(S_ISLNK(mode)) {
+   if (S_ISLNK(mode)) {
       ret[0]='l';
    }
 #endif
 #ifdef S_ISSOCK
-   if(S_ISSOCK(mode)) {
+   if (S_ISSOCK(mode)) {
       ret[0]='s';
    }
 #endif
@@ -212,6 +212,9 @@ int SSH2Client::ssh_disconnect_unlocked(bool force, int timeout_ms, ExceptionSin
       ssh_session = 0;
    }
 
+   if (sshauthenticatedwith)
+      sshauthenticatedwith = 0;
+
    socket.close();
    return 0;
 }
@@ -254,7 +257,7 @@ const char *SSH2Client::getAuthenticatedWith() {
 }
 
 void SSH2Client::deref(ExceptionSink *xsink) {
-   if(ROdereference()) {
+   if (ROdereference()) {
       delete this;
    }
 }
@@ -338,21 +341,18 @@ const char *SSH2Client::getKeyPub() {
 }
 
 QoreStringNode *SSH2Client::fingerprint_unlocked() {
-   if (!ssh_connected_unlocked()) {
-      return NULL;
-   }
+   if (!ssh_connected_unlocked())
+      return 0;
 
    const char *fingerprint = libssh2_hostkey_hash(ssh_session, LIBSSH2_HOSTKEY_HASH_MD5);
   
-   if(!fingerprint) {
-      return NULL;
-   }
+   if (!fingerprint)
+      return 0;
 
-   QoreStringNode *fpstr=new QoreStringNode();
+   QoreStringNode *fpstr = new QoreStringNode;
    fpstr->sprintf("%02X", (unsigned char)fingerprint[0]);
-   for(int i=1; i<16; i++) {
+   for (int i = 1; i < 16; i++)
       fpstr->sprintf(":%02X", (unsigned char)fingerprint[i]);
-   }
    return fpstr;
 }
 
@@ -377,6 +377,14 @@ static void kbd_callback(const char *name, int name_len,
       responses[0].length = strlen(password);
    }
 } /* kbd_callback */ 
+
+int SSH2Client::startup_unlocked() {
+#ifdef HAVE_LIBSSH2_SESSION_HANDSHAKE
+   return libssh2_session_handshake(ssh_session, socket.getSocket());
+#else
+   return libssh2_session_startup(ssh_session, socket.getSocket());
+#endif
+}
 
 /**
  * connect()
@@ -429,16 +437,18 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
       return -1;
    }
 
-   // make sure we are in blocking mode
-   set_blocking_unlocked(true);
-  
+   // make sure the connection is made with non-blocking I/O
+   set_blocking_unlocked(false);
+
    // ... start it up. This will trade welcome banners, exchange keys,
    // and setup crypto, compression, and MAC layers
-#ifdef HAVE_LIBSSH2_SESSION_HANDSHAKE
-   rc = libssh2_session_handshake(ssh_session, socket.getSocket());
-#else
-   rc = libssh2_session_startup(ssh_session, socket.getSocket());
-#endif
+   while ((rc = startup_unlocked()) == LIBSSH2_ERROR_EAGAIN) {
+      if (waitsocket_unlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2_ERROR, "SSH2Client::connect", timeout_ms)) {
+         ssh_disconnect_unlocked(true); // clean up connection
+         return -1;
+      }
+   }
+
    if (rc) {
       ssh_disconnect_unlocked(true); // clean up connection
       xsink && xsink->raiseException(SSH2_ERROR, "failure establishing SSH session: %d", rc);
@@ -446,70 +456,90 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
    }
 
    // check what types are available for authentifcation
-   userauthlist = libssh2_userauth_list(ssh_session, sshuser.c_str(), sshuser.size());
-   // remove the info how we are actual authenticated (should be NULL anyway)
-   sshauthenticatedwith = 0;
+   while (true) {
+      userauthlist = libssh2_userauth_list(ssh_session, sshuser.c_str(), sshuser.size());
+      if (!userauthlist && libssh2_session_last_errno(ssh_session) == LIBSSH2_ERROR_EAGAIN) {
+         if (waitsocket_unlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2_ERROR, "SSH2Client::connect", timeout_ms)) {
+            ssh_disconnect_unlocked(true); // clean up connection
+            return -1;
+         }
+         continue;
+      }
+      break;         
+   }
+
+   assert(!sshauthenticatedwith);
 
    printd(5, "userauthlist: %s\n", userauthlist);
 
-   {
-      // make sure we are in non-blocking mode
-      BlockingHelper bh(this);
-  
-      // set flags for use with authentification
-      if (strstr(userauthlist, "publickey"))
-         auth_pw |= QAUTH_PUBLICKEY;
-      if (strstr(userauthlist, "password"))
-         auth_pw |= QAUTH_PASSWORD;
-      if (strstr(userauthlist, "keyboard-interactive"))
-         auth_pw |= QAUTH_KEYBOARD_INTERACTIVE;
+   // set flags for use with authentification
+   if (strstr(userauthlist, "publickey"))
+      auth_pw |= QAUTH_PUBLICKEY;
+   if (strstr(userauthlist, "password"))
+      auth_pw |= QAUTH_PASSWORD;
+   if (strstr(userauthlist, "keyboard-interactive"))
+      auth_pw |= QAUTH_KEYBOARD_INTERACTIVE;
       
-      // try auth 
-      // try publickey if available
-      if (!loggedin && (auth_pw & QAUTH_PUBLICKEY) && (!sshkeys_priv.empty() && !sshkeys_pub.empty())) {
-         printd(5, "SSH2Client::connect(): try pubkey auth: %s %s\n", sshkeys_priv.c_str(), sshkeys_pub.c_str());
-         while ((rc = libssh2_userauth_publickey_fromfile(ssh_session, sshuser.c_str(), sshkeys_pub.c_str(), sshkeys_priv.c_str(), sshpass.c_str())) == LIBSSH2_ERROR_EAGAIN) {}
-         if (!rc) {
-            loggedin = true;
-            sshauthenticatedwith = "publickey";
-            printd(5, "publickey authentication succeeded\n");
+   // try auth 
+   // try publickey if available
+   if (!loggedin && (auth_pw & QAUTH_PUBLICKEY) && (!sshkeys_priv.empty() && !sshkeys_pub.empty())) {
+      printd(5, "SSH2Client::connect(): try pubkey auth: %s %s\n", sshkeys_priv.c_str(), sshkeys_pub.c_str());
+      while ((rc = libssh2_userauth_publickey_fromfile(ssh_session, sshuser.c_str(), sshkeys_pub.c_str(), sshkeys_priv.c_str(), sshpass.c_str())) == LIBSSH2_ERROR_EAGAIN) {
+         if (waitsocket_unlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2_ERROR, "SSH2Client::connect", timeout_ms)) {
+            ssh_disconnect_unlocked(true); // clean up connection
+            return -1;
          }
+      }
+      if (!rc) {
+         loggedin = true;
+         sshauthenticatedwith = "publickey";
+         printd(5, "publickey authentication succeeded\n");
+      }
 #ifdef DEBUG
-         else
-            printd(5, "publickey authentication failed\n");
+      else
+         printd(5, "publickey authentication failed\n");
 #endif	
-      }
-
-      // try password and keyboard-interactive first if a password was given
-      if (!loggedin && (auth_pw & QAUTH_PASSWORD)) {
-         printd(5, "SSH2Client::connect(): try user/pass auth: %s/%s\n", sshuser.c_str(), sshpass.c_str());
-         while ((rc = libssh2_userauth_password(ssh_session, sshuser.c_str(), sshpass.c_str())) == LIBSSH2_ERROR_EAGAIN) {}
-         if (!rc) {
-            loggedin = true;
-            sshauthenticatedwith = "password";
-            printd(5, "password authentication succeeded\n");
+   }
+   
+   // try password and keyboard-interactive first if a password was given
+   if (!loggedin && (auth_pw & QAUTH_PASSWORD)) {
+      printd(5, "SSH2Client::connect(): try user/pass auth: %s/%s\n", sshuser.c_str(), sshpass.c_str());
+      while ((rc = libssh2_userauth_password(ssh_session, sshuser.c_str(), sshpass.c_str())) == LIBSSH2_ERROR_EAGAIN) {
+         if (waitsocket_unlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2_ERROR, "SSH2Client::connect", timeout_ms)) {
+            ssh_disconnect_unlocked(true); // clean up connection
+            return -1;
          }
-#ifdef DEBUG
-         else
-            printd(5, "password authentication failed\n");
-#endif
       }
-      
-      if (!loggedin && (auth_pw & QAUTH_KEYBOARD_INTERACTIVE)) {
-         printd(5, "SSH2Client::connect(): try user/pass with keyboard-interactive auth: %s/%s\n", sshuser.c_str(), sshpass.c_str());
-         // thread thread-local storage for password for fake keyboard-interactive authentication
-         keyboardPassword.set(sshpass.c_str());
-         while ((rc = libssh2_userauth_keyboard_interactive(ssh_session, sshuser.c_str(), &kbd_callback)) == LIBSSH2_ERROR_EAGAIN) {}
-         if (!rc) {
-            loggedin = true;
-            sshauthenticatedwith = "keyboard-interactive";
-            printd(5, "keyboard-interactive authentication succeeded\n");
+      if (!rc) {
+         loggedin = true;
+         sshauthenticatedwith = "password";
+         printd(5, "password authentication succeeded\n");
+      }
+#ifdef DEBUG
+      else
+         printd(5, "password authentication failed\n");
+#endif
+   }
+   
+   if (!loggedin && (auth_pw & QAUTH_KEYBOARD_INTERACTIVE)) {
+      printd(5, "SSH2Client::connect(): try user/pass with keyboard-interactive auth: %s/%s\n", sshuser.c_str(), sshpass.c_str());
+      // thread thread-local storage for password for fake keyboard-interactive authentication
+      keyboardPassword.set(sshpass.c_str());
+      while ((rc = libssh2_userauth_keyboard_interactive(ssh_session, sshuser.c_str(), &kbd_callback)) == LIBSSH2_ERROR_EAGAIN) {
+         if (waitsocket_unlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2_ERROR, "SSH2Client::connect", timeout_ms)) {
+            ssh_disconnect_unlocked(true); // clean up connection
+            return -1;
          }
-#ifdef DEBUG
-         else
-            printd(5, "keyboard-interactive authentication failed\n");
-#endif
       }
+      if (!rc) {
+         loggedin = true;
+         sshauthenticatedwith = "keyboard-interactive";
+         printd(5, "keyboard-interactive authentication succeeded\n");
+      }
+#ifdef DEBUG
+      else
+         printd(5, "keyboard-interactive authentication failed\n");
+#endif
    }
   
    // could we auth?
@@ -518,6 +548,8 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
       xsink && xsink->raiseException("SSH2CLIENT-AUTH-ERROR", "No proper authentication method found");
       return -1;
    }
+
+   set_blocking_unlocked(true);
 
    return 0;
 }

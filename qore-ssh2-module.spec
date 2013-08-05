@@ -1,4 +1,4 @@
-%define mod_ver 0.9.8
+%define mod_ver 0.9.8.1
 %define module_api %(qore --latest-module-api 2>/dev/null)
 %define module_dir %{_libdir}/qore-modules
 
@@ -98,6 +98,9 @@ This RPM provides API documentation, test and example programs
 %doc docs/ssh2/html test/ 
 
 %changelog
+* Mon Aug 5 2013 David Nichols <david@qore.org> - 0.9.8.1
+- updated to version 0.9.8.1
+
 * Mon Mar 12 2013 David Nichols <david@qore.org> - 0.9.8
 - updated to version 0.9.8
 
