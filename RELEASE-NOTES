@@ -7,6 +7,10 @@ version 0.9.8.1
 * implemented implicit connections for the SFTPClient class
 * implemented the SFTPClient::listFull() method
 * implemented the SSH2Base::connected() method
+* when errors occur in the SFTPClient class, mark the connection as closed if
+  possible
+* made cwd persistent across connections to better deal with implicit
+  disconnections and reconnections
 
 
 *************

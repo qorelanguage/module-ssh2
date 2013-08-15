@@ -52,6 +52,9 @@ DLLLOCAL std::string mode2str(const int mode);
 #define QAUTH_KEYBOARD_INTERACTIVE (1 << 1)
 #define QAUTH_PUBLICKEY            (1 << 2)
 
+// 60 second keepalive defaut
+#define QKEEPALIVE_DEFAULT  60
+
 DLLLOCAL extern const char *SSH2_ERROR;
 
 class SSH2Channel;
@@ -146,8 +149,8 @@ protected:
       xsink->raiseException(SSH2_ERROR, desc);
    }
    DLLLOCAL void set_blocking_unlocked(bool block) {
-      assert(ssh_session);
-      libssh2_session_set_blocking(ssh_session, (int)block);
+      if (ssh_session)
+         libssh2_session_set_blocking(ssh_session, (int)block);
    }
 
    DLLLOCAL int waitsocket_unlocked(ExceptionSink* xsink, const char *toerr, const char *err, const char* m, int timeout_ms = DEFAULT_TIMEOUT_MS) {
@@ -166,12 +169,16 @@ protected:
    }
 
    DLLLOCAL int waitsocket_unlocked(int timeout_ms = DEFAULT_TIMEOUT_MS) {
+      return waitsocket_select_unlocked(libssh2_session_block_directions(ssh_session), timeout_ms);
+   }
+
+   DLLLOCAL int waitsocket_select_unlocked(int dir, int timeout_ms = DEFAULT_TIMEOUT_MS) {
       assert(ssh_session);
 
       struct timeval timeout;
       fd_set fd;
-      fd_set *writefd = 0;
-      fd_set *readfd = 0;
+      fd_set* writefd = 0;
+      fd_set* readfd = 0;
  
       if (timeout_ms >= 0) {
 	 timeout.tv_sec = timeout_ms / 1000;
@@ -181,9 +188,6 @@ protected:
       FD_ZERO(&fd);
  
       FD_SET(socket.getSocket(), &fd);
- 
-      // now make sure we wait in the correct direction
-      int dir = libssh2_session_block_directions(ssh_session);
  
       if (dir & LIBSSH2_SESSION_BLOCK_INBOUND)
 	 readfd = &fd;

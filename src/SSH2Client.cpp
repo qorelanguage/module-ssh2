@@ -551,6 +551,9 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
 
    set_blocking_unlocked(true);
 
+   // set keepalive
+   libssh2_keepalive_config(ssh_session, 1, QKEEPALIVE_DEFAULT);
+
    return 0;
 }
 

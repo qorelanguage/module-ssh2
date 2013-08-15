@@ -190,7 +190,6 @@ int SFTPClient::sftp_disconnect_unlocked(bool force, int timeout_ms, ExceptionSi
 
    // close sftp session if not null
    do_shutdown(timeout_ms, xsink);
-   sftppath.clear();
 
    // close ssh session if not null
    rc = ssh_disconnect_unlocked(force, timeout_ms, xsink);
@@ -229,7 +228,7 @@ QoreHashNode *SFTPClient::sftp_list(const char* path, int timeout_ms, ExceptionS
                return 0;
          }
          else {
-            xsink->raiseException("SFTPCLIENT-LIST-ERROR", "cannot open '%s' as directory", pstr.c_str());
+            do_session_err_unlocked(xsink, "error reading directory '%s'", pstr.c_str());
             return 0;
          }
       }
@@ -310,7 +309,7 @@ QoreListNode *SFTPClient::sftp_list_full(const char* path, int timeout_ms, Excep
                return 0;
          }
          else {
-            xsink->raiseException("SFTPCLIENT-LISTFULL-ERROR", "cannot open '%s' as directory", pstr.c_str());
+            do_session_err_unlocked(xsink, "error reading directory '%s'", pstr.c_str());
             return 0;
          }
       }
@@ -599,7 +598,7 @@ QoreStringNode* SFTPClient::sftp_chdir(const char* nwd, int timeout_ms, Exceptio
                return 0;
          }
          else {
-            xsink->raiseException("SFTPCLIENT-CHDIR-ERROR", "'%s' is not a directory", buff);
+            do_session_err_unlocked(xsink, "'%s' is not a directory", buff);
             return 0;
          }
       }
@@ -656,29 +655,32 @@ int SFTPClient::sftp_connect_unlocked(int timeout_ms, ExceptionSink* xsink) {
          }
          else {
             sftp_disconnect_unlocked(true); // force shutdown
-            xsink && xsink->raiseException(SFTPCLIENT_CONNECT_ERROR, "Unable to init SFTP session");
+            if (xsink)
+               do_session_err_unlocked(xsink, "Unable to initialize SFTP session");
             return -1;
          }
       }
    } while (!sftp_session);
   
-   // get the cwd for the path
-   char buff[PATH_MAX];
-   // returns the amount of chars
-   while ((rc = libssh2_sftp_realpath(sftp_session, ".", buff, sizeof(buff) - 1)) == LIBSSH2_ERROR_EAGAIN) {
-      if (waitsocket_unlocked(xsink, SFTPCLIENT_TIMEOUT, SFTPCLIENT_CONNECT_ERROR, "SFTPClient::connect", timeout_ms))
+   if (sftppath.empty()) {
+      // get the cwd for the path
+      char buff[PATH_MAX];
+      // returns the amount of chars
+      while ((rc = libssh2_sftp_realpath(sftp_session, ".", buff, sizeof(buff) - 1)) == LIBSSH2_ERROR_EAGAIN) {
+         if (waitsocket_unlocked(xsink, SFTPCLIENT_TIMEOUT, SFTPCLIENT_CONNECT_ERROR, "SFTPClient::connect", timeout_ms))
+            return -1;
+      }
+      if (rc <= 0) {
+         if (xsink)
+            do_session_err_unlocked(xsink, "SFTPClient::connect() raised an error in libssh2_sftp_realpath()");
+         sftp_disconnect_unlocked(true); // force shutdown
          return -1;
+      }
+      // for safety: do end string
+      buff[rc] = '\0';
+      sftppath = buff;
    }
-   if (rc <= 0) {
-      if (xsink)
-         do_session_err_unlocked(xsink, "SFTPClient::connect() raised an error in libssh2_sftp_realpath()");
-      sftp_disconnect_unlocked(true); // force shutdown
-      return -1;
-   }
-   // for safety: do end string
-   buff[rc] = '\0';
-   sftppath = buff;
-  
+
    return 0;
 }
 
@@ -966,6 +968,13 @@ void SFTPClient::do_session_err_unlocked(ExceptionSink* xsink, const char* fmt, 
       desc->sprintf(": ssh2 error %d: %s", err, get_session_err_unlocked());
 
    xsink->raiseException(SSH2_ERROR, desc);
+
+   // check if we're still connected: if there is data to be read, we assume it's the EOF marker and close the session
+   int rc = waitsocket_select_unlocked(LIBSSH2_SESSION_BLOCK_INBOUND, 0);
+   if (rc > 0) {
+      printd(5, "do_session_err_unlocked() session %p: detected disconnected session, marking as closed\n", ssh_session);
+      sftp_disconnect_unlocked(true, 10, xsink);
+   }
 }
 
 QoreHashNode *SFTPClient::sftp_info() {
