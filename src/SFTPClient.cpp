@@ -29,6 +29,7 @@
 #include <map>
 #include <utility>
 #include <sys/types.h>
+#include <sys/stat.h>
 #ifdef HAVE_PWD_H
 #include <pwd.h>
 #endif
@@ -37,8 +38,93 @@
 #include <unistd.h>
 
 static const char* SFTPCLIENT_CONNECT_ERROR = "SFTPCLIENT-CONNECT-ERROR";
-static const char* SFTPCLIENT_NOT_CONNECTED = "SFTPCLIENT-NOT-CONNECTED";
 static const char* SFTPCLIENT_TIMEOUT = "SFTPCLIENT-TIMEOUT";
+
+static const char* ssh2_mode_to_perm(mode_t mode, QoreString& perm) {
+   const char* type;
+   if (S_ISBLK(mode)) {
+      type = "BLOCK-DEVICE";
+      perm.concat('b');
+   }
+   else if (S_ISDIR(mode)) {
+      type = "DIRECTORY";
+      perm.concat('d');
+   }
+   else if (S_ISCHR(mode)) {
+      type = "CHARACTER-DEVICE";
+      perm.concat('c');
+   }
+   else if (S_ISFIFO(mode)) {
+      type = "FIFO";
+      perm.concat('p');
+   }
+#ifdef S_ISLNK
+   else if (S_ISLNK(mode)) {
+      type = "SYMBOLIC-LINK";
+      perm.concat('l');
+   }
+#endif
+#ifdef S_ISSOCK
+   else if (S_ISSOCK(mode)) {
+      type = "SOCKET";
+      perm.concat('s');
+   }
+#endif
+   else if (S_ISREG(mode)) {
+      type = "REGULAR";
+      perm.concat('-');
+   }
+   else {
+      type = "UNKNOWN";
+      perm.concat('?');
+   }
+
+   // add user permission flags
+   perm.concat(mode & S_IRUSR ? 'r' : '-');
+   perm.concat(mode & S_IWUSR ? 'w' : '-');
+#ifdef S_ISUID
+   if (mode & S_ISUID)
+      perm.concat(mode & S_IXUSR ? 's' : 'S');
+   else
+      perm.concat(mode & S_IXUSR ? 'x' : '-');
+#else
+   // Windows
+   perm.concat('-');
+#endif
+
+   // add group permission flags
+#ifdef S_IRGRP
+   perm.concat(mode & S_IRGRP ? 'r' : '-');
+   perm.concat(mode & S_IWGRP ? 'w' : '-');
+#else
+   // Windows
+   perm.concat("--");
+#endif
+#ifdef S_ISGID
+   if (mode & S_ISGID)
+      perm.concat(mode & S_IXGRP ? 's' : 'S');
+   else
+      perm.concat(mode & S_IXGRP ? 'x' : '-');
+#else
+   // Windows
+   perm.concat('-');
+#endif
+
+#ifdef S_IROTH
+   // add other permission flags
+   perm.concat(mode & S_IROTH ? 'r' : '-');
+   perm.concat(mode & S_IWOTH ? 'w' : '-');
+   if (mode & S_ISVTX)
+      perm.concat(mode & S_IXOTH ? 't' : 'T');
+   else
+      perm.concat(mode & S_IXOTH ? 'x' : '-');
+#else
+   // Windows
+   perm.concat("---");
+#endif
+
+   return type;
+}
 
 /**
  * SFTPClient constructor
@@ -90,7 +176,6 @@ void SFTPClient::deref(ExceptionSink* xsink) {
    }
 }
 
-
 int SFTPClient::sftp_connected_unlocked() {
    return (sftp_session ? 1: 0);
 }
@@ -121,11 +206,9 @@ int SFTPClient::sftp_disconnect(bool force, int timeout_ms, ExceptionSink* xsink
 QoreHashNode *SFTPClient::sftp_list(const char* path, int timeout_ms, ExceptionSink* xsink) {
    AutoLocker al(m);
 
-   // no path?
-   if (!sftp_connected_unlocked()) {
-      xsink->raiseException(SFTPCLIENT_NOT_CONNECTED, "the SFTPClient object is not connected");
+   // try to make an implicit connection
+   if (!sftp_connected_unlocked() && sftp_connect_unlocked(timeout_ms, xsink))
       return 0;
-   }
 
    std::string pstr;
    if (!path) // there is no path given so we use the sftp_path
@@ -201,6 +284,82 @@ QoreHashNode *SFTPClient::sftp_list(const char* path, int timeout_ms, ExceptionS
    return ret;
 }
 
+QoreListNode *SFTPClient::sftp_list_full(const char* path, int timeout_ms, ExceptionSink* xsink) {
+   AutoLocker al(m);
+
+   // try to make an implicit connection
+   if (!sftp_connected_unlocked() && sftp_connect_unlocked(timeout_ms, xsink))
+      return 0;
+
+   std::string pstr;
+   if (!path) // there is no path given so we use the sftp_path
+      pstr = sftppath;
+   else if (path[0] == '/') // absolute path, take it
+      pstr = path;
+   else // relative path
+      pstr = sftppath + "/" + path;
+
+   BlockingHelper bh(this);
+
+   LIBSSH2_SFTP_HANDLE* dh;
+   do {
+      dh = libssh2_sftp_opendir(sftp_session, pstr.c_str());  
+      if (!dh) {
+         if (libssh2_session_last_errno(ssh_session) == LIBSSH2_ERROR_EAGAIN) {
+            if (waitsocket_unlocked(xsink, SFTPCLIENT_TIMEOUT, "SFTPCLIENT-LISTFULL-ERROR", "SFTPClient::listFull", timeout_ms))
+               return 0;
+         }
+         else {
+            xsink->raiseException("SFTPCLIENT-LISTFULL-ERROR", "cannot open '%s' as directory", pstr.c_str());
+            return 0;
+         }
+      }
+   } while (!dh);
+
+   ON_BLOCK_EXIT(libssh2_sftp_close_handle, dh);
+
+   // create objects after only possible error
+   ReferenceHolder<QoreListNode> rv(new QoreListNode, xsink);
+
+   char buff[PATH_MAX];
+   LIBSSH2_SFTP_ATTRIBUTES attrs;
+
+   while (true) {
+      int rc;
+      while ((rc = libssh2_sftp_readdir(dh, buff, sizeof(buff), &attrs)) == LIBSSH2_ERROR_EAGAIN) {
+         if (waitsocket_unlocked(xsink, SFTPCLIENT_TIMEOUT, "SFTPCLIENT-LISTFULL-ERROR", "SFTPClient::listFull", timeout_ms))
+            return 0;
+      }
+      if (!rc)
+         break;
+      if (rc < 0) {
+         do_session_err_unlocked(xsink, "error reading directory '%s'", pstr.c_str());
+         return 0;
+      }
+
+      QoreHashNode* h = new QoreHashNode;
+      h->setKeyValue("name", new QoreStringNode(buff), 0);
+
+      if (attrs.flags & LIBSSH2_SFTP_ATTR_PERMISSIONS) {
+         QoreStringNode* perm = new QoreStringNode;
+         const char* type = ssh2_mode_to_perm(attrs.permissions, *perm);
+
+         h->setKeyValue("size", new QoreBigIntNode(attrs.filesize), 0);
+         h->setKeyValue("atime", DateTimeNode::makeAbsolute(currentTZ(), (int64)attrs.atime), 0);
+         h->setKeyValue("mtime", DateTimeNode::makeAbsolute(currentTZ(), (int64)attrs.mtime), 0);
+         h->setKeyValue("uid", new QoreBigIntNode(attrs.uid), 0);
+         h->setKeyValue("gid", new QoreBigIntNode(attrs.gid), 0);
+         h->setKeyValue("mode", new QoreBigIntNode(attrs.permissions), 0);
+         h->setKeyValue("type", new QoreStringNode(type), 0);
+         h->setKeyValue("perm", perm, 0);
+      }
+
+      rv->push(h);
+   }
+
+   return rv.release();
+}
+
 // return 0 if ok, -1 otherwise
 int SFTPClient::sftp_chmod(const char* file, const int mode, int timeout_ms, ExceptionSink* xsink) {
    static const char* SFTPCLIENT_CHMOD_ERROR = "SFTPCLIENT-CHMOD-ERROR";
@@ -214,11 +373,9 @@ int SFTPClient::sftp_chmod(const char* file, const int mode, int timeout_ms, Exc
 
    AutoLocker al(m);
 
-   // no path?
-   if (!sftp_connected_unlocked()) {
-      xsink->raiseException(SFTPCLIENT_NOT_CONNECTED, "the SFTPClient object is not connected");
+   // try to make an implicit connection
+   if (!sftp_connected_unlocked() && sftp_connect_unlocked(timeout_ms, xsink))
       return -2;
-   }
 
    std::string pstr;
    if (file[0] == '/')
@@ -287,11 +444,9 @@ int SFTPClient::sftp_mkdir(const char* dir, const int mode, int timeout_ms, Exce
 
    AutoLocker al(m);
 
-   // no path?
-   if (!sftp_connected_unlocked()) {
-      xsink->raiseException(SFTPCLIENT_NOT_CONNECTED, "the SFTPClient object is not connected");
+   // try to make an implicit connection
+   if (!sftp_connected_unlocked() && sftp_connect_unlocked(timeout_ms, xsink))
       return -2;
-   }
 
    std::string pstr;
    if (dir[0] == '/')
@@ -324,11 +479,9 @@ int SFTPClient::sftp_rmdir(const char* dir, int timeout_ms, ExceptionSink* xsink
 
    AutoLocker al(m);
 
-   // no path?
-   if (!sftp_connected_unlocked()) {
-      xsink->raiseException(SFTPCLIENT_NOT_CONNECTED, "the SFTPClient object is not connected");
+   // try to make an implicit connection
+   if (!sftp_connected_unlocked() && sftp_connect_unlocked(timeout_ms, xsink))
       return -2;
-   }
 
    std::string pstr;
    if (dir[0] == '/')
@@ -354,11 +507,9 @@ int SFTPClient::sftp_rename(const char* from, const char* to, int timeout_ms, Ex
 
    AutoLocker al(m);
 
-   // no path?
-   if (!sftp_connected_unlocked()) {
-      xsink->raiseException(SFTPCLIENT_NOT_CONNECTED, "not connected");
+   // try to make an implicit connection
+   if (!sftp_connected_unlocked() && sftp_connect_unlocked(timeout_ms, xsink))
       return -2;
-   }
 
    std::string fstr, tstr;
    fstr = absolute_filename(this, from);
@@ -382,11 +533,9 @@ int SFTPClient::sftp_unlink(const char* file, int timeout_ms, ExceptionSink* xsi
 
    AutoLocker al(m);
 
-   // no path?
-   if (!sftp_connected_unlocked()) {
-      xsink->raiseException(SFTPCLIENT_NOT_CONNECTED, "not connected");
+   // try to make an implicit connection
+   if (!sftp_connected_unlocked() && sftp_connect_unlocked(timeout_ms, xsink))
       return -2;
-   }
 
    std::string fstr;
    if (file[0] == '/')
@@ -414,11 +563,9 @@ QoreStringNode* SFTPClient::sftp_chdir(const char* nwd, int timeout_ms, Exceptio
 
    AutoLocker al(m);
 
-   // no path?
-   if (!sftp_connected_unlocked()) {
-      xsink->raiseException(SFTPCLIENT_NOT_CONNECTED, "not connected");
+   // try to make an implicit connection
+   if (!sftp_connected_unlocked() && sftp_connect_unlocked(timeout_ms, xsink))
       return 0;
-   }
 
    // calc the path. if it starts with '/', replace with nwd
    std::string npath;
@@ -544,10 +691,9 @@ int SFTPClient::sftp_connect(int timeout_ms, ExceptionSink* xsink) {
 BinaryNode *SFTPClient::sftp_getFile(const char* file, int timeout_ms, ExceptionSink* xsink) {
    AutoLocker al(m);
 
-   if (!sftp_connected_unlocked()) {
-      xsink->raiseException(SFTPCLIENT_NOT_CONNECTED, "not connected");
-      return NULL;
-   }
+   // try to make an implicit connection
+   if (!sftp_connected_unlocked() && sftp_connect_unlocked(timeout_ms, xsink))
+      return 0;
 
    std::string fname = absolute_filename(this, file);
 
@@ -613,10 +759,9 @@ BinaryNode *SFTPClient::sftp_getFile(const char* file, int timeout_ms, Exception
 QoreStringNode *SFTPClient::sftp_getTextFile(const char* file, int timeout_ms, const QoreEncoding *encoding, ExceptionSink* xsink) {
    AutoLocker al(m);
 
-   if (!sftp_connected_unlocked()) {
-      xsink->raiseException(SFTPCLIENT_NOT_CONNECTED, "This action can only be performed if the client is connected");
-      return NULL;
-   }
+   // try to make an implicit connection
+   if (!sftp_connected_unlocked() && sftp_connect_unlocked(timeout_ms, xsink))
+      return 0;
 
    std::string fname = absolute_filename(this, file);
 
@@ -682,10 +827,9 @@ QoreStringNode *SFTPClient::sftp_getTextFile(const char* file, int timeout_ms, c
 qore_size_t SFTPClient::sftp_putFile(const char* outb, qore_size_t towrite, const char* fname, int mode, int timeout_ms, ExceptionSink* xsink) {
    AutoLocker al(m);
 
-   if (!sftp_connected_unlocked()) {
-      xsink->raiseException(SFTPCLIENT_NOT_CONNECTED, "This action can only be performed if the client is connected");
+   // try to make an implicit connection
+   if (!sftp_connected_unlocked() && sftp_connect_unlocked(timeout_ms, xsink))
       return -1;
-   }
 
    std::string file = absolute_filename(this, fname);
 
@@ -761,10 +905,9 @@ int SFTPClient::sftp_getAttributes(const char* fname, LIBSSH2_SFTP_ATTRIBUTES *a
 
    AutoLocker al(m);
 
-   if (!sftp_connected_unlocked()) {
-      xsink->raiseException(SFTPCLIENT_NOT_CONNECTED, "This action can only be performed if the client is connected");
+   // try to make an implicit connection
+   if (!sftp_connected_unlocked() && sftp_connect_unlocked(timeout_ms, xsink))
       return -3;
-   }
 
    if (!fname || !fname[0]) {
       xsink->raiseException("SFTPCLIENT-PARAMETER-ERROR", "no file given");

@@ -86,6 +86,7 @@ public:
    DLLLOCAL QoreStringNode *sftp_path();
    DLLLOCAL QoreStringNode *sftp_chdir(const char* nwd, int timeout_ms, ExceptionSink* xsink);
    DLLLOCAL QoreHashNode *sftp_list(const char* path, int timeout_ms, ExceptionSink* xsink);
+   DLLLOCAL QoreListNode *sftp_list_full(const char* path, int timeout_ms, ExceptionSink* xsink);
    DLLLOCAL int sftp_mkdir(const char* dir, const int mode, int timeout_ms, ExceptionSink* xsink);
    DLLLOCAL int sftp_rmdir(const char* dir, int timeout_ms, ExceptionSink* xsink);
    DLLLOCAL int sftp_rename(const char* from, const char* to, int timeout_ms, ExceptionSink* xsink);

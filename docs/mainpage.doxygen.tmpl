@@ -96,6 +96,9 @@ stdout.printf("exit status: %d\n", $chan.getExitStatus());@endcode
 
     @subsection v0981 Version 0.9.8.1
     - closed some gaps in the non-blocking I/O solution introduced in the last release
+    - implemented implicit connections for the @ref Qore::SSH2::SFTPClient class
+    - implemented the @ref Qore::SSH2::SFTPClient::listFull() method
+    - implemented the @ref Qore::SSH2::SSH2Base::connected() method
 
     @subsection v098 Version 0.9.8
     - default timeout of 60 seconds added to connect methods to avoid hanging connections indefinitely

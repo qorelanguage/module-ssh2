@@ -115,3 +115,15 @@ nothing SSH2Base::setPassword(string pass) {
 nothing SSH2Base::setKeys(string priv_key, *string pub_key) [dom=FILESYSTEM] {
    myself->setKeys(priv_key->getBuffer(), pub_key ? pub_key->getBuffer() : 0, xsink);
 }
+
+//! returns @ref Qore::True "True" if the session is connected, @ref Qore::False "False" if not
+/** @return @ref Qore::True "True" if the session is connected, @ref Qore::False "False" if not
+
+    @par Example:
+    @code my bool $b = $sftpclient.connected(); @endcode
+
+    @since ssh2 0.9.8.1
+ */
+bool SSH2Base::connected() [flags=CONSTANT] {
+  return myself->ssh_connected();
+}

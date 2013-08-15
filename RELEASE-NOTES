@@ -4,6 +4,9 @@ version 0.9.8.1
 
 * closed some gaps in the non-blocking I/O solution introduced in the last
   release
+* implemented implicit connections for the SFTPClient class
+* implemented the SFTPClient::listFull() method
+* implemented the SSH2Base::connected() method
 
 
 *************
