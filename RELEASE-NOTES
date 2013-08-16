@@ -1,6 +1,6 @@
-***************
-version 0.9.8.1
-***************
+*************
+version 0.9.9
+*************
 
 * closed some gaps in the non-blocking I/O solution introduced in the last
   release
@@ -9,8 +9,8 @@ version 0.9.8.1
 * implemented the SSH2Base::connected() method
 * when errors occur in the SFTPClient class, mark the connection as closed if
   possible
-* made cwd persistent across connections to better deal with implicit
-  disconnections and reconnections
+* made cwd persistent in the SFTPClient class across connections to better deal
+  with implicit disconnections and reconnections
 
 
 *************
