@@ -137,6 +137,7 @@ sub sftp_test_intern(SFTPClient $sc) {
     
     test_value($info.connected, True, "SFTPClient::info()");
     test_value(type($sc.list(NOTHING, $timeout)), Type::Hash, "SFTPClient::list()");
+    test_value(type($sc.listFull(NOTHING, $timeout)), Type::List, "SFTPClient::listFull()");
 
     # create a file: seems that sshd ignores the mode when creating a file
     my int $rc = $sc.putFile(FileContents, $fn, NOTHING, $timeout);

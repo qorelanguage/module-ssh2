@@ -101,6 +101,7 @@ stdout.printf("exit status: %d\n", $chan.getExitStatus());@endcode
     - implemented the @ref Qore::SSH2::SSH2Base::connected() method
     - when errors occur in the SFTPClient class, the connection is marked as closed if the connection has been terminated
     - made cwd persistent across connections to better deal with implicit disconnections and reconnections
+    - use keepalive by default to try and maintain persistent connections
 
     @subsection v098 Version 0.9.8
     - default timeout of 60 seconds added to connect methods to avoid hanging connections indefinitely

@@ -1,3 +1,44 @@
+2013-08-16 08:36  david_nichols
+
+	* RELEASE-NOTES, configure.ac, docs/mainpage.doxygen.tmpl,
+	  qore-ssh2-module.spec: updated version to 0.9.9
+
+2013-08-15 18:41  david_nichols
+
+	* RELEASE-NOTES, docs/mainpage.doxygen.tmpl, src/SFTPClient.cpp,
+	  src/SSH2Client.cpp, src/SSH2Client.h: - when errors occur in the
+	  SFTPClient class, the connection is marked as closed if the
+	  connection has been terminated
+	  - made cwd persistent across connections to better deal with
+	  implicit disconnections and reconnections
+
+2013-08-15 16:15  david_nichols
+
+	* RELEASE-NOTES, docs/mainpage.doxygen.tmpl, src/QC_SFTPClient.qpp,
+	  src/QC_SSH2Base.qpp, src/SFTPClient.cpp, src/SFTPClient.h: -
+	  implemented implicit connections for the SFTPClient class
+	  - implemented the SFTPClient::listFull() method
+	  - implemented the SSH2Base::connected() method
+
+2013-08-05 10:27  david_nichols
+
+	* test/ssh2-test.q: cosmetic fix to usage text
+
+2013-08-05 10:24  david_nichols
+
+	* RELEASE-NOTES, configure.ac, docs/mainpage.doxygen.tmpl,
+	  qore-ssh2-module.spec, src/SSH2Client.cpp, src/SSH2Client.h:
+	  updated module version to 0.9.8.1 and made additional fixes to
+	  non-blocking I/O in ssh2 session initialization
+
+2013-08-03 17:14  david_nichols
+
+	* src/ssh2-module.cpp: compile fixes for older versions of libssh2
+
+2013-08-03 16:06  david_nichols
+
+	* ChangeLog: updated ChangeLog for release
+
 2013-07-04 11:53  subik
 
 	* docs/mainpage.doxygen.tmpl, src/QC_SFTPClient.qpp,

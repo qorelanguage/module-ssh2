@@ -11,6 +11,7 @@ version 0.9.9
   possible
 * made cwd persistent in the SFTPClient class across connections to better deal
   with implicit disconnections and reconnections
+* use keepalive by default to try and maintain persistent connections
 
 
 *************

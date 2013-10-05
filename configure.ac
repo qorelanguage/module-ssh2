@@ -334,6 +334,14 @@ else
     else
        AC_MSG_RESULT([no])
     fi
+
+    AC_MSG_CHECKING([for libssh2_keepalive_config()])
+    if test -n "`grep libssh2_keepalive_config $libssh2h 2>/dev/null`"; then
+       AC_MSG_RESULT([yes])
+       AC_DEFINE(HAVE_LIBSSH2_KEEPALIVE_CONFIG, 1, [define if libssh2_keepalive_config() is available])
+    else
+       AC_MSG_RESULT([no])
+    fi
 fi
 
 #################
