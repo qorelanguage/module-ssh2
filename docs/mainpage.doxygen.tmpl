@@ -6,7 +6,11 @@
 
     The ssh2 module provides Qore the possibility to communicate with sshd servers via the <a href="http://en.wikipedia.org/wiki/Secure_Shell#Version_2.x">ssh2 protocol</a>; the underlying functionality is provided by <a href="http://www.libssh2.org">libssh2</a>.
 
-    This module is released under the <a href="http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html">LGPL 2.1</a> and is tagged as such in the module's header (meaning it can be loaded unconditionally regardless of how the %Qore library was initialized).  This version of the module requires Qore 0.8.1+ to compile and run.
+    This module is released under a choice of two licenses:
+    - <a href="http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html">LGPL 2.1</a>
+    - MIT (see COPYING.MIT in the source distribution for more information)
+    .
+    The module is tagged as such in the module's header (meaning it can be loaded unconditionally regardless of how the %Qore library was initialized).  This version of the module requires Qore 0.8.1+ to compile and run.
 
     To use the module in a %Qore script, use the \c %%requires directive as follows:
     @code %requires ssh2 @endcode
@@ -102,6 +106,7 @@ stdout.printf("exit status: %d\n", $chan.getExitStatus());@endcode
     - when errors occur in the SFTPClient class, the connection is marked as closed if the connection has been terminated
     - made cwd persistent across connections to better deal with implicit disconnections and reconnections
     - use keepalive by default to try and maintain persistent connections
+    - released also under the MIT licenses (in addition to LGPL 2.1)
 
     @subsection v098 Version 0.9.8
     - default timeout of 60 seconds added to connect methods to avoid hanging connections indefinitely

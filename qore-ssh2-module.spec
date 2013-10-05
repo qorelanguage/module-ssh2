@@ -81,7 +81,7 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-,root,root,-)
 %{module_dir}
-%doc COPYING README RELEASE-NOTES ChangeLog AUTHORS
+%doc COPYING.LGPL COPYING.MIT README RELEASE-NOTES ChangeLog AUTHORS
 
 %package doc
 Summary: SSH2 module for Qore

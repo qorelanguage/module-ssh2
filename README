@@ -8,6 +8,11 @@ This module provides access to ssh2 sessions and the sftp protocol via libssh2
 This version requires qore 0.8.5+ as it requires qpp to build (qpp is the Qore
 Pre-Processor)
 
+LICENSE
+-------
+This module is released under a choice of two licenses: LGPL 2.1 and MIT, see
+COPYING.LGPL and COPYING.MIT for more information
+
 BINARIES
 --------
 For Linux RPMs for many distributions, see the opensuse build service:

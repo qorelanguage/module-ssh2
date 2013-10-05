@@ -11,7 +11,7 @@ noinst_HEADERS = src/ssh2-module.h \
 	src/SSH2Channel.h \
 	src/QC_SSH2Base.h
 
-EXTRA_DIST = COPYING ChangeLog AUTHORS README \
+EXTRA_DIST = COPYING.LGPL COPYING.MIT ChangeLog AUTHORS README \
 	RELEASE-NOTES \
 	src/QC_SSH2Base.qpp \
 	src/QC_SSH2Client.qpp \
