@@ -45,7 +45,59 @@ DLLLOCAL extern qore_classid_t CID_SFTP_CLIENT;
 // the mask for user/group/other permissions
 #define SFTP_UGOMASK ((unsigned long)(LIBSSH2_SFTP_S_IRWXU | LIBSSH2_SFTP_S_IRWXG | LIBSSH2_SFTP_S_IRWXO))
 
+class SFTPClient;
+
+class QSftpHelper {
+private:
+   LIBSSH2_SFTP_HANDLE* sftp_handle;
+   SFTPClient* client;
+   const char* errstr;
+   const char* meth;
+   int timeout_ms;
+   ExceptionSink* xsink;
+
+   DLLLOCAL int closeIntern();
+
+public:
+   DLLLOCAL QSftpHelper(SFTPClient* c, const char* e, const char* m, int to, ExceptionSink* xs) : sftp_handle(0), client(c), errstr(e), meth(m), timeout_ms(to), xsink(xs) {
+   }
+
+   DLLLOCAL ~QSftpHelper() {
+      if (sftp_handle)
+         closeIntern();
+   }
+
+   DLLLOCAL int waitSocket();
+
+   DLLLOCAL operator bool() const {
+      return (bool)sftp_handle;
+   }
+
+   DLLLOCAL LIBSSH2_SFTP_HANDLE* operator*() const {
+      return sftp_handle;
+   }
+
+   DLLLOCAL void assign(LIBSSH2_SFTP_HANDLE* h) {
+      assert(!sftp_handle);
+      sftp_handle = h;
+   }
+
+   DLLLOCAL void tryClose() {
+      if (sftp_handle) {
+         closeIntern();
+         sftp_handle = 0;
+      }
+   }
+   
+   DLLLOCAL int close() {
+      return closeIntern();
+   }
+
+   DLLLOCAL void err(const char* fmt, ...);
+};
+
 class SFTPClient : public SSH2Client {
+   friend class QSftpHelper;
 private:
 
 protected:
@@ -57,7 +109,7 @@ protected:
    DLLLOCAL int sftp_connect_unlocked(int timeout_ms, ExceptionSink* xsink);
    DLLLOCAL int sftp_disconnect_unlocked(bool force, int timeout_ms = DEFAULT_TIMEOUT, ExceptionSink* xsink = 0);
 
-   DLLLOCAL void do_session_err_unlocked(ExceptionSink* xsink, const char* fmt, ...);
+   DLLLOCAL void do_session_err_unlocked(ExceptionSink* xsink, QoreStringNode* desc);
    DLLLOCAL void do_shutdown(int timeout_ms = DEFAULT_TIMEOUT, ExceptionSink* xsink = 0);
 
 public:

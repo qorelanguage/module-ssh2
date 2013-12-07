@@ -1,3 +1,10 @@
+***********
+version 1.0
+***********
+
+* fixed crashing bugs handling errors and handle scope in the SFTPClient class
+
+
 *************
 version 0.9.9
 *************
