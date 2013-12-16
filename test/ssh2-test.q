@@ -196,23 +196,23 @@ sub sftp_test_intern(SFTPClient $sc) {
 }
 
 sub sftp_test(string $url) {
-    my SFTPClient $sc($url);
-    if ($o.privkey.val())
-        $sc.setKeys($o.privkey);
-    
-    $sc.connect($timeout);
-
     my Counter $c();
 
-    my code $test = sub () {
-        on_exit $c.dec();
-        my int $iters = $o.iters;
-        while ($iters--) {
-            sftp_test_intern($sc);
-        }
-    };
-
     while ($o.threads--) {
+        my SFTPClient $sc($url);
+        if ($o.privkey.val())
+            $sc.setKeys($o.privkey);
+    
+        $sc.connect($timeout);
+
+        my code $test = sub () {
+            on_exit $c.dec();
+            my int $iters = $o.iters;
+            while ($iters--) {
+                sftp_test_intern($sc);
+            }
+        };
+
         $c.inc();
         background $test();
     }

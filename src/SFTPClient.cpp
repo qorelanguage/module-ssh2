@@ -580,7 +580,7 @@ QoreStringNode* SFTPClient::sftp_chdir(const char* nwd, int timeout_ms, Exceptio
    std::string npath;
    if (!nwd)
       npath = sftppath;
-   else if(nwd[0] == '/')
+   else if (nwd[0] == '/')
       npath = std::string(nwd);
    else
       npath = sftppath + "/" + std::string(nwd);
@@ -589,11 +589,11 @@ QoreStringNode* SFTPClient::sftp_chdir(const char* nwd, int timeout_ms, Exceptio
 
    // returns the amount of chars
    int rc;
-   while ((rc = libssh2_sftp_realpath(sftp_session, npath.c_str(), buff, sizeof(buff)-1)) == LIBSSH2_ERROR_EAGAIN) {
+   while ((rc = libssh2_sftp_symlink_ex(sftp_session, npath.c_str(), npath.size(), buff, sizeof(buff) - 1, LIBSSH2_SFTP_REALPATH)) == LIBSSH2_ERROR_EAGAIN) {
       if (qh.waitSocket())
          return 0;
    }
-   if (rc < 0) {
+   if (rc <= 0) {
       qh.err("failed to retrieve the remote path for: '%s'", npath.c_str());
       return 0;
    }
@@ -675,7 +675,7 @@ int SFTPClient::sftp_connect_unlocked(int timeout_ms, ExceptionSink* xsink) {
       // get the cwd for the path
       char buff[PATH_MAX];
       // returns the amount of chars
-      while ((rc = libssh2_sftp_realpath(sftp_session, ".", buff, sizeof(buff) - 1)) == LIBSSH2_ERROR_EAGAIN) {
+      while ((rc = libssh2_sftp_symlink_ex(sftp_session, ".", 1, buff, sizeof(buff) - 1, LIBSSH2_SFTP_REALPATH)) == LIBSSH2_ERROR_EAGAIN) {
          if (qh.waitSocket())
             return -1;
       }

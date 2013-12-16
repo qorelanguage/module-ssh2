@@ -90,7 +90,10 @@ public:
    }
    
    DLLLOCAL int close() {
-      return closeIntern();
+      int rc = closeIntern();
+      if (!rc)
+         sftp_handle = 0;
+      return rc;
    }
 
    DLLLOCAL void err(const char* fmt, ...);
