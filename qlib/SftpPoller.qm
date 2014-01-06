@@ -49,6 +49,44 @@ module SftpPoller {
     To use this class, subclass the @ref SftpPoller::SftpPoller "SftpPoller" class and implement the @ref SftpPoller::SftpPoller::fileEvent()
     method.
 
+    @section sftppollerexamples SftpPoller Module Examples
+
+    The following simple example will poll for files and then print out the files polled (as well as all info, detail, and debug messages) and exit immediately:
+    @code
+%requires ssh2
+%requires SftpPoller
+
+class MySftpPoller inherits SftpPoller {
+    constructor(SFTPClient $sc, hash $opts) : SftpPoller($sc, $opts) {
+    }
+
+    nothing fileEvent(list $l) {
+        printf("GOT FILES: %y\n", $l);
+        printf("exiting...\n");
+        $.stopNoWait();
+    }
+}
+
+my code $info = sub (string $msg) { printf("INFO: %s\n", $msg); };
+my code $detail = sub (string $msg) { printf("DETAIL: %s\n", $msg); };
+my code $debug = sub (string $msg) { printf("DEBUG: %s\n", $msg); };
+
+my hash $opts = (
+    "log_info": $info,
+    "log_detail": $detail,
+    "log_debug": $debug,
+    );
+
+my SftpClient $sc("sftp://user@pass:localhost");
+my SftpPoller $poller($sc, $opts);
+$poller.waitStop();
+    @endcode
+
+    Note that @ref SftpPoller::SftpPoller::stopNoWait() "SftpPoller::stopNoWait()" was called in the event thread because calling 
+    @ref SftpPoller::SftpPoller::stop() "SftpPoller::stop()" in the event thread would cause an exception to be thrown.
+
+    A useful poller class would implement the @ref SftpPoller::SftpPoller::fileEvent() "SftpPoller::fileEvent()" method which would transfer and delete / move / rename the affected files so that they would not be acquired on the next poll.
+
     @section sftppollerrelnotes SftpPoller Module Release Notes
 
     @section sftppollerv1_0 Version 1.0
@@ -463,8 +501,22 @@ public namespace SftpPoller {
             return $.start_thread ? call_function($.start_thread, \$.run()) : background $.run();
         }
 
+        #! stops the polling operation, returns immediately
+        /** @see stop()
+        */
+        stopNoWait() {
+            $.m.lock();
+            on_exit $.m.unlock();
+
+            $.run = False;
+        }
+
         #! stops the polling operation, returns when the polling operation has been stopped
         /** if polling was not in progress then this method returns immediately
+
+            @throw THREAD-ERROR this exception is thrown if this method is called from the event thread since it would result in a deadlock
+
+            @see stopNoWait()
         */
         stop() {
             if (gettid() == $.tid)
@@ -478,6 +530,9 @@ public namespace SftpPoller {
         }
 
         #! waits indefinitely for the polling operation to stop; if polling was not in progress then this method returns immediately
+        /**
+            @throw THREAD-ERROR this exception is thrown if this method is called from the event thread since it would result in a deadlock
+        */
         waitStop() {
             if (gettid() == $.tid)
                 throw "THREAD-ERROR", sprintf("cannot call SftpPoller::waitStop() from the event thread (%d)", $.tid);
@@ -485,6 +540,9 @@ public namespace SftpPoller {
         }
 
         #! starts the polling operation inline (not in a background thread)
+        /** 
+            @throw SFTPPOLLER-ERROR this exception is thrown if polling is already in progress
+        */
         startInline() {
             {
                 $.m.lock();
@@ -519,10 +577,12 @@ public namespace SftpPoller {
                 try {
                     if ($.runOnce())
                         continue;
-                    $.sleep ? call_function($.sleep, $.poll_interval) : sleep($.poll_interval);
+                    if ($.run)
+                        $.sleep ? call_function($.sleep, $.poll_interval) : sleep($.poll_interval);
                 } catch ($ex) {
                     $.logInfo("Cannot get file list from %y: %s: %s; waiting %y for next try", $.path, $ex.err, $ex.desc, ErrorDelay);
-                    $.sleep ? call_function($.sleep, ErrorDelay) : sleep(ErrorDelay);
+                    if ($.run)
+                        $.sleep ? call_function($.sleep, ErrorDelay) : sleep(ErrorDelay);
                 }
             }
             
@@ -532,7 +592,10 @@ public namespace SftpPoller {
         #! called whenever matching files are polled with the list of matching file names
         abstract fileEvent(list $files);
 
-        #! checks a path on the local file system; throws a \c DIR-ERROR exception if the local path does not exist or should be writable and is not
+        #! checks a path on the local file system
+        /**
+            @throw DIR-ERROR this exception is thrown if the local path does not exist, is not readable, is not a directory, or should be writable and is not
+        */
         static checkPath(string $path, string $type, bool $write = False) {
             my *hash $h = hstat($path);
             if (!exists $h)

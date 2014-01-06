@@ -21,7 +21,7 @@ class MySftpPoller inherits SftpPoller {
     nothing fileEvent(list $l) {
         printf("GOT FILES: %y\n", $l);
         printf("exiting...\n");
-        background $.stop();
+        $.stopNoWait();
     }
 }
 
