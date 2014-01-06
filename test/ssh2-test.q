@@ -67,7 +67,7 @@ sub ssh_test(string $url) {
 
     my SSH2Client $sc($url);
 
-    if ($o.privkey.val())
+    if ($o.privkey)
         $sc.setKeys($o.privkey);
     
     $sc.connect();
@@ -200,7 +200,7 @@ sub sftp_test(string $url) {
 
     while ($o.threads--) {
         my SFTPClient $sc($url);
-        if ($o.privkey.val())
+        if ($o.privkey)
             $sc.setKeys($o.privkey);
     
         $sc.connect($timeout);

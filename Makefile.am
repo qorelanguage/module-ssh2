@@ -11,6 +11,8 @@ noinst_HEADERS = src/ssh2-module.h \
 	src/SSH2Channel.h \
 	src/QC_SSH2Base.h
 
+USER_MODULES = qlib/SftpPoller.qm
+
 EXTRA_DIST = COPYING.LGPL COPYING.MIT ChangeLog AUTHORS README \
 	RELEASE-NOTES \
 	src/QC_SSH2Base.qpp \
@@ -18,23 +20,37 @@ EXTRA_DIST = COPYING.LGPL COPYING.MIT ChangeLog AUTHORS README \
 	src/QC_SSH2Channel.qpp \
 	src/QC_SFTPClient.qpp \
 	test/ssh2-test.q \
+        $(USER_MODULES) \
 	qore-ssh2-module.spec
 
 ACLOCAL_AMFLAGS=-I m4
 
-if COND_DOXYGEN
-DOX = ssh2
-DOXYGEN_OUTPUT=docs/ssh2/html
+dist_modver_DATA = $(USER_MODULES)
 
+if COND_DOXYGEN
+DOX = ssh2 SftpPoller
+DOXYGEN_OUTPUT=docs/ssh2/html docs/SftpPoller/html
 DOXYFILES = docs/doxyfile docs/mainpage.doxygen
 DOXYFILES_SRC = docs/doxyfile.tmpl docs/footer_template.html
+QLIB_TMP_DOXYFILES = docs/qlib/SftpPoller.qm.dox.h docs/qlib/Doxyfile.SftpPoller docs/ssh2.tag docs/SftpPoller.tag
 QDX = qdx
-DX_CLEANFILES = ${DOXYFILES}
+DX_CLEANFILES = ${DOXYFILES} $(QLIB_TMP_DOXYFILES)
+
+docs/qlib/Doxyfile.SftpPoller: docs/qlib/Doxyfile.tmpl
+	$(QDX) -M=qlib/SftpPoller.qm:qlib/SftpPoller.qm.dox.h $< $@
+
+docs/qlib/SftpPoller.qm.dox.h: qlib/SftpPoller.qm
+	$(QDX) $< $@
+
+docs/SftpPoller/html: docs/qlib/SftpPoller.qm.dox.h docs/qlib/Doxyfile.SftpPoller
+	cd docs; $(DOXYGEN_CMD) qlib/Doxyfile.SftpPoller
+	$(QDX) --post docs/SftpPoller/html/*html
+	$(QDX) --post docs/SftpPoller/html/search/*html
 
 docs/ssh2/html: $(DOXYFILES)
 	cd docs; $(DOXYGEN_CMD) doxyfile;
-	$(QDX) --post $(DOXYGEN_OUTPUT)/*html
-	$(QDX) --post $(DOXYGEN_OUTPUT)/search/*html
+	$(QDX) --post docs/xml/html/*html
+	$(QDX) --post docs/xml/html/search/*html
 
 docs/mainpage.doxygen: docs/mainpage.doxygen.tmpl
 	$(QDX) -d $< $@
