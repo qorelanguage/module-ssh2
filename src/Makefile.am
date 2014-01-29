@@ -16,7 +16,7 @@ endif
 
 lib_LTLIBRARIES = ssh2.la
 ssh2_la_SOURCES = $(SSH2_SOURCES)
-ssh2_la_LDFLAGS = -module -avoid-version $(LIBSSH2_LDFLAGS) $(QORE_LDFLAGS)
+ssh2_la_LDFLAGS = -module -avoid-version $(QORE_LDFLAGS) $(LIBSSH2_LDFLAGS)
 
 AM_CPPFLAGS = $(LIBSSH2_CPPFLAGS) $(QORE_CPPFLAGS)
 
