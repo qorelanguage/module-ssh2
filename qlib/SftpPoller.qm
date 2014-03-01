@@ -36,7 +36,7 @@ module SftpPoller {
 }
 
 /*  Version History
-    * 2014-01-06 v1.0: David Nichols <david@qore.org>: initial version
+    * 2014-03-01 v1.0: David Nichols <david@qore.org>: initial version
 */
 
 /** @mainpage SftpPoller Module
@@ -46,12 +46,12 @@ module SftpPoller {
     The SftpPoller module implements an abstract class that will poll a remote directory with the SFTP protocol and return
     matching files.
 
-    To use this class, subclass the @ref SftpPoller::SftpPoller "SftpPoller" class and implement the @ref SftpPoller::SftpPoller::fileEvent()
+    To use this class, subclass the @ref SftpPoller::SftpPoller "SftpPoller" class and implement the @ref SftpPoller::SftpPoller::singleFileEvent()
     method.
 
     @section sftppollerexamples SftpPoller Module Examples
 
-    The following simple example will poll for files and then print out the files polled (as well as all info, detail, and debug messages) and exit immediately:
+    The following simple example will poll for files and then print out information for the files polled (as well as all info, detail, and debug messages) and exit immediately:
     @code
 %requires ssh2
 %requires SftpPoller
@@ -60,9 +60,9 @@ class MySftpPoller inherits SftpPoller {
     constructor(SFTPClient $sc, hash $opts) : SftpPoller($sc, $opts) {
     }
 
-    nothing fileEvent(list $l) {
-        printf("GOT FILES: %y\n", $l);
-        printf("exiting...\n");
+    nothing singleFileEvent(hash $fh) {
+        printf("GOT FILE: %y\n", $fh - "data" + ("data_type": $fh.data.type(), "data_size": $fh.data.size()));
+        # in this case, the polling stop operation will take effect after all the singleFileEvent() calls are made for the polling operation
         $.stopNoWait();
     }
 }
@@ -119,12 +119,13 @@ public namespace SftpPoller {
                 "poll_interval": 10,
                 "reopts": 0,
                 "timeout": 30s,
+                "binary": False,
                 );
 
             #! optional constructor hash keys
             const OptionalKeys = (
                 "path", "user", "pass", "keyfile", "regex_mask", "minage",
-                "encoding", "log_info", "log_detail", "log_debug",
+                "encoding", "log_info", "log_detail", "log_debug", "binary",
                 );
 
             #! all keys
@@ -152,6 +153,9 @@ public namespace SftpPoller {
             
             # path to the ssh private key in PEM format; one of \c "pass" or \c "keyfile" *must* be set
             *string $.keyfile;
+
+            # binary transfer flag (for singleFileEvent())
+            bool $.binary;
 
             # path to poll
             string $.path = ".";
@@ -203,6 +207,12 @@ public namespace SftpPoller {
 
             # optional sleep closure
             *code $.sleep;
+
+            # "get files" code
+            bool $.get_files;
+
+            # poll counter
+            int $.pollcnt = 0;
         }
 
         #! creates the SftpPoller object from the @ref Qore::SSH2::SFTPClient "SFTPClient" argument and configuration hash argument passed
@@ -214,6 +224,7 @@ public namespace SftpPoller {
             - \c timeout: connection timeout (default \c 30s)
             - \c minage: the minimum file age in seconds before a file will be acquired (default: 0)
             - \c encoding: the encoding for any text files received
+            - \c binary: if set to @ref Qore::True "True" then files are transferred in binary mode by default (with singleFileEvent() usage only), otherwise file data is returned in text format
             - \c log_info: a @ref closure "closure" or @ref call_reference "call reference" for logging important information; must accept a single string giving the log message
             - \c log_detail: a @ref closure "closure" or @ref call_reference "call reference" for logging detailed information; must accept a single string giving the log message
             - \c log_debug: a @ref closure "closure" or @ref call_reference "call reference" for logging verbose debgugging information; must accept a single string giving the log message
@@ -238,7 +249,7 @@ public namespace SftpPoller {
                 throw "SFTPPOLLER-CONSTRUCTOR-ERROR", sprintf("poll_interval cannot be <= 0 (val: %d)", $conf.poll_interval);
 
             my bool $re = False;
-            if (exists $conf.regex_mask) {
+            if ($conf.regex_mask) {
                 $.mask = remove $conf.regex_mask;
                 $re = True;
                 $conf -= "mask";
@@ -322,7 +333,7 @@ public namespace SftpPoller {
                 throw "SFTPPOLLER-CONSTRUCTOR-ERROR", sprintf("port cannot be <= 0 (val: %d)", $conf.port);
 
             my bool $re = False;
-            if (exists $conf.regex_mask) {
+            if ($conf.regex_mask) {
                 $.mask = remove $conf.regex_mask;
                 $re = True;
                 $conf -= "mask";
@@ -337,14 +348,14 @@ public namespace SftpPoller {
 
             # create SFTPClient object
             $.sftp = new SFTPClient($.host, $.port);
-            if (exists $.user)
+            if ($.user)
                 $.sftp.setUser($.user);
-            if (exists $.pass)
+            if ($.pass)
                 $.sftp.setPassword($.pass);
-            if (exists $.keyfile)
+            if ($.keyfile)
                 $.sftp.setKeys($.keyfile);
 
-            $.url = sprintf("%s@%s:%d", exists $.user ? $.user : "<none>", $.host, $.port);
+            $.url = sprintf("%s@%s:%d", $.user ? $.user : "<none>", $.host, $.port);
 
             if ($.mask)
                 $.logDetail("%s: file regex mask: %s", $.url, $.mask);
@@ -364,6 +375,11 @@ public namespace SftpPoller {
         #! stops the polling operation if in progress and destroys the object
         destructor() {
             $.stop();
+        }
+
+        #! returns the current poll count
+        int getPollCount() {
+            return $.pollcnt;
         }
 
         #! calls the \c "log_info" @ref closure "closure" or @ref call_reference "call reference" with important information
@@ -430,7 +446,19 @@ public namespace SftpPoller {
             return $.sftp.stat($path, $timeout ? $timeout : $.timeout);
         }
 
-        #! returns a list of file name strings matching any file name mask set for the object
+        #! returns a list of file hashes matching any file name mask set for the object
+        /** @param sort the sort option for the list returned
+            @param order the ordering of sorted data returned
+
+            @return a list of file hashes with the following keys in each list element:
+            - \c name: the name of the file, link, or directory
+            - \c size: the size of the file in bytes
+            - \c uid: the UID of the owner of the file
+            - \c gid: the GID of the owner of the file
+            - \c mode: the permissions / mode of the file
+            - \c type: the type of file; one of: \c "REGULAR", \c "DIRECTORY", \c "SYMBOLIC-LINK", \c "BLOCK-DEVICE", \c "CHARACTER-DEVICE", \c "FIFO", \c "SYMBOLIC-LINK", \c "SOCKET", or \c "UNKNOWN"
+            - \c perm: a string giving UNIX-style permissions for the file (ex: "-rwxr-xr-x")
+        */
         list getFiles(int $sort = SftpPoller::SortNone, int $order = SftpPoller::OrderAsc) {
             my list $l = (select $.sftp.listFull(NOTHING, $.timeout), $1.type == "REGULAR");
 
@@ -461,16 +489,14 @@ public namespace SftpPoller {
             # return list of files
             switch ($sort) {
                 case SftpPoller::SortNone: {
-                    # get list of just filenames
-                    $l = map $1.name, $l;
                     break;
                 }
 
                 # sort by file name
                 case SftpPoller::SortName: {
-                    # get list of just filenames
-                    $l = map $1.name, $l;
-                    $l = ($order == SftpPoller::OrderAsc ? sort($l) : sortDescending($l)); 
+                    # sort closure
+                    my code $sort = int sub (hash $l, hash $r) { return $l.name <=> $r.name; };
+                    $l = ($order == SftpPoller::OrderAsc ? sort($l, $sort) : sortDescending($l, $sort)); 
                     break;
                 }
 
@@ -560,10 +586,29 @@ public namespace SftpPoller {
 
         #! runs a single poll (useful for checking for errors inline before starting a background thread)
         bool runOnce() {
+            ++$.pollcnt;
+            $.get_files = True;
+
             my list $files = $.getFiles();
+
             if ($files) {
                 $.logDetail("got new files in %y: %y", $.path, $files);            
-                $.fileEvent($files);
+
+                if (!$.fileEvent($files)) {
+                    foreach my hash $fh in ($files) {
+                        # transfer file from server
+                        $.logInfo("%y: retrieving %s file data", $fh.name, $.binary ? "binary" : "text");
+                        my date $t1 = now_us();
+
+                        $.get_files = True;
+                        $fh.data = $.binary ? $.getFile($fh.name) : $.getTextFile($fh.name);
+                        $.logInfo("%y: retrieved %d bytes in %y", $fh.name, $fh.data.size(), now_us() - $t1);
+                        
+                        # make sure any errors after this point cause the polling operation to stop
+                        $.get_files = False;
+                        $.singleFileEvent($fh);
+                    }
+                }
                 return True;
             }
             return False;
@@ -579,18 +624,39 @@ public namespace SftpPoller {
                         continue;
                     if ($.run)
                         $.sleep ? call_function($.sleep, $.poll_interval) : sleep($.poll_interval);
-                } catch ($ex) {
-                    $.logInfo("Cannot get file list from %y: %s: %s; waiting %y for next try", $.path, $ex.err, $ex.desc, ErrorDelay);
-                    if ($.run)
-                        $.sleep ? call_function($.sleep, ErrorDelay) : sleep(ErrorDelay);
+                } catch (hash $ex) {
+                    if ($.get_files) {                        
+                        $.logInfo("SFTP error in %y: %s: %s; waiting %y for next try", $.path, $ex.err, $ex.desc, ErrorDelay);
+                        if ($.run)
+                            $.sleep ? call_function($.sleep, ErrorDelay) : sleep(ErrorDelay);                        
+                    }
+                    else {
+                        # error thrown in "post transfer" code
+                        $.logInfo("error in post transfer code; polling terminated: %s: %s", $ex.err, $ex.desc);
+                        rethrow;
+                    }
                 }
             }
             
             $.logInfo("polling finished");
         }
 
-        #! called whenever matching files are polled with the list of matching file names
-        abstract fileEvent(list $files);
+        #! called for each poll with a list of all files matched before transfer; if this method returns True, then the singleFileEvent method is not called
+        *bool fileEvent(list $l) {
+        }
+
+        #! called for each matching file individually whenever matching files are polled with the list of matching file names
+        /** @param $fih a hash of file data and information with the following keys:
+            - \c name: the name of the file, link, or directory
+            - \c size: the size of the file in bytes
+            - \c uid: the UID of the owner of the file
+            - \c gid: the GID of the owner of the file
+            - \c mode: the permissions / mode of the file
+            - \c type: the type of file; one of: \c "REGULAR", \c "DIRECTORY", \c "SYMBOLIC-LINK", \c "BLOCK-DEVICE", \c "CHARACTER-DEVICE", \c "FIFO", \c "SYMBOLIC-LINK", \c "SOCKET", or \c "UNKNOWN"
+            - \c perm: a string giving UNIX-style permissions for the file (ex: "-rwxr-xr-x")
+            - \c data: the file's data; this will be a string unless the \a "binary" option is set to @ref Qore::True "True", in which case this key is assigned to the files binary data
+        */
+        abstract singleFileEvent(hash $fih);
 
         #! checks a path on the local file system
         /**
@@ -598,7 +664,7 @@ public namespace SftpPoller {
         */
         static checkPath(string $path, string $type, bool $write = False) {
             my *hash $h = hstat($path);
-            if (!exists $h)
+            if (!$h)
                 throw "DIR-ERROR", sprintf("%y: %s path does not exist", $path, $type);
             if ($h.type != "DIRECTORY")
                 throw "DIR-ERROR", sprintf("%y: %s path is not a directory (%s)", $path, $type, $h.type);

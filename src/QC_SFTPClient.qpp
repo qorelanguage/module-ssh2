@@ -153,7 +153,7 @@ hash SFTPClient::list(*string path, timeout timeout = 60s) [flags=RET_VALUE_ONLY
     - \c uid: the UID of the owner of the file
     - \c gid: the GID of the owner of the file
     - \c mode: the permissions / mode of the file
-    - \c type: 
+    - \c type: the type of file; one of: \c "REGULAR", \c "DIRECTORY", \c "SYMBOLIC-LINK", \c "BLOCK-DEVICE", \c "CHARACTER-DEVICE", \c "FIFO", \c "SYMBOLIC-LINK", \c "SOCKET", or \c "UNKNOWN"
     - \c perm: a string giving UNIX-style permissions for the file (ex: "-rwxr-xr-x")
 
     @throw SFTPCLIENT-LIST-ERROR failed to list directory

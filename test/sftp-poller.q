@@ -18,9 +18,9 @@ class MySftpPoller inherits SftpPoller {
     constructor(SFTPClient $sc, hash $opts) : SftpPoller($sc, $opts) {
     }
 
-    nothing fileEvent(list $l) {
-        printf("GOT FILES: %y\n", $l);
-        printf("exiting...\n");
+    nothing singleFileEvent(hash $fh) {
+        printf("GOT FILE: %y\n", $fh - "data" + ("data_type": $fh.data.type(), "data_size": $fh.data.size()));
+        # in this case, the polling stop operation will take effect after all the singleFileEvent() calls are made for the polling operation
         $.stopNoWait();
     }
 }
