@@ -153,6 +153,8 @@ hash SFTPClient::list(*string path, timeout timeout = 60s) [flags=RET_VALUE_ONLY
     - \c uid: the UID of the owner of the file
     - \c gid: the GID of the owner of the file
     - \c mode: the permissions / mode of the file
+    - \c atime: the last accessed date/time of the file
+    - \c mtime: the last modified date/time of the file
     - \c type: the type of file; one of: \c "REGULAR", \c "DIRECTORY", \c "SYMBOLIC-LINK", \c "BLOCK-DEVICE", \c "CHARACTER-DEVICE", \c "FIFO", \c "SYMBOLIC-LINK", \c "SOCKET", or \c "UNKNOWN"
     - \c perm: a string giving UNIX-style permissions for the file (ex: "-rwxr-xr-x")
 
@@ -183,6 +185,7 @@ list SFTPClient::listFull(*string path, timeout timeout = 60s) [flags=RET_VALUE_
     - \c uid: (int) the userid of the file's owner
     - \c gid: (int) the groupid of the file
     - \c mode: (int) the mode of the file as an integer
+    - \c type: the type of file; one of: \c "REGULAR", \c "DIRECTORY", \c "SYMBOLIC-LINK", \c "BLOCK-DEVICE", \c "CHARACTER-DEVICE", \c "FIFO", \c "SYMBOLIC-LINK", \c "SOCKET", or \c "UNKNOWN"
     - \c permissions: (string) a string giving the symbolic mode of the file
 
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message   

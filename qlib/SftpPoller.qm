@@ -125,7 +125,8 @@ public namespace SftpPoller {
             #! optional constructor hash keys
             const OptionalKeys = (
                 "path", "user", "pass", "keyfile", "regex_mask", "minage",
-                "encoding", "log_info", "log_detail", "log_debug", "binary",
+                "encoding", "log_info", "log_detail", "log_debug", 
+                "start_thread", "sleep", "binary",
                 );
 
             #! all keys
@@ -154,9 +155,6 @@ public namespace SftpPoller {
             # path to the ssh private key in PEM format; one of \c "pass" or \c "keyfile" *must* be set
             *string $.keyfile;
 
-            # binary transfer flag (for singleFileEvent())
-            bool $.binary;
-
             # path to poll
             string $.path = ".";
 
@@ -168,6 +166,12 @@ public namespace SftpPoller {
 
             # run flag
             bool $.run = False;
+
+            # internal "get files" flag
+            bool $.get_files;
+
+            # internal poll counter
+            int $.pollcnt = 0;
 
             # start mutex
             Mutex $.m();
@@ -208,11 +212,8 @@ public namespace SftpPoller {
             # optional sleep closure
             *code $.sleep;
 
-            # "get files" code
-            bool $.get_files;
-
-            # poll counter
-            int $.pollcnt = 0;
+            # binary transfer flag (for singleFileEvent())
+            bool $.binary;
         }
 
         #! creates the SftpPoller object from the @ref Qore::SSH2::SFTPClient "SFTPClient" argument and configuration hash argument passed
@@ -456,6 +457,8 @@ public namespace SftpPoller {
             - \c uid: the UID of the owner of the file
             - \c gid: the GID of the owner of the file
             - \c mode: the permissions / mode of the file
+            - \c atime: the last accessed date/time of the file
+            - \c mtime: the last modified date/time of the file
             - \c type: the type of file; one of: \c "REGULAR", \c "DIRECTORY", \c "SYMBOLIC-LINK", \c "BLOCK-DEVICE", \c "CHARACTER-DEVICE", \c "FIFO", \c "SYMBOLIC-LINK", \c "SOCKET", or \c "UNKNOWN"
             - \c perm: a string giving UNIX-style permissions for the file (ex: "-rwxr-xr-x")
         */
@@ -594,7 +597,7 @@ public namespace SftpPoller {
             if ($files) {
                 $.logDetail("got new files in %y: %y", $.path, $files);            
 
-                if (!$.fileEvent($files)) {
+                if ($.fileEvent($files)) {
                     foreach my hash $fh in ($files) {
                         # transfer file from server
                         $.logInfo("%y: retrieving %s file data", $fh.name, $.binary ? "binary" : "text");
@@ -641,8 +644,9 @@ public namespace SftpPoller {
             $.logInfo("polling finished");
         }
 
-        #! called for each poll with a list of all files matched before transfer; if this method returns True, then the singleFileEvent method is not called
+        #! called for each poll with a list of all files matched before transfer; if this method returns False or @ref nothing, then the singleFileEvent method is not called
         *bool fileEvent(list $l) {
+            return True;
         }
 
         #! called for each matching file individually whenever matching files are polled with the list of matching file names
@@ -652,6 +656,8 @@ public namespace SftpPoller {
             - \c uid: the UID of the owner of the file
             - \c gid: the GID of the owner of the file
             - \c mode: the permissions / mode of the file
+            - \c atime: the last accessed date/time of the file
+            - \c mtime: the last modified date/time of the file
             - \c type: the type of file; one of: \c "REGULAR", \c "DIRECTORY", \c "SYMBOLIC-LINK", \c "BLOCK-DEVICE", \c "CHARACTER-DEVICE", \c "FIFO", \c "SYMBOLIC-LINK", \c "SOCKET", or \c "UNKNOWN"
             - \c perm: a string giving UNIX-style permissions for the file (ex: "-rwxr-xr-x")
             - \c data: the file's data; this will be a string unless the \a "binary" option is set to @ref Qore::True "True", in which case this key is assigned to the files binary data
