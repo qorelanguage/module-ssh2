@@ -3,7 +3,8 @@ version 1.0
 ***********
 
 * fixed crashing bugs handling errors and handle scope in the SFTPClient class
-
+* added the SftpPoller user module
+* force socket disconnect in case of a timeout error when trying to close a file descriptor
 
 *************
 version 0.9.9

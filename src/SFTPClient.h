@@ -56,7 +56,7 @@ private:
    int timeout_ms;
    ExceptionSink* xsink;
 
-   DLLLOCAL int closeIntern();
+   DLLLOCAL int closeIntern(bool final = false);
 
 public:
    DLLLOCAL QSftpHelper(SFTPClient* c, const char* e, const char* m, int to, ExceptionSink* xs) : sftp_handle(0), client(c), errstr(e), meth(m), timeout_ms(to), xsink(xs) {
@@ -64,7 +64,7 @@ public:
 
    DLLLOCAL ~QSftpHelper() {
       if (sftp_handle)
-         closeIntern();
+         closeIntern(true);
    }
 
    DLLLOCAL int waitSocket();
@@ -83,17 +83,12 @@ public:
    }
 
    DLLLOCAL void tryClose() {
-      if (sftp_handle) {
+      if (sftp_handle)
          closeIntern();
-         sftp_handle = 0;
-      }
    }
    
    DLLLOCAL int close() {
-      int rc = closeIntern();
-      if (!rc)
-         sftp_handle = 0;
-      return rc;
+      return closeIntern();
    }
 
    DLLLOCAL void err(const char* fmt, ...);

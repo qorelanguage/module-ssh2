@@ -1,11 +1,11 @@
 /* -*- indent-tabs-mode: nil -*- */
 /*
-  SFTPClient.cc
+  SFTPClient.cpp
 
   libssh2 SFTP client integration into qore
 
   Copyright 2009 Wolfgang Ritzinger
-  Copyright 2010 - 2013 Qore Technologies, sro
+  Copyright 2010 - 2014 Qore Technologies, sro
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -363,14 +363,14 @@ int SFTPClient::sftp_chmod(const char* file, const int mode, int timeout_ms, Exc
 
    assert(file);
 
+   AutoLocker al(m);
+
    QSftpHelper qh(this, SFTPCLIENT_CHMOD_ERROR, "SFTPClient::chmod", timeout_ms, xsink);
 
    if (!file || !file[0]) {
       qh.err("file argument is empty");
       return -3;
    }
-
-   AutoLocker al(m);
 
    // try to make an implicit connection
    if (!sftp_connected_unlocked() && sftp_connect_unlocked(timeout_ms, xsink))
@@ -436,14 +436,14 @@ int SFTPClient::sftp_chmod(const char* file, const int mode, int timeout_ms, Exc
 int SFTPClient::sftp_mkdir(const char* dir, const int mode, int timeout_ms, ExceptionSink* xsink) {
    assert(dir);
 
+   AutoLocker al(m);
+
    QSftpHelper qh(this, "SFTPCLIENT-MKDIR-ERROR", "SFTPClient::mkdir", timeout_ms, xsink);
 
    if (!dir || !dir[0]) {
       qh.err("directory name is empty");
       return -3;
    }
-
-   AutoLocker al(m);
 
    // try to make an implicit connection
    if (!sftp_connected_unlocked() && sftp_connect_unlocked(timeout_ms, xsink))
@@ -473,14 +473,14 @@ int SFTPClient::sftp_mkdir(const char* dir, const int mode, int timeout_ms, Exce
 int SFTPClient::sftp_rmdir(const char* dir, int timeout_ms, ExceptionSink* xsink) {
    assert(dir);
 
+   AutoLocker al(m);
+
    QSftpHelper qh(this, "SFTPCLIENT-RMDIR-ERROR", "SFTPClient::rmdir", timeout_ms, xsink);
 
    if (!dir || !dir[0]) {
       qh.err("directory name is empty");
       return -3;
    }
-
-   AutoLocker al(m);
 
    // try to make an implicit connection
    if (!sftp_connected_unlocked() && sftp_connect_unlocked(timeout_ms, xsink))
@@ -508,9 +508,9 @@ int SFTPClient::sftp_rmdir(const char* dir, int timeout_ms, ExceptionSink* xsink
 int SFTPClient::sftp_rename(const char* from, const char* to, int timeout_ms, ExceptionSink* xsink) {
    assert(from && to);
 
-   QSftpHelper qh(this, "SFTPCLIENT-RENAME-ERROR", "SFTPClient::rename", timeout_ms, xsink);
-
    AutoLocker al(m);
+
+   QSftpHelper qh(this, "SFTPCLIENT-RENAME-ERROR", "SFTPClient::rename", timeout_ms, xsink);
 
    // try to make an implicit connection
    if (!sftp_connected_unlocked() && sftp_connect_unlocked(timeout_ms, xsink))
@@ -536,9 +536,9 @@ int SFTPClient::sftp_rename(const char* from, const char* to, int timeout_ms, Ex
 int SFTPClient::sftp_unlink(const char* file, int timeout_ms, ExceptionSink* xsink) {
    assert(file);
 
-   QSftpHelper qh(this, "SFTPCLIENT-REMOVEFILE-ERROR", "SFTPClient::removeFile", timeout_ms, xsink);
-
    AutoLocker al(m);
+
+   QSftpHelper qh(this, "SFTPCLIENT-REMOVEFILE-ERROR", "SFTPClient::removeFile", timeout_ms, xsink);
 
    // try to make an implicit connection
    if (!sftp_connected_unlocked() && sftp_connect_unlocked(timeout_ms, xsink))
@@ -568,9 +568,9 @@ QoreStringNode* SFTPClient::sftp_chdir(const char* nwd, int timeout_ms, Exceptio
    char buff[PATH_MAX];
    *buff='\0';
 
-   QSftpHelper qh(this, "SFTPCLIENT-REMOVEFILE-ERROR", "SFTPClient::removeFile", timeout_ms, xsink);
-
    AutoLocker al(m);
+
+   QSftpHelper qh(this, "SFTPCLIENT-REMOVEFILE-ERROR", "SFTPClient::removeFile", timeout_ms, xsink);
 
    // try to make an implicit connection
    if (!sftp_connected_unlocked() && sftp_connect_unlocked(timeout_ms, xsink))
@@ -962,6 +962,13 @@ void SFTPClient::do_session_err_unlocked(ExceptionSink* xsink, QoreStringNode* d
    }
 }
 
+QoreHashNode *SFTPClient::sftp_info() {
+   AutoLocker al(m);
+   QoreHashNode *h = ssh_info_intern();
+   h->setKeyValue("path", sftppath.empty() ? 0 : new QoreStringNode(sftppath), 0);
+   return h;
+}
+
 void QSftpHelper::err(const char* fmt, ...) {
    tryClose();
 
@@ -980,24 +987,24 @@ void QSftpHelper::err(const char* fmt, ...) {
 }
 
 
-QoreHashNode *SFTPClient::sftp_info() {
-   AutoLocker al(m);
-   QoreHashNode *h = ssh_info_intern();
-   h->setKeyValue("path", sftppath.empty() ? 0 : new QoreStringNode(sftppath), 0);
-   return h;
-}
-
-int QSftpHelper::closeIntern() {
+int QSftpHelper::closeIntern(bool final) {
    assert(sftp_handle);
 
    // close the handle
    int rc;
    while ((rc = libssh2_sftp_close_handle(sftp_handle)) == LIBSSH2_ERROR_EAGAIN) {
       if (client->waitsocket_unlocked(xsink, SFTPCLIENT_TIMEOUT, errstr, meth, timeout_ms)) {
+         if (final) {
+            printd(0, "QSftpHelper::closeIntern() session %p: cannot close remote file descriptor, forcing session disconnect\n", client->ssh_session);
+            sftp_handle = 0;
+            client->sftp_disconnect_unlocked(true, 10, xsink);
+         }
          // note: memory leak here! we cannot close the handle due to the timeout
          break;
       }
    }
+   if (!rc)
+      sftp_handle = 0;
 
    return rc;
 }
