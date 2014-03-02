@@ -49,8 +49,8 @@ docs/SftpPoller/html: docs/qlib/SftpPoller.qm.dox.h docs/qlib/Doxyfile.SftpPolle
 
 docs/ssh2/html: $(DOXYFILES)
 	cd docs; $(DOXYGEN_CMD) doxyfile;
-	$(QDX) --post docs/xml/html/*html
-	$(QDX) --post docs/xml/html/search/*html
+	$(QDX) --post docs/ssh2/html/*html
+	$(QDX) --post docs/ssh2/html/search/*html
 
 docs/mainpage.doxygen: docs/mainpage.doxygen.tmpl
 	$(QDX) -d $< $@
