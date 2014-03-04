@@ -5,8 +5,8 @@
 
   Qore Programming Language
 
-  Copyright 2009 Wolfgang Ritzinger
-  Copyright 2010 - 2013 Qore Technologies, sro
+  Copyright (C) 2009 Wolfgang Ritzinger
+  Copyright (C) 2010 - 2014 Qore Technologies, sro
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -179,6 +179,10 @@ static QoreStringNode *ssh2_module_init() {
 
 static void ssh2_module_ns_init(QoreNamespace *rns, QoreNamespace *qns) {
    QORE_TRACE("ssh2_module_ns_init()");
+
+#ifdef LIBSSH2_INIT_NO_CRYPTO
+   libssh2_init(LIBSSH2_INIT_NO_CRYPTO);
+#endif
 
    qns->addInitialNamespace(ssh2ns.copy());
 }
