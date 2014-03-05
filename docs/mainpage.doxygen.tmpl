@@ -108,11 +108,11 @@ stdout.printf("exit status: %d\n", $chan.getExitStatus());@endcode
 
     @subsection v099 Version 0.9.9
     - closed some gaps in the non-blocking I/O solution introduced in the last release
-    - implemented implicit connections for the @ref Qore::SSH2::SFTPClient class
-    - implemented the @ref Qore::SSH2::SFTPClient::listFull() method
-    - implemented the @ref Qore::SSH2::SSH2Base::connected() method
-    - when errors occur in the SFTPClient class, the connection is marked as closed if the connection has been terminated
-    - made cwd persistent across connections to better deal with implicit disconnections and reconnections
+    - implemented implicit connections for the @ref Qore::SSH2::SFTPClient "SFTPClient" class
+    - implemented the @ref Qore::SSH2::SFTPClient::listFull() "SFTPClient::listFull()" method
+    - implemented the @ref Qore::SSH2::SSH2Base::connected() "SSH2Base::connected()" method
+    - when errors occur in the @ref Qore::SSH2::SFTPClient "SFTPClient" class, the connection is marked as closed if the connection has been terminated
+    - made the current working directory in the @ref Qore::SSH2::SFTPClient "SFTPClient" class persistent across connections to better deal with implicit disconnections and reconnections
     - use keepalive by default to try and maintain persistent connections
     - released also under the MIT licenses (in addition to LGPL 2.1)
 
@@ -120,7 +120,7 @@ stdout.printf("exit status: %d\n", $chan.getExitStatus());@endcode
     - default timeout of 60 seconds added to connect methods to avoid hanging connections indefinitely
     - non-blocking I/O implemented for all SFTPClient methods, default timeout set to 60s
     - send the file mode when opening files read-only in case broken servers will erroneously set the remote file's mode to 0 and then the file will not be readable
-    - @ref Qore::SSH2::SFTPClient::getTextFile() has new optional parameter: encoding
+    - @ref Qore::SSH2::SFTPClient::getTextFile() "SFTPClient::getTextFile()" has a new optional parameter: encoding
 
     @subsection v097 Version 0.9.7
     - an exception will be thrown if a key file is set and either the public or private key is not available or readable; previously such errors would cause hard-to-debug connection problems (for instance, see: http://comments.gmane.org/gmane.network.ssh.libssh2.devel/5873; note that the patch mentioned in the linked thread was subsequently reverted)
