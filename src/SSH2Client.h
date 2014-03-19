@@ -7,6 +7,7 @@
   Qore Programming Language
 
   Copyright 2009 Wolfgang Ritzinger
+  Copyright (C) 2010 - 2014 Qore Technologies, sro
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -30,6 +31,9 @@
 #include "ssh2-module.h"
 
 #include <qore/QoreSocket.h>
+#ifdef _QORE_HAS_QUEUE_OBJECT
+#include <qore/QoreQueue.h>
+#endif
 
 #include <time.h>
 #include <stdarg.h>
@@ -83,10 +87,11 @@ private:
 
    // set of connected channels
    channel_set_t channel_set;
+
+protected:
    // socket object for the connection
    QoreSocket socket;
 
-protected:
    /*
     * close session/connection
     * free ressources
@@ -202,7 +207,7 @@ protected:
    DLLLOCAL QoreObject *register_channel_unlocked(LIBSSH2_CHANNEL *channel);
 
    // to ensure thread-safe operations
-   QoreThreadLock m;
+   mutable QoreThreadLock m;
    LIBSSH2_SESSION* ssh_session;
 
 public:
@@ -233,6 +238,13 @@ public:
    DLLLOCAL QoreObject *openDirectTcpipChannel(ExceptionSink *xsink, const char *host, int port, const char *shost = "127.0.0.1", int sport = 22, int timeout_ms = -1);
    DLLLOCAL QoreObject *scpGet(ExceptionSink *xsink, const char *path, int timeout_ms = -1, QoreHashNode *statinfo = 0);
    DLLLOCAL QoreObject *scpPut(ExceptionSink *xsink, const char *path, size_t size, int mode = 0644, long mtime = 0, long atime = 0, int timeout_ms = -1);
+
+#ifdef _QORE_HAS_SOCKET_PERF_API
+   DLLLOCAL void clearWarningQueue(ExceptionSink* xsink);
+   DLLLOCAL void setWarningQueue(ExceptionSink* xsink, int64 warning_ms, int64 warning_bs, Queue* wq, AbstractQoreNode* arg, int64 min_ms = 1000);
+   DLLLOCAL QoreHashNode* getUsageInfo() const;
+   DLLLOCAL void clearStats();
+#endif
 };
 
 class BlockingHelper {

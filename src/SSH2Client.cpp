@@ -5,7 +5,7 @@
   libssh2 ssh2 client integration into qore
 
   Copyright 2009 Wolfgang Ritzinger
-  Copyright 2010 - 2013 Qore Technologies, sro
+  Copyright (C) 2010 - 2014 Qore Technologies, sro
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -258,6 +258,11 @@ const char *SSH2Client::getAuthenticatedWith() {
 
 void SSH2Client::deref(ExceptionSink *xsink) {
    if (ROdereference()) {
+#ifdef _QORE_HAS_SOCKET_PERF_API
+      // this function is only exported in versions of qore with the socket performance API
+      // and must be called before the QoreSocket object is destroyed
+      socket.cleanup(xsink);
+#endif
       delete this;
    }
 }
@@ -769,3 +774,25 @@ QoreObject *SSH2Client::scpPut(ExceptionSink *xsink, const char *path, size_t si
 
    return register_channel_unlocked(channel);   
 }
+
+#ifdef _QORE_HAS_SOCKET_PERF_API
+void SSH2Client::clearWarningQueue(ExceptionSink* xsink) {
+   AutoLocker al(m);
+   socket.clearWarningQueue(xsink);
+}
+
+void SSH2Client::setWarningQueue(ExceptionSink* xsink, int64 warning_ms, int64 warning_bs, Queue* wq, AbstractQoreNode* arg, int64 min_ms) {
+   AutoLocker al(m);
+   socket.setWarningQueue(xsink, warning_ms, warning_bs, wq, arg, min_ms);
+}
+
+QoreHashNode* SSH2Client::getUsageInfo() const {
+   AutoLocker al(m);
+   return socket.getUsageInfo();
+}
+
+void SSH2Client::clearStats() {
+   AutoLocker al(m);
+   socket.clearStats();
+}
+#endif

@@ -172,6 +172,11 @@ void SFTPClient::do_shutdown(int timeout_ms, ExceptionSink* xsink) {
  */
 void SFTPClient::deref(ExceptionSink* xsink) {
    if (ROdereference()) {
+#ifdef _QORE_HAS_SOCKET_PERF_API
+      // this function is only exported in versions of qore with the socket performance API
+      // and must be called before the QoreSocket object is destroyed
+      socket.cleanup(xsink);
+#endif
       delete this;
    }
 }
@@ -221,19 +226,25 @@ QoreHashNode *SFTPClient::sftp_list(const char* path, int timeout_ms, ExceptionS
 
    QSftpHelper qh(this, "SFTPCLIENT-LIST-ERROR", "SFTPClient::list", timeout_ms, xsink);
 
-   do {
-      qh.assign(libssh2_sftp_opendir(sftp_session, pstr.c_str()));
-      if (!qh) {
-         if (libssh2_session_last_errno(ssh_session) == LIBSSH2_ERROR_EAGAIN) {
-            if (qh.waitSocket())
+   {
+#ifdef _QORE_HAS_SOCKET_PERF_API
+      QoreSocketTimeoutHelper th(socket, "list");
+#endif
+
+      do {
+         qh.assign(libssh2_sftp_opendir(sftp_session, pstr.c_str()));
+         if (!qh) {
+            if (libssh2_session_last_errno(ssh_session) == LIBSSH2_ERROR_EAGAIN) {
+               if (qh.waitSocket())
+                  return 0;
+            }
+            else {
+               qh.err("error reading directory '%s'", pstr.c_str());
                return 0;
+            }
          }
-         else {
-            qh.err("error reading directory '%s'", pstr.c_str());
-            return 0;
-         }
-      }
-   } while (!qh);
+      } while (!qh);
+   }
 
    // create objects after only possible error
    ReferenceHolder<QoreListNode> files(new QoreListNode, xsink);
@@ -301,19 +312,25 @@ QoreListNode *SFTPClient::sftp_list_full(const char* path, int timeout_ms, Excep
 
    QSftpHelper qh(this, "SFTPCLIENT-LISTFULL-ERROR", "SFTPClient::listFull", timeout_ms, xsink);
 
-   do {
-      qh.assign(libssh2_sftp_opendir(sftp_session, pstr.c_str()));
-      if (!qh) {
-         if (libssh2_session_last_errno(ssh_session) == LIBSSH2_ERROR_EAGAIN) {
-            if (qh.waitSocket())
+   {
+#ifdef _QORE_HAS_SOCKET_PERF_API
+      QoreSocketTimeoutHelper th(socket, "list");
+#endif
+
+      do {
+         qh.assign(libssh2_sftp_opendir(sftp_session, pstr.c_str()));
+         if (!qh) {
+            if (libssh2_session_last_errno(ssh_session) == LIBSSH2_ERROR_EAGAIN) {
+               if (qh.waitSocket())
+                  return 0;
+            }
+            else {
+               qh.err("error reading directory '%s'", pstr.c_str());
                return 0;
+            }
          }
-         else {
-            qh.err("error reading directory '%s'", pstr.c_str());
-            return 0;
-         }
-      }
-   } while (!qh);
+      } while (!qh);
+   }
 
    // create objects after only possible error
    ReferenceHolder<QoreListNode> rv(new QoreListNode, xsink);
@@ -388,16 +405,22 @@ int SFTPClient::sftp_chmod(const char* file, const int mode, int timeout_ms, Exc
    LIBSSH2_SFTP_ATTRIBUTES attrs;
 
    int rc;
-   while ((rc = libssh2_sftp_stat(sftp_session, pstr.c_str(), &attrs)) == LIBSSH2_ERROR_EAGAIN) {
-      if (qh.waitSocket())
-         return -3;
+   {
+#ifdef _QORE_HAS_SOCKET_PERF_API
+      QoreSocketTimeoutHelper th(socket, "chmod");
+#endif
+
+      while ((rc = libssh2_sftp_stat(sftp_session, pstr.c_str(), &attrs)) == LIBSSH2_ERROR_EAGAIN) {
+         if (qh.waitSocket())
+            return -3;
+      }
    }
 
    if (rc < 0) {
       qh.err("libssh2_sftp_stat(%s) returned an error", pstr.c_str());
       return rc;
    }
-
+      
    // overwrite permissions
    if (!(attrs.flags & LIBSSH2_SFTP_ATTR_PERMISSIONS)) {
       qh.err("permissions not supported by sftp server");
@@ -408,17 +431,29 @@ int SFTPClient::sftp_chmod(const char* file, const int mode, int timeout_ms, Exc
    unsigned long newmode = (attrs.permissions & (-1^SFTP_UGOMASK)) | (mode & SFTP_UGOMASK);
    attrs.permissions = newmode;
 
-   // set the permissions (stat). it happens that we get a 'SFTP Protocol Error' so we check manually
-   while ((rc = libssh2_sftp_setstat(sftp_session, pstr.c_str(), &attrs)) == LIBSSH2_ERROR_EAGAIN) {
-      if (qh.waitSocket())
-         return -3;
+   {
+#ifdef _QORE_HAS_SOCKET_PERF_API
+      QoreSocketTimeoutHelper th(socket, "chmod");
+#endif
+
+      // set the permissions (stat). it happens that we get a 'SFTP Protocol Error' so we check manually
+      while ((rc = libssh2_sftp_setstat(sftp_session, pstr.c_str(), &attrs)) == LIBSSH2_ERROR_EAGAIN) {
+         if (qh.waitSocket())
+            return -3;
+      }
    }
 
    if (rc < 0) {
-      // re-read the attributes
-      while ((rc = libssh2_sftp_stat(sftp_session, pstr.c_str(), &attrs)) == LIBSSH2_ERROR_EAGAIN) {
-         if (qh.waitSocket())
-            return -3;
+      {
+#ifdef _QORE_HAS_SOCKET_PERF_API
+         QoreSocketTimeoutHelper th(socket, "chmod");
+#endif
+
+         // re-read the attributes
+         while ((rc = libssh2_sftp_stat(sftp_session, pstr.c_str(), &attrs)) == LIBSSH2_ERROR_EAGAIN) {
+            if (qh.waitSocket())
+               return -3;
+         }
       }
 
       // they are how they should be, so we are done
@@ -459,9 +494,16 @@ int SFTPClient::sftp_mkdir(const char* dir, const int mode, int timeout_ms, Exce
 
    // TODO: use proper modes for created dir
    int rc;
-   while ((rc = libssh2_sftp_mkdir(sftp_session, pstr.c_str(), mode)) == LIBSSH2_ERROR_EAGAIN) {
-      if (qh.waitSocket())
-         return -3;
+
+   {
+#ifdef _QORE_HAS_SOCKET_PERF_API
+      QoreSocketTimeoutHelper th(socket, "mkdir");
+#endif
+
+      while ((rc = libssh2_sftp_mkdir(sftp_session, pstr.c_str(), mode)) == LIBSSH2_ERROR_EAGAIN) {
+         if (qh.waitSocket())
+            return -3;
+      }
    }
 
    if (rc < 0)
@@ -495,10 +537,17 @@ int SFTPClient::sftp_rmdir(const char* dir, int timeout_ms, ExceptionSink* xsink
    BlockingHelper bh(this);
 
    int rc;
-   while ((rc = libssh2_sftp_rmdir(sftp_session, pstr.c_str())) == LIBSSH2_ERROR_EAGAIN) {
-      if (qh.waitSocket())
-         return -3;
+   {
+#ifdef _QORE_HAS_SOCKET_PERF_API
+      QoreSocketTimeoutHelper th(socket, "rmdir");
+#endif
+
+      while ((rc = libssh2_sftp_rmdir(sftp_session, pstr.c_str())) == LIBSSH2_ERROR_EAGAIN) {
+         if (qh.waitSocket())
+            return -3;
+      }
    }
+
    if (rc < 0)
       qh.err("libssh2_sftp_rmdir(%s) returned an error", pstr.c_str());
 
@@ -523,10 +572,17 @@ int SFTPClient::sftp_rename(const char* from, const char* to, int timeout_ms, Ex
    BlockingHelper bh(this);
 
    int rc;
-   while ((rc = libssh2_sftp_rename(sftp_session, fstr.c_str(), tstr.c_str())) == LIBSSH2_ERROR_EAGAIN) {
-      if (qh.waitSocket())
-         return -3;
+   {
+#ifdef _QORE_HAS_SOCKET_PERF_API
+      QoreSocketTimeoutHelper th(socket, "rename");
+#endif
+
+      while ((rc = libssh2_sftp_rename(sftp_session, fstr.c_str(), tstr.c_str())) == LIBSSH2_ERROR_EAGAIN) {
+         if (qh.waitSocket())
+            return -3;
+      }
    }
+
    if (rc < 0)
       qh.err("libssh2_sftp_rename(%s, %s) returned an error", fstr.c_str(), tstr.c_str());
 
@@ -553,9 +609,15 @@ int SFTPClient::sftp_unlink(const char* file, int timeout_ms, ExceptionSink* xsi
    BlockingHelper bh(this);
 
    int rc;
-   while ((rc = libssh2_sftp_unlink(sftp_session, fstr.c_str())) == LIBSSH2_ERROR_EAGAIN) {
-      if (qh.waitSocket())
-         return -3;
+   {
+#ifdef _QORE_HAS_SOCKET_PERF_API
+      QoreSocketTimeoutHelper th(socket, "unlink");
+#endif
+
+      while ((rc = libssh2_sftp_unlink(sftp_session, fstr.c_str())) == LIBSSH2_ERROR_EAGAIN) {
+         if (qh.waitSocket())
+            return -3;
+      }
    }
 
    if (rc < 0)
@@ -570,7 +632,7 @@ QoreStringNode* SFTPClient::sftp_chdir(const char* nwd, int timeout_ms, Exceptio
 
    AutoLocker al(m);
 
-   QSftpHelper qh(this, "SFTPCLIENT-REMOVEFILE-ERROR", "SFTPClient::removeFile", timeout_ms, xsink);
+   QSftpHelper qh(this, "SFTPCLIENT-CHDIR-ERROR", "SFTPClient::chdir", timeout_ms, xsink);
 
    // try to make an implicit connection
    if (!sftp_connected_unlocked() && sftp_connect_unlocked(timeout_ms, xsink))
@@ -589,9 +651,15 @@ QoreStringNode* SFTPClient::sftp_chdir(const char* nwd, int timeout_ms, Exceptio
 
    // returns the amount of chars
    int rc;
-   while ((rc = libssh2_sftp_symlink_ex(sftp_session, npath.c_str(), npath.size(), buff, sizeof(buff) - 1, LIBSSH2_SFTP_REALPATH)) == LIBSSH2_ERROR_EAGAIN) {
-      if (qh.waitSocket())
-         return 0;
+   {
+#ifdef _QORE_HAS_SOCKET_PERF_API
+      QoreSocketTimeoutHelper th(socket, "chdir");
+#endif
+
+      while ((rc = libssh2_sftp_symlink_ex(sftp_session, npath.c_str(), npath.size(), buff, sizeof(buff) - 1, LIBSSH2_SFTP_REALPATH)) == LIBSSH2_ERROR_EAGAIN) {
+         if (qh.waitSocket())
+            return 0;
+      }
    }
    if (rc <= 0) {
       qh.err("failed to retrieve the remote path for: '%s'", npath.c_str());
@@ -599,19 +667,25 @@ QoreStringNode* SFTPClient::sftp_chdir(const char* nwd, int timeout_ms, Exceptio
    }
 
    // check if it is a directory
-   do {
-      qh.assign(libssh2_sftp_opendir(sftp_session, buff));
-      if (!qh) {
-         if (libssh2_session_last_errno(ssh_session) == LIBSSH2_ERROR_EAGAIN) {
-            if (qh.waitSocket())
+   {
+#ifdef _QORE_HAS_SOCKET_PERF_API
+      QoreSocketTimeoutHelper th(socket, "chdir");
+#endif
+
+      do {
+         qh.assign(libssh2_sftp_opendir(sftp_session, buff));
+         if (!qh) {
+            if (libssh2_session_last_errno(ssh_session) == LIBSSH2_ERROR_EAGAIN) {
+               if (qh.waitSocket())
+                  return 0;
+            }
+            else {
+               qh.err("'%s' is not a directory", buff);
                return 0;
+            }
          }
-         else {
-            qh.err("'%s' is not a directory", buff);
-            return 0;
-         }
-      }
-   } while (!qh);
+      } while (!qh);
+   }
 
    // save new path
    sftppath = buff;
@@ -653,31 +727,43 @@ int SFTPClient::sftp_connect_unlocked(int timeout_ms, ExceptionSink* xsink) {
 
    QSftpHelper qh(this, SFTPCLIENT_CONNECT_ERROR, "SFTPClient::connect", timeout_ms, xsink);
 
-   do {
-      // init sftp session
-      sftp_session = libssh2_sftp_init(ssh_session);
-  
-      if (!sftp_session) {
-         if (libssh2_session_last_errno(ssh_session) == LIBSSH2_ERROR_EAGAIN) {
-            if (qh.waitSocket())
+   {
+#ifdef _QORE_HAS_SOCKET_PERF_API
+      QoreSocketTimeoutHelper th(socket, "connect (SFTP session)");
+#endif
+
+      do {
+         // init sftp session
+         sftp_session = libssh2_sftp_init(ssh_session);
+         
+         if (!sftp_session) {
+            if (libssh2_session_last_errno(ssh_session) == LIBSSH2_ERROR_EAGAIN) {
+               if (qh.waitSocket())
+                  return -1;
+            }
+            else {
+               sftp_disconnect_unlocked(true); // force shutdown
+               if (xsink)
+                  qh.err("Unable to initialize SFTP session");
                return -1;
+            }
          }
-         else {
-            sftp_disconnect_unlocked(true); // force shutdown
-            if (xsink)
-               qh.err("Unable to initialize SFTP session");
-            return -1;
-         }
-      }
-   } while (!sftp_session);
-  
+      } while (!sftp_session);
+   }
+
    if (sftppath.empty()) {
       // get the cwd for the path
       char buff[PATH_MAX];
-      // returns the amount of chars
-      while ((rc = libssh2_sftp_symlink_ex(sftp_session, ".", 1, buff, sizeof(buff) - 1, LIBSSH2_SFTP_REALPATH)) == LIBSSH2_ERROR_EAGAIN) {
-         if (qh.waitSocket())
-            return -1;
+      {
+#ifdef _QORE_HAS_SOCKET_PERF_API
+         QoreSocketTimeoutHelper th(socket, "connect (SFTP realpath)");
+#endif
+
+         // returns the amount of chars
+         while ((rc = libssh2_sftp_symlink_ex(sftp_session, ".", 1, buff, sizeof(buff) - 1, LIBSSH2_SFTP_REALPATH)) == LIBSSH2_ERROR_EAGAIN) {
+            if (qh.waitSocket())
+               return -1;
+         }
       }
       if (rc <= 0) {
          if (xsink)
@@ -714,9 +800,15 @@ BinaryNode *SFTPClient::sftp_getFile(const char* file, int timeout_ms, Exception
 
    LIBSSH2_SFTP_ATTRIBUTES attrs;
    int rc;
-   while ((rc = libssh2_sftp_stat(sftp_session, fname.c_str(), &attrs)) == LIBSSH2_ERROR_EAGAIN) {
-      if (qh.waitSocket())
-         return 0;
+   {
+#ifdef _QORE_HAS_SOCKET_PERF_API
+      QoreSocketTimeoutHelper th(socket, "getFile (stat)");
+#endif
+
+      while ((rc = libssh2_sftp_stat(sftp_session, fname.c_str(), &attrs)) == LIBSSH2_ERROR_EAGAIN) {
+         if (qh.waitSocket())
+            return 0;
+      }
    }
    if (rc < 0) {
       qh.err("libssh2_sftp_stat(%s) returned an error", fname.c_str());
@@ -725,27 +817,37 @@ BinaryNode *SFTPClient::sftp_getFile(const char* file, int timeout_ms, Exception
    //printd(0, "SFTPClient::sftp_getFile() permissions: %lo\n", attrs.permissions);
    size_t fsize = attrs.filesize;
 
-   // open handle
-   do {
-      qh.assign(libssh2_sftp_open(sftp_session, fname.c_str(), LIBSSH2_FXF_READ, attrs.permissions));
-      if (!qh) {
-         if (libssh2_session_last_errno(ssh_session) == LIBSSH2_ERROR_EAGAIN) {
-            if (qh.waitSocket())
+   {
+#ifdef _QORE_HAS_SOCKET_PERF_API
+      QoreSocketTimeoutHelper th(socket, "getFile (open)");
+#endif
+
+      // open handle
+      do {
+         qh.assign(libssh2_sftp_open(sftp_session, fname.c_str(), LIBSSH2_FXF_READ, attrs.permissions));
+         if (!qh) {
+            if (libssh2_session_last_errno(ssh_session) == LIBSSH2_ERROR_EAGAIN) {
+               if (qh.waitSocket())
+                  return 0;
+            }
+            else {
+               qh.err("libssh2_sftp_open(%s) returned an error", fname.c_str());
                return 0;
+            }
          }
-         else {
-            qh.err("libssh2_sftp_open(%s) returned an error", fname.c_str());
-            return 0;
-         }
-      }
-   } while (!qh);
+      } while (!qh);
+   }
 
    // close file
    // errors can be ignored, because by the time we close, we should have already what we want
 
    // create binary node for return with the size the server gave us on stat
-   SimpleRefHolder<BinaryNode> bn(new BinaryNode());
+   SimpleRefHolder<BinaryNode> bn(new BinaryNode);
    bn->preallocate(fsize);
+
+#ifdef _QORE_HAS_SOCKET_PERF_API
+   QoreSocketThroughputHelper th(socket, false);
+#endif
 
    size_t tot = 0;
    while (true) {
@@ -763,6 +865,10 @@ BinaryNode *SFTPClient::sftp_getFile(const char* file, int timeout_ms, Exception
          break;
    }
    bn->setSize(tot);
+
+#ifdef _QORE_HAS_SOCKET_PERF_API
+   th.finalize(tot);
+#endif
 
    return bn.release();
 }
@@ -782,9 +888,15 @@ QoreStringNode *SFTPClient::sftp_getTextFile(const char* file, int timeout_ms, c
 
    LIBSSH2_SFTP_ATTRIBUTES attrs;
    int rc;
-   while ((rc = libssh2_sftp_stat(sftp_session, fname.c_str(), &attrs)) == LIBSSH2_ERROR_EAGAIN) {
-      if (qh.waitSocket())
-         return 0;
+   {
+#ifdef _QORE_HAS_SOCKET_PERF_API
+      QoreSocketTimeoutHelper th(socket, "getTextFile (stat)");
+#endif
+
+      while ((rc = libssh2_sftp_stat(sftp_session, fname.c_str(), &attrs)) == LIBSSH2_ERROR_EAGAIN) {
+         if (qh.waitSocket())
+            return 0;
+      }
    }
    if (rc < 0) {
       qh.err("libssh2_sftp_stat(%s) returned an error", fname.c_str());
@@ -792,20 +904,26 @@ QoreStringNode *SFTPClient::sftp_getTextFile(const char* file, int timeout_ms, c
    }
    size_t fsize = attrs.filesize;
    
-   // open handle
-   do {
-      qh.assign(libssh2_sftp_open(sftp_session, fname.c_str(), LIBSSH2_FXF_READ, attrs.permissions));
-      if (!qh) {
-         if (libssh2_session_last_errno(ssh_session) == LIBSSH2_ERROR_EAGAIN) {
-            if (qh.waitSocket())
+   {
+#ifdef _QORE_HAS_SOCKET_PERF_API
+      QoreSocketTimeoutHelper th(socket, "getTextFile (open)");
+#endif
+
+      // open handle
+      do {
+         qh.assign(libssh2_sftp_open(sftp_session, fname.c_str(), LIBSSH2_FXF_READ, attrs.permissions));
+         if (!qh) {
+            if (libssh2_session_last_errno(ssh_session) == LIBSSH2_ERROR_EAGAIN) {
+               if (qh.waitSocket())
+                  return 0;
+            }
+            else {
+               qh.err("libssh2_sftp_open(%s) returned an error", fname.c_str());
                return 0;
+            }
          }
-         else {
-            qh.err("libssh2_sftp_open(%s) returned an error", fname.c_str());
-            return 0;
-         }
-      }
-   } while (!qh);
+      } while (!qh);
+   }
 
    // close file
    // errors can be ignored, because by the time we close, we should already have what we want
@@ -813,6 +931,10 @@ QoreStringNode *SFTPClient::sftp_getTextFile(const char* file, int timeout_ms, c
    // create buffer for return with the size the server gave us on stat + 1 byte for termination char
    SimpleRefHolder<QoreStringNode> str(new QoreStringNode(encoding));
    str->allocate(fsize + 1);
+
+#ifdef _QORE_HAS_SOCKET_PERF_API
+   QoreSocketThroughputHelper th(socket, false);
+#endif
    
    size_t tot = 0;
    while (true) {
@@ -831,6 +953,10 @@ QoreStringNode *SFTPClient::sftp_getTextFile(const char* file, int timeout_ms, c
    }
    str->terminate(tot);
 
+#ifdef _QORE_HAS_SOCKET_PERF_API
+   th.finalize(tot);
+#endif
+
    return str.release();
 }
 
@@ -848,21 +974,31 @@ qore_size_t SFTPClient::sftp_putFile(const char* outb, qore_size_t towrite, cons
 
    QSftpHelper qh(this, "SFTPCLIENT-PUTFILE-ERROR", "SFTPClient::putFile", timeout_ms, xsink);
 
-   // if this works we try to open an sftp handle on the other side
-   do {
-      qh.assign(libssh2_sftp_open_ex(sftp_session, file.c_str(), file.size(), LIBSSH2_FXF_WRITE|LIBSSH2_FXF_CREAT|LIBSSH2_FXF_TRUNC, mode, LIBSSH2_SFTP_OPENFILE));
-      if (!qh) {
-         if (libssh2_session_last_errno(ssh_session) == LIBSSH2_ERROR_EAGAIN) {
-            if (qh.waitSocket())
+   {
+#ifdef _QORE_HAS_SOCKET_PERF_API
+      QoreSocketTimeoutHelper th(socket, "putFile (open)");
+#endif
+
+      // if this works we try to open an sftp handle on the other side
+      do {
+         qh.assign(libssh2_sftp_open_ex(sftp_session, file.c_str(), file.size(), LIBSSH2_FXF_WRITE|LIBSSH2_FXF_CREAT|LIBSSH2_FXF_TRUNC, mode, LIBSSH2_SFTP_OPENFILE));
+         if (!qh) {
+            if (libssh2_session_last_errno(ssh_session) == LIBSSH2_ERROR_EAGAIN) {
+               if (qh.waitSocket())
+                  return -1;
+            }
+            else {
+               qh.err("libssh2_sftp_open_ex(%s) returned an error", file.c_str());
                return -1;
+            }
          }
-         else {
-            qh.err("libssh2_sftp_open_ex(%s) returned an error", file.c_str());
-            return -1;
-         }
-      }
-   } while (!qh);
-   
+      } while (!qh);
+   }
+
+#ifdef _QORE_HAS_SOCKET_PERF_API
+   QoreSocketThroughputHelper th(socket, true);
+#endif
+
    qore_size_t size = 0;
    while (size < towrite) {
       ssize_t rc;
@@ -878,6 +1014,10 @@ qore_size_t SFTPClient::sftp_putFile(const char* outb, qore_size_t towrite, cons
       }
       size += rc;
    }
+
+#ifdef _QORE_HAS_SOCKET_PERF_API
+   th.finalize(size);
+#endif
 
    int rc = qh.close();
    if (rc && rc != LIBSSH2_ERROR_EAGAIN) {
@@ -917,9 +1057,15 @@ int SFTPClient::sftp_getAttributes(const char* fname, LIBSSH2_SFTP_ATTRIBUTES *a
  
    // stat the file
    int rc;
-   while ((rc = libssh2_sftp_stat(sftp_session, file.c_str(), attrs)) == LIBSSH2_ERROR_EAGAIN) {
-      if (qh.waitSocket())
-         return -3;
+   {
+#ifdef _QORE_HAS_SOCKET_PERF_API
+      QoreSocketTimeoutHelper th(socket, "getAttributes (stat)");
+#endif
+
+      while ((rc = libssh2_sftp_stat(sftp_session, file.c_str(), attrs)) == LIBSSH2_ERROR_EAGAIN) {
+         if (qh.waitSocket())
+            return -3;
+      }
    }
 
    if (rc < 0) {
@@ -989,6 +1135,10 @@ void QSftpHelper::err(const char* fmt, ...) {
 
 int QSftpHelper::closeIntern(bool final) {
    assert(sftp_handle);
+
+#ifdef _QORE_HAS_SOCKET_PERF_API
+   QoreSocketTimeoutHelper th(client->socket, meth);
+#endif
 
    // close the handle
    int rc;
