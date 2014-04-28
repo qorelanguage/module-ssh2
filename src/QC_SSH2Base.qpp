@@ -186,7 +186,7 @@ $sftpclient.setWarningQueue(5000, 5000, $queue, "socket-1");
     @since ssh2 1.0
  */
 nothing SSH2Base::setWarningQueue(int warning_ms, int warning_bs, Queue[Queue] queue, any arg, timeout min_ms = 1s) {
-#ifdef QORE_HAS_QUEUE_OBJECT
+#ifdef _QORE_HAS_QUEUE_OBJECT
    ReferenceHolder<Queue> q(queue, xsink);
 #else
    ReferenceHolder<AbstractPrivateData> q((AbstractPrivateData*)queue, xsink);

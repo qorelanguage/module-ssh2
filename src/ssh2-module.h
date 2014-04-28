@@ -4,6 +4,7 @@
   SSH2/SFTP integration to QORE
 
   Copyright 2009 Wolfgang Ritzinger
+  Copyright (C) 2010 - 2014 Qore Technologies, sro
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
