@@ -99,15 +99,15 @@ stdout.printf("exit status: %d\n", $chan.getExitStatus());@endcode
 	
     Code with this flag is deprecated and may be removed in a future version of this module; if a variant with this flag is resolved at parse time, a \c "deprecated" warning is raised (assuming this warning is enabled).
 
-    @section releasenotes Release Notes
+    @section ssh2releasenotes Release Notes
 
-    @subsection v10 Version 1.0
+    @subsection ssh2v10 Version 1.0
     - fixed crashing bugs handling errors and handle scope in the @ref Qore::SSH2::SFTPClient "SFTPClient" class
     - added the <a href="../../SftpPoller/html/index.html">SftpPoller</a> user module
     - force socket disconnect in case of a timeout error when trying to close a file descriptor
     - socket performance instrumentation supported in the @ref Qore::SSH2::SFTPClient "SFTPClient" class when compiled with Qore 0.8.10+
 
-    @subsection v099 Version 0.9.9
+    @subsection ssh2v099 Version 0.9.9
     - closed some gaps in the non-blocking I/O solution introduced in the last release
     - implemented implicit connections for the @ref Qore::SSH2::SFTPClient "SFTPClient" class
     - implemented the @ref Qore::SSH2::SFTPClient::listFull() "SFTPClient::listFull()" method
@@ -117,24 +117,24 @@ stdout.printf("exit status: %d\n", $chan.getExitStatus());@endcode
     - use keepalive by default to try and maintain persistent connections
     - released also under the MIT licenses (in addition to LGPL 2.1)
 
-    @subsection v098 Version 0.9.8
+    @subsection ssh2v098 Version 0.9.8
     - default timeout of 60 seconds added to connect methods to avoid hanging connections indefinitely
     - non-blocking I/O implemented for all SFTPClient methods, default timeout set to 60s
     - send the file mode when opening files read-only in case broken servers will erroneously set the remote file's mode to 0 and then the file will not be readable
     - @ref Qore::SSH2::SFTPClient::getTextFile() "SFTPClient::getTextFile()" has a new optional parameter: encoding
 
-    @subsection v097 Version 0.9.7
+    @subsection ssh2v097 Version 0.9.7
     - an exception will be thrown if a key file is set and either the public or private key is not available or readable; previously such errors would cause hard-to-debug connection problems (for instance, see: http://comments.gmane.org/gmane.network.ssh.libssh2.devel/5873; note that the patch mentioned in the linked thread was subsequently reverted)
     - fixed another deadlock in the @ref Qore::SSH2::SFTPClient::disconnect() "SFTPClient::disconnect()" method
     - minor doc updates
     - requires qore 0.8.5+ to build and run
 
-    @subsection v096 Version 0.9.6
+    @subsection ssh2v096 Version 0.9.6
     - major documentation updates; now using doxygen
     - fixed a deadlock in the @ref Qore::SSH2::SFTPClient::disconnect() "SFTPClient::disconnect()" method
     - requires qore 0.8.1+ to build and run
 
-    @subsection v095 Version 0.9.5
+    @subsection ssh2v095 Version 0.9.5
     - Initial release of the ssh2 module
     - Requires qore 0.8.0+ to build and run
 */
