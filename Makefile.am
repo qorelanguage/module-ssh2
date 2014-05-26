@@ -1,4 +1,4 @@
-modverdir = $(libdir)/$(mymodverdir)
+moddir = $(libdir)
 
 AUTOMAKE_OPTIONS = foreign
 
@@ -25,7 +25,7 @@ EXTRA_DIST = COPYING.LGPL COPYING.MIT ChangeLog AUTHORS README \
 
 ACLOCAL_AMFLAGS=-I m4
 
-dist_modver_DATA = $(USER_MODULES)
+dist_mod_DATA = $(USER_MODULES)
 
 if COND_DOXYGEN
 DOX = ssh2 SftpPoller
