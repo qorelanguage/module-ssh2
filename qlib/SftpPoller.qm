@@ -23,7 +23,7 @@
 */
 
 # make sure we have the required qore version
-%requires qore >= 0.8.9
+%requires qore >= 0.8.10
 
 # requires ssh2 functionality
 %requires ssh2
