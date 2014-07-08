@@ -466,14 +466,32 @@ else
 
    if test -z "${prefix}" -o "${prefix}" = "NONE"; then
       libdir=`qore --module-dir`
+      userlibdir=`qore --user-module-dir 2>/dev/null`
+      if test -z "${userlibdir}"; then
+         userlibdir="${libdir}"
+      fi
    else
       libdir="$prefix/lib${LIBSUFFIX}/qore-modules"
       qlibdir=`qore --module-dir`
       if test "$libdir" != "$qlibdir"; then
          AC_MSG_WARN([warning, installed qore's module dir is $qlibdir, this module will be installed in $libdir])
       fi
+      if test "$windows" = yes; then
+         userlibdir="${qlibdir}"
+      else
+         if test -n "echo ${datarootdir}|grep \$"; then
+            userlibdir="`eval echo ${datarootdir}`/qore-modules"
+         else
+            userlibdir="${datarootdir}/qore-modules"
+         fi
+         qlibdir=`qore --user-module-dir`
+         if test "$userlibdir" != "$qlibdir"; then
+            AC_MSG_WARN([warning, installed qore's user module dir is $qlibdir, this module will be installed in $userlibdir])
+         fi
+      fi
    fi
 fi
+AC_SUBST([userlibdir])
 
 AC_ARG_ENABLE([profile],
      [AS_HELP_STRING([--enable-profile],

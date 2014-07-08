@@ -1,4 +1,4 @@
-moddir = $(libdir)
+moddir = $(userlibdir)
 
 AUTOMAKE_OPTIONS = foreign
 
