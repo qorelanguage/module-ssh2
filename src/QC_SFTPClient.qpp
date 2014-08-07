@@ -59,7 +59,7 @@ qclass SFTPClient [arg=SFTPClient* myself; ns=Qore::SSH2; dom=NETWORK; vparent=S
     @throw SFTPCLIENT-PARAMETER-ERROR unknown protocol passed in URL; no hostname in URL
 
     @par Example:
-    @code my $sftpclient SFTPClient("sftp://user:pass@host:4022"); @endcode
+    @code my SFTPClient $sftpclient("sftp://user:pass@host:4022"); @endcode
  */
 SFTPClient::constructor(string url, softint port = 0) {
    QoreURL qurl(url);
