@@ -47,8 +47,8 @@ module SftpPoller {
     The SftpPoller module implements an abstract class that will poll a remote directory with the SFTP protocol and return
     matching files.
 
-    To use this class, subclass the @ref SftpPoller::SftpPoller "SftpPoller" class and implement the @ref SftpPoller::SftpPoller::singleFileEvent()
-    method.
+    To use this class, subclass the @ref SftpPoller::SftpPoller "SftpPoller" class and implement the @ref SftpPoller::SftpPoller::singleFileEvent() and 
+    @ref SftpPoller::SftpPoller::postSingleFileEvent() methods.
 
     @section sftppollerexamples SftpPoller Module Examples
 
@@ -65,6 +65,9 @@ class MySftpPoller inherits SftpPoller {
         printf("GOT FILE: %y\n", $fh - "data" + ("data_type": $fh.data.type(), "data_size": $fh.data.size()));
         # in this case, the polling stop operation will take effect after all the singleFileEvent() calls are made for the polling operation
         $.stopNoWait();
+    }
+
+    nothing postSingleFileEvent(hash $fh) {
     }
 }
 
@@ -86,7 +89,13 @@ $poller.waitStop();
     Note that @ref SftpPoller::SftpPoller::stopNoWait() "SftpPoller::stopNoWait()" was called in the event thread because calling 
     @ref SftpPoller::SftpPoller::stop() "SftpPoller::stop()" in the event thread would cause an exception to be thrown.
 
-    A useful poller class would implement the @ref SftpPoller::SftpPoller::singleFileEvent() "SftpPoller::singleFileEvent()" method which handle already-transferred files by deleting / moving / renaming the files so that they would not be acquired on the next poll.
+    A useful poller class would implement the @ref SftpPoller::SftpPoller::singleFileEvent() "SftpPoller::singleFileEvent()" method which process already-transferred files and the @ref SftpPoller::SftpPoller::postSingleFileEvent() "SftpPoller::postSingleFileEvent()" by deleting / moving / renaming the files so that they would not be acquired on the next poll.
+
+    @section sftpollersandbox SftpPoller Module in Sandboxed Programs
+
+    The @ref SftpPoller::SftpPoller "SftpPoller" class includes support for running in sandboxed Program objects with the following parse options set:
+    - \c PO_NO_THREAD_CONTROL: in this case the \c "start_thread" option is required in @ref SftpPoller::SftpPoller::constructor() "SftpPoller::constructor()"
+    - \c PO_NO_PROCESS_CONTROL: in this case the \c "sleep" option is required in @ref SftpPoller::SftpPoller::constructor() "SftpPoller::constructor()"
 
     @section sftppollerrelnotes SftpPoller Module Release Notes
 
@@ -111,7 +120,15 @@ public namespace SftpPoller {
             #const SortDate = 2;
 
             #! minimum required keys for constructor hash argument
-            const RequiredKeys = ("host",);
+            const RequiredKeys = (
+                "host",
+%ifdef PO_NO_PROCESS_CONTROL
+                "sleep",
+%endif
+%ifdef PO_NO_THREAD_CONTROL
+                "start_thread",
+%endif
+                );
 
             #! default values for constructor hash argument
             const Defaults = (
@@ -126,8 +143,13 @@ public namespace SftpPoller {
             #! optional constructor hash keys
             const OptionalKeys = (
                 "path", "user", "pass", "keyfile", "regex_mask", "minage",
-                "encoding", "log_info", "log_detail", "log_debug", 
-                "start_thread", "sleep", "binary",
+                "encoding", "log_info", "log_detail", "log_debug", "binary",
+%ifndef PO_NO_PROCESS_CONTROL
+                "sleep",
+%endif
+%ifndef PO_NO_THREAD_CONTROL
+                "start_thread",
+%endif
                 );
 
             #! all keys
@@ -170,6 +192,9 @@ public namespace SftpPoller {
 
             # internal "get files" flag
             bool $.get_files;
+
+            # internal fatal error flag
+            bool $.fatal = False;
 
             # internal poll counter
             int $.pollcnt = 0;
@@ -230,8 +255,8 @@ public namespace SftpPoller {
             - \c log_info: a @ref closure "closure" or @ref call_reference "call reference" for logging important information; must accept a single string giving the log message
             - \c log_detail: a @ref closure "closure" or @ref call_reference "call reference" for logging detailed information; must accept a single string giving the log message
             - \c log_debug: a @ref closure "closure" or @ref call_reference "call reference" for logging verbose debgugging information; must accept a single string giving the log message
-            - \c start_thread: a @ref closure "closure" or @ref call_reference "call reference" for starting threads; must return the integer thread ID (if not set then @ref background will be used)
-            - \c sleep: a @ref closure "closure" or @ref call_reference "call reference" to use instead of @ref Qore::sleep() (if not set then @ref Qore::sleep() will be used)
+            - \c start_thread: a @ref closure "closure" or @ref call_reference "call reference" for starting threads; must return the integer thread ID (if not set then @ref background will be used); note that this option is required when the module is imported in a Program where \c PO_NO_THREAD_CONTROL is set
+            - \c sleep: a @ref closure "closure" or @ref call_reference "call reference" to use instead of @ref Qore::sleep() (if not set then @ref Qore::sleep() will be used); note that this option is required when the module is imported in a Program where \c PO_NO_PROCESS_CONTROL is set
 
             @throw SFTPPOLLER-CONSTRUCTOR-ERROR missing required key (see RequiredKeys), invalid port or poll_interval given
             @throw SFTPCLIENT-PARAMETER-ERROR empty hostname passed
@@ -528,7 +553,11 @@ public namespace SftpPoller {
             $.run = True;
             $.sc.inc();
 
+%ifdef PO_NO_THREAD_CONTROL
+            return call_function($.start_thread, \$.run());
+%else
             return $.start_thread ? call_function($.start_thread, \$.run()) : background $.run();
+%endif
         }
 
         #! stops the polling operation, returns immediately
@@ -611,11 +640,28 @@ public namespace SftpPoller {
                         # make sure any errors after this point cause the polling operation to stop
                         $.get_files = False;
                         $.singleFileEvent($fh);
+
+                        try {
+                            $.postSingleFileEvent($fh);
+                        }
+                        catch (hash $ex) {
+                            $.fatal = True;
+                            rethrow;
+                        }
                     }
                 }
                 return True;
             }
             return False;
+        }
+
+        #! sleeps for the specificed number of seconds
+        private sleep(softint $secs) {
+%ifdef PO_NO_PROCESS_CONTROL
+            call_function($.sleep, $secs);
+%else
+            $.sleep ? call_function($.sleep, $secs) : sleep($secs);
+%endif
         }
 
         #! starts the polling operation
@@ -627,12 +673,12 @@ public namespace SftpPoller {
                     if ($.runOnce())
                         continue;
                     if ($.run)
-                        $.sleep ? call_function($.sleep, $.poll_interval) : sleep($.poll_interval);
+                        $.sleep($.poll_interval);
                 } catch (hash $ex) {
                     if ($.get_files) {                        
                         $.logInfo("SFTP error in %y: %s: %s; waiting %y for next try", $.path, $ex.err, $ex.desc, ErrorDelay);
                         if ($.run)
-                            $.sleep ? call_function($.sleep, ErrorDelay) : sleep(ErrorDelay);                        
+                            $.sleep(ErrorDelay);
                     }
                     else {
                         # error thrown in "post transfer" code
@@ -650,7 +696,7 @@ public namespace SftpPoller {
             return True;
         }
 
-        #! called for each matching file individually whenever matching files are polled with the list of matching file names
+        #! called for each matching file individually whenever matching files are polled with the list of matching file names; if any error occurs here, the error is logged and the polling operation is retried
         /** @param $fih a hash of file data and information with the following keys:
             - \c name: the name of the file, link, or directory
             - \c size: the size of the file in bytes
@@ -664,6 +710,25 @@ public namespace SftpPoller {
             - \c data: the file's data; this will be a string unless the \a "binary" option is set to @ref Qore::True "True", in which case this key is assigned to the files binary data
         */
         abstract singleFileEvent(hash $fih);
+
+        #! called after singleFileEvent() for each matching file individually whenever matching files are polled with the list of matching file names; if any error occurs here, the polling operation stops
+        /** This method would normally delete / rename / move files processed by singleFileEvent() so that they would not be polled a second time.
+            If an error occurs in this operation, then the polling event will stop since continuing after failing to delete, rename, or move a file already processed
+            would cause the file to be processed more than once.
+
+            @param $fih a hash of file data and information with the following keys:
+            - \c name: the name of the file, link, or directory
+            - \c size: the size of the file in bytes
+            - \c uid: the UID of the owner of the file
+            - \c gid: the GID of the owner of the file
+            - \c mode: the permissions / mode of the file
+            - \c atime: the last accessed date/time of the file
+            - \c mtime: the last modified date/time of the file
+            - \c type: the type of file; one of: \c "REGULAR", \c "DIRECTORY", \c "SYMBOLIC-LINK", \c "BLOCK-DEVICE", \c "CHARACTER-DEVICE", \c "FIFO", \c "SYMBOLIC-LINK", \c "SOCKET", or \c "UNKNOWN"
+            - \c perm: a string giving UNIX-style permissions for the file (ex: "-rwxr-xr-x")
+            - \c data: the file's data; this will be a string unless the \a "binary" option is set to @ref Qore::True "True", in which case this key is assigned to the files binary data
+        */
+        abstract postSingleFileEvent(hash $fih);
 
         #! checks a path on the local file system
         /**
