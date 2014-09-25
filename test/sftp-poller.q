@@ -23,6 +23,8 @@ class MySftpPoller inherits SftpPoller {
         # in this case, the polling stop operation will take effect after all the singleFileEvent() calls are made for the polling operation
         $.stopNoWait();
     }
+
+    nothing postSingleFileEvent(hash $fh) {}
 }
 
 sub main() {
