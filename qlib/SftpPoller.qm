@@ -23,7 +23,7 @@
 */
 
 # make sure we have the required qore version
-%requires qore >= 0.8.10
+%requires qore >= 0.8.12
 
 # requires ssh2 functionality
 %requires ssh2
@@ -525,7 +525,7 @@ public namespace SftpPoller {
                 case SftpPoller::SortName: {
                     # sort closure
                     my code $sort = int sub (hash $l, hash $r) { return $l.name <=> $r.name; };
-                    $l = ($order == SftpPoller::OrderAsc ? sort($l, $sort) : sortDescending($l, $sort)); 
+                    $l = ($order == SftpPoller::OrderAsc ? sort($l, $sort) : sort_descending($l, $sort)); 
                     break;
                 }
 
