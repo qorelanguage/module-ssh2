@@ -6,8 +6,8 @@
 
   Qore Programming Language
 
-  Copyright 2009 Wolfgang Ritzinger
-  Copyright (C) 2010 - 2014 Qore Technologies, sro
+  Copyright (C) 2009 Wolfgang Ritzinger
+  Copyright (C) 2010 - 2015 Qore Technologies, sro
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -56,7 +56,7 @@ private:
    int timeout_ms;
    ExceptionSink* xsink;
 
-   DLLLOCAL int closeIntern(bool final = false);
+   DLLLOCAL int closeIntern();
 
 public:
    DLLLOCAL QSftpHelper(SFTPClient* c, const char* e, const char* m, int to, ExceptionSink* xs) : sftp_handle(0), client(c), errstr(e), meth(m), timeout_ms(to), xsink(xs) {
@@ -64,7 +64,7 @@ public:
 
    DLLLOCAL ~QSftpHelper() {
       if (sftp_handle)
-         closeIntern(true);
+         closeIntern();
    }
 
    DLLLOCAL int waitSocket();

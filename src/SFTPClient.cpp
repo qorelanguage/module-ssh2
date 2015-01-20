@@ -4,8 +4,8 @@
 
   libssh2 SFTP client integration into qore
 
-  Copyright 2009 Wolfgang Ritzinger
-  Copyright 2010 - 2014 Qore Technologies, sro
+  Copyright (C) 2009 Wolfgang Ritzinger
+  Copyright (C) 2010 - 2015 Qore Technologies, sro
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -1133,7 +1133,7 @@ void QSftpHelper::err(const char* fmt, ...) {
 }
 
 
-int QSftpHelper::closeIntern(bool final) {
+int QSftpHelper::closeIntern() {
    assert(sftp_handle);
 
 #ifdef _QORE_HAS_SOCKET_PERF_API
@@ -1144,17 +1144,13 @@ int QSftpHelper::closeIntern(bool final) {
    int rc;
    while ((rc = libssh2_sftp_close_handle(sftp_handle)) == LIBSSH2_ERROR_EAGAIN) {
       if (client->waitsocket_unlocked(xsink, SFTPCLIENT_TIMEOUT, errstr, meth, timeout_ms)) {
-         if (final) {
-            printd(0, "QSftpHelper::closeIntern() session %p: cannot close remote file descriptor, forcing session disconnect\n", client->ssh_session);
-            sftp_handle = 0;
-            client->sftp_disconnect_unlocked(true, 10, xsink);
-         }
+         printd(5, "QSftpHelper::closeIntern() session %p: cannot close remote file descriptor, forcing session disconnect; leaking descriptor\n", client->ssh_session);
+         client->sftp_disconnect_unlocked(true, 10, xsink);
          // note: memory leak here! we cannot close the handle due to the timeout
          break;
       }
    }
-   if (!rc)
-      sftp_handle = 0;
+   sftp_handle = 0;
 
    return rc;
 }
