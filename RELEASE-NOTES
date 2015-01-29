@@ -10,6 +10,10 @@ version 1.0
   compiled with Qore 0.8.10+
 * user modules moved to top-level qore module directory from version-specific
   module directory since they are valid for multiple versions of qore 
+* fixed a bug where a crash would result when attempting a connection and
+  libssh2 would not return any user authentication methods
+* implemented an automatic disconnection when timeouts occur to avoid dead
+  connections
 
 
 *************

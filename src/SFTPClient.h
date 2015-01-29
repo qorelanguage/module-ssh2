@@ -105,11 +105,12 @@ protected:
    DLLLOCAL int sftp_connected_unlocked();
    DLLLOCAL QoreStringNode *sftp_path_unlocked();
    DLLLOCAL int sftp_connect_unlocked(int timeout_ms, ExceptionSink* xsink);
-   DLLLOCAL int sftp_disconnect_unlocked(bool force, int timeout_ms = DEFAULT_TIMEOUT, ExceptionSink* xsink = 0);
 
    DLLLOCAL void do_session_err_unlocked(ExceptionSink* xsink, QoreStringNode* desc);
-   DLLLOCAL void do_shutdown(int timeout_ms = DEFAULT_TIMEOUT, ExceptionSink* xsink = 0);
+   DLLLOCAL void do_shutdown(int timeout_ms = DEFAULT_TIMEOUT_MS, ExceptionSink* xsink = 0);
 
+   DLLLOCAL virtual int disconnect_unlocked(bool force, int timeout_ms = DEFAULT_TIMEOUT_MS, ExceptionSink* xsink = 0);
+   
 public:
    // session props
    std::string sftppath;
@@ -123,11 +124,6 @@ public:
       return sftp_connect(timeout_ms, xsink);
    }
    
-   DLLLOCAL virtual int disconnect(bool force = false, int timeout_ms = DEFAULT_TIMEOUT, ExceptionSink* xsink = 0) {
-      return sftp_disconnect(force, timeout_ms, xsink);
-   }
-
-   DLLLOCAL int sftp_disconnect(bool force = false, int timeout_ms = DEFAULT_TIMEOUT, ExceptionSink* xsink = 0);
    DLLLOCAL int sftp_connect(int timeout_ms, ExceptionSink* xsink = 0);
 
    DLLLOCAL int sftp_connected();

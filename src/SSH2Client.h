@@ -45,8 +45,6 @@
 #include <set>
 #include <string>
 
-#define DEFAULT_TIMEOUT 2000
-
 DLLLOCAL QoreClass *initSSH2ClientClass(QoreNamespace& ns);
 DLLLOCAL extern qore_classid_t CID_SSH2CLIENT;
 
@@ -104,7 +102,6 @@ protected:
 
    DLLLOCAL int startup_unlocked();
    DLLLOCAL int ssh_connected_unlocked();
-   DLLLOCAL int ssh_disconnect_unlocked(bool force, int timeout_ms = DEFAULT_TIMEOUT, ExceptionSink *xsink = 0);
    DLLLOCAL int ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink);
    DLLLOCAL void channel_deleted_unlocked(SSH2Channel *channel) {
 #ifdef DEBUG
@@ -158,16 +155,20 @@ protected:
          libssh2_session_set_blocking(ssh_session, (int)block);
    }
 
-   DLLLOCAL int waitsocket_unlocked(ExceptionSink* xsink, const char *toerr, const char *err, const char* m, int timeout_ms = DEFAULT_TIMEOUT_MS) {
+   DLLLOCAL int waitsocket_unlocked(ExceptionSink* xsink, const char *toerr, const char *err, const char* m, int timeout_ms = DEFAULT_TIMEOUT_MS, bool in_disconnect = false) {
       int rc = waitsocket_unlocked(timeout_ms);
       if (!rc) {
          if (xsink)
-            xsink->raiseException(toerr, "network timeout after %dms in %s()", timeout_ms, m);
+            xsink->raiseException(toerr, "network timeout after %dms in %s(); closing connection", timeout_ms, m);
+         if (!in_disconnect)
+            disconnect_unlocked(true, timeout_ms > DEFAULT_TIMEOUT_MS ? timeout_ms : DEFAULT_TIMEOUT_MS, xsink);
          return -1;
       }
       if (rc < 0) {
          if (xsink)
-            xsink->raiseErrnoException(err, errno, "error waiting for network (timeout: %dms) in %s()", timeout_ms, m);
+            xsink->raiseErrnoException(err, errno, "error waiting for network (timeout: %dms) in %s(); closing connection", timeout_ms, m);
+         if (!in_disconnect)
+            disconnect_unlocked(true, timeout_ms > DEFAULT_TIMEOUT_MS ? timeout_ms : DEFAULT_TIMEOUT_MS, xsink);
          return -1;
       }
       return 0;
@@ -206,6 +207,8 @@ protected:
 
    DLLLOCAL QoreObject *register_channel_unlocked(LIBSSH2_CHANNEL *channel);
 
+   DLLLOCAL virtual int disconnect_unlocked(bool force, int timeout_ms = DEFAULT_TIMEOUT_MS, ExceptionSink* xsink = 0);
+
    // to ensure thread-safe operations
    mutable QoreThreadLock m;
    LIBSSH2_SESSION* ssh_session;
@@ -222,11 +225,12 @@ public:
       return ssh_connect(timeout_ms, xsink);
    }
    
-   DLLLOCAL virtual int disconnect(bool force = false, int timeout_ms = DEFAULT_TIMEOUT, ExceptionSink *xsink = 0) {
-      return ssh_disconnect(force, timeout_ms, xsink);
+   DLLLOCAL int disconnect(bool force = false, int timeout_ms = DEFAULT_TIMEOUT_MS, ExceptionSink *xsink = 0) {
+      AutoLocker al(m);
+      
+      return disconnect_unlocked(force, timeout_ms, xsink);
    }
 
-   DLLLOCAL int ssh_disconnect(bool force = false, int timeout_ms = DEFAULT_TIMEOUT, ExceptionSink *xsink = 0);
    DLLLOCAL int ssh_connect(int timeout_ms, ExceptionSink *xsink);
 
    DLLLOCAL int ssh_connected();

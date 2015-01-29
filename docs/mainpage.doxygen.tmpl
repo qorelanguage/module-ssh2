@@ -107,6 +107,8 @@ stdout.printf("exit status: %d\n", $chan.getExitStatus());@endcode
     - force socket disconnect in case of a timeout error when trying to close a file descriptor
     - socket performance instrumentation supported in the @ref Qore::SSH2::SFTPClient "SFTPClient" class when compiled with Qore 0.8.10+
     - user modules moved to top-level qore module directory from version-specific module directory since they are valid for multiple versions of qore
+    - fixed a bug where a crash would result when attempting a connection and libssh2 would not return any user authentication methods
+    - implemented an automatic disconnection when timeouts occur to avoid dead connections
 
     @subsection ssh2v099 Version 0.9.9
     - closed some gaps in the non-blocking I/O solution introduced in the last release

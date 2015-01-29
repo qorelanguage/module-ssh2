@@ -5,7 +5,7 @@
   libssh2 ssh2 client integration into qore
 
   Copyright 2009 Wolfgang Ritzinger
-  Copyright (C) 2010 - 2014 Qore Technologies, sro
+  Copyright (C) 2010 - 2015 Qore Technologies, sro
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -142,7 +142,7 @@ SSH2Client::~SSH2Client() {
    }
    
    // disconnect
-   ssh_disconnect_unlocked(true);
+   disconnect_unlocked(true);
 }
 
 void SSH2Client::setKeysIntern() {
@@ -186,7 +186,7 @@ void SSH2Client::setKeysIntern() {
  * return 0 on ok.
  * sets errno
  */
-int SSH2Client::ssh_disconnect_unlocked(bool force, int timeout_ms, ExceptionSink *xsink) {
+int SSH2Client::disconnect_unlocked(bool force, int timeout_ms, ExceptionSink *xsink) {
    if (!ssh_session) {
       if (!force) {
          errno = EINVAL;
@@ -199,13 +199,13 @@ int SSH2Client::ssh_disconnect_unlocked(bool force, int timeout_ms, ExceptionSin
       // close ssh session if not null
       int rc;
       while ((rc = libssh2_session_disconnect(ssh_session, (char*)"qore program disconnect")) == LIBSSH2_ERROR_EAGAIN) {
-         if (waitsocket_unlocked(xsink, SSH2CLIENT_TIMEOUT, "SSSHCLIENT-DISCONNECT", "SSHClient::disconnect", timeout_ms))
+         if (waitsocket_unlocked(xsink, SSH2CLIENT_TIMEOUT, "SSSHCLIENT-DISCONNECT", "SSHClient::disconnect", timeout_ms, true))
             break;
       }
 
       while ((rc = libssh2_session_free(ssh_session)) == LIBSSH2_ERROR_EAGAIN) {
          // there can be a memory leak here, but there is no other way to free memory without waiting for the remote socket
-         if (waitsocket_unlocked(xsink, SSH2CLIENT_TIMEOUT, "SSSHCLIENT-DISCONNECT", "SSHClient::disconnect", timeout_ms))
+         if (waitsocket_unlocked(xsink, SSH2CLIENT_TIMEOUT, "SSSHCLIENT-DISCONNECT", "SSHClient::disconnect", timeout_ms, true))
             break;
       }
 
@@ -217,12 +217,6 @@ int SSH2Client::ssh_disconnect_unlocked(bool force, int timeout_ms, ExceptionSin
 
    socket.close();
    return 0;
-}
-
-int SSH2Client::ssh_disconnect(bool force, int timeout_ms, ExceptionSink *xsink) {
-   AutoLocker al(m);
-
-   return ssh_disconnect_unlocked(force, timeout_ms, xsink);
 }
 
 /**
@@ -429,7 +423,7 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
 
    // force disconnect session if already connected
    if (ssh_session)
-      ssh_disconnect_unlocked(true);
+      disconnect_unlocked(true);
   
    if (socket.connectINET(sshhost.c_str(), sshport, timeout_ms, xsink))
       return -1;
@@ -437,7 +431,7 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
    // Create a session instance
    ssh_session = libssh2_session_init();
    if (!ssh_session) {
-      ssh_disconnect_unlocked(true); // clean up connection
+      disconnect_unlocked(true); // clean up connection
       xsink && xsink->raiseException(SSH2_ERROR, "error in libssh2_session_init(): ", strerror(errno));
       return -1;
    }
@@ -449,13 +443,13 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
    // and setup crypto, compression, and MAC layers
    while ((rc = startup_unlocked()) == LIBSSH2_ERROR_EAGAIN) {
       if (waitsocket_unlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2_ERROR, "SSH2Client::connect", timeout_ms)) {
-         ssh_disconnect_unlocked(true); // clean up connection
+         disconnect_unlocked(true); // clean up connection
          return -1;
       }
    }
 
    if (rc) {
-      ssh_disconnect_unlocked(true); // clean up connection
+      disconnect_unlocked(true); // clean up connection
       xsink && xsink->raiseException(SSH2_ERROR, "failure establishing SSH session: %d", rc);
       return -1;
    }
@@ -465,7 +459,7 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
       userauthlist = libssh2_userauth_list(ssh_session, sshuser.c_str(), sshuser.size());
       if (!userauthlist && libssh2_session_last_errno(ssh_session) == LIBSSH2_ERROR_EAGAIN) {
          if (waitsocket_unlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2_ERROR, "SSH2Client::connect", timeout_ms)) {
-            ssh_disconnect_unlocked(true); // clean up connection
+            disconnect_unlocked(true); // clean up connection
             return -1;
          }
          continue;
@@ -475,23 +469,25 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
 
    assert(!sshauthenticatedwith);
 
-   printd(5, "userauthlist: %s\n", userauthlist);
+   printd(5, "userauthlist: %s\n", userauthlist ? userauthlist : "n/a");
 
    // set flags for use with authentification
-   if (strstr(userauthlist, "publickey"))
-      auth_pw |= QAUTH_PUBLICKEY;
-   if (strstr(userauthlist, "password"))
-      auth_pw |= QAUTH_PASSWORD;
-   if (strstr(userauthlist, "keyboard-interactive"))
-      auth_pw |= QAUTH_KEYBOARD_INTERACTIVE;
-      
+   if (userauthlist) {
+      if (strstr(userauthlist, "publickey"))
+         auth_pw |= QAUTH_PUBLICKEY;
+      if (strstr(userauthlist, "password"))
+         auth_pw |= QAUTH_PASSWORD;
+      if (strstr(userauthlist, "keyboard-interactive"))
+         auth_pw |= QAUTH_KEYBOARD_INTERACTIVE;
+   }
+   
    // try auth 
    // try publickey if available
    if (!loggedin && (auth_pw & QAUTH_PUBLICKEY) && (!sshkeys_priv.empty() && !sshkeys_pub.empty())) {
       printd(5, "SSH2Client::connect(): try pubkey auth: %s %s\n", sshkeys_priv.c_str(), sshkeys_pub.c_str());
       while ((rc = libssh2_userauth_publickey_fromfile(ssh_session, sshuser.c_str(), sshkeys_pub.c_str(), sshkeys_priv.c_str(), sshpass.c_str())) == LIBSSH2_ERROR_EAGAIN) {
          if (waitsocket_unlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2_ERROR, "SSH2Client::connect", timeout_ms)) {
-            ssh_disconnect_unlocked(true); // clean up connection
+            disconnect_unlocked(true); // clean up connection
             return -1;
          }
       }
@@ -511,7 +507,7 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
       printd(5, "SSH2Client::connect(): try user/pass auth: %s/%s\n", sshuser.c_str(), sshpass.c_str());
       while ((rc = libssh2_userauth_password(ssh_session, sshuser.c_str(), sshpass.c_str())) == LIBSSH2_ERROR_EAGAIN) {
          if (waitsocket_unlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2_ERROR, "SSH2Client::connect", timeout_ms)) {
-            ssh_disconnect_unlocked(true); // clean up connection
+            disconnect_unlocked(true); // clean up connection
             return -1;
          }
       }
@@ -532,7 +528,7 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
       keyboardPassword.set(sshpass.c_str());
       while ((rc = libssh2_userauth_keyboard_interactive(ssh_session, sshuser.c_str(), &kbd_callback)) == LIBSSH2_ERROR_EAGAIN) {
          if (waitsocket_unlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2_ERROR, "SSH2Client::connect", timeout_ms)) {
-            ssh_disconnect_unlocked(true); // clean up connection
+            disconnect_unlocked(true); // clean up connection
             return -1;
          }
       }
@@ -549,7 +545,7 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
   
    // could we auth?
    if (!loggedin) {
-      ssh_disconnect_unlocked(true); // clean up connection
+      disconnect_unlocked(true); // clean up connection
       xsink && xsink->raiseException("SSH2CLIENT-AUTH-ERROR", "No proper authentication method found");
       return -1;
    }
