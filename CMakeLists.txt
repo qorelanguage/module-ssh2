@@ -16,10 +16,13 @@ find_package(Qore REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBSSH2 REQUIRED libssh2)
 
-set(CMAKE_THREAD_PREFER_PTHREAD)
+set(CMAKE_THREAD_PREFER_PTHREAD ON)
 find_package(Threads REQUIRED)
-if(NOT CMAKE_USE_PTHREADS_INIT)
-message(FATAL_ERROR "POSIX threads not found")
+if(CMAKE_USE_PTHREADS_INIT)
+message(STATUS "Found POSIX Threads: TRUE")
+else(CMAKE_USE_PTHREADS_INIT)
+message(STATUS "Found POSIX Threads: FALSE")
+message(FATAL_ERROR "POSIX threads do not seem to be supported on this platform, aborting")
 endif()
 
 include_directories(${CMAKE_SOURCE_DIR}/src)
@@ -40,7 +43,7 @@ check_cxx_symbol_exists(libssh2_keepalive_config libssh2.h HAVE_LIBSSH2_KEEPALIV
 check_cxx_compiler_flag(-fvisibility=hidden HAVE_GCC_VISIBILITY)
 
 if(${CMAKE_SYSTEM_NAME} EQUAL "Linux")
-add_definitions(-DGNU_SOURCE)
+add_definitions(-D_GNU_SOURCE)
 endif()
 
 configure_file(${CMAKE_SOURCE_DIR}/cmake/config.h.in
