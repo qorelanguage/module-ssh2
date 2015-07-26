@@ -26,7 +26,6 @@ src/.libs/
 src/Makefile
 src/Makefile.in
 src/*.dox.h
-src/QC_SFTPClient.cpp
-src/QC_SSH2Base.cpp
-src/QC_SSH2Channel.cpp
-src/QC_SSH2Client.cpp
+src/qc_*.cpp
+src/ql_*.cpp
+src/QC_*.cpp
