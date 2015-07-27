@@ -1,7 +1,5 @@
 # TODO: Add defines for solaris and hp-ux.
 # TODO: Maybe not depend on cmake 3 but the project command is nice in cmake 3.
-# TODO: It would be nice if config.h was in CMAKE_BINARY_DIR but that
-# TODO: requires source code changes and changes to the autotools build.
 
 cmake_minimum_required(VERSION 3.0.0)
 
@@ -17,6 +15,7 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBSSH2 REQUIRED libssh2)
 
 set(CMAKE_THREAD_PREFER_PTHREAD ON)
+set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 if(CMAKE_USE_PTHREADS_INIT)
 message(STATUS "Found POSIX Threads: TRUE")
@@ -39,6 +38,8 @@ set(CMAKE_REQUIRED_INCLUDES ${LIBSSH2_INCLUDE_DIRS})
 set(CMAKE_REQUIRED_LIBRARIES ${LIBSSH2_LDFLAGS})
 check_cxx_symbol_exists(libssh2_session_handshake libssh2.h HAVE_LIBSSH2_SESSION_HANDSHAKE)
 check_cxx_symbol_exists(libssh2_keepalive_config libssh2.h HAVE_LIBSSH2_KEEPALIVE_CONFIG)
+unset(CMAKE_REQUIRED_INCLUDES)
+unset(CMAKE_REQUIRED_LIBRARIES)
 
 check_cxx_compiler_flag(-fvisibility=hidden HAVE_GCC_VISIBILITY)
 
@@ -47,7 +48,7 @@ add_definitions(-D_GNU_SOURCE)
 endif()
 
 configure_file(${CMAKE_SOURCE_DIR}/cmake/config.h.in
-               ${CMAKE_SOURCE_DIR}/config.h)
+               ${CMAKE_BINARY_DIR}/config.h)
 
 set(QPP_SRC
     src/QC_SFTPClient.qpp
