@@ -9,10 +9,10 @@ include(CheckCXXCompilerFlag)
 include(CheckCXXSymbolExists)
 include(CheckIncludeFileCXX)
 
-find_package(Qore REQUIRED)
+find_package(Qore 0.8.6 REQUIRED)
 
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(LIBSSH2 REQUIRED libssh2)
+pkg_check_modules(LIBSSH2 REQUIRED libssh2>=1.1)
 
 set(CMAKE_THREAD_PREFER_PTHREAD ON)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
@@ -24,7 +24,6 @@ message(STATUS "Found POSIX Threads: FALSE")
 message(FATAL_ERROR "POSIX threads do not seem to be supported on this platform, aborting")
 endif()
 
-include_directories(${CMAKE_SOURCE_DIR}/src)
 include_directories(${LIBSSH2_INCLUDE_DIRS})
 
 check_include_file_cxx(arpa/inet.h HAVE_ARPA_INET_H)
@@ -47,7 +46,7 @@ if(${CMAKE_SYSTEM_NAME} EQUAL "Linux")
 add_definitions(-D_GNU_SOURCE)
 endif()
 
-configure_file(${CMAKE_SOURCE_DIR}/cmake/config.h.in
+configure_file(${CMAKE_SOURCE_DIR}/cmake/config.h.cmake
                ${CMAKE_BINARY_DIR}/config.h)
 
 set(QPP_SRC
