@@ -163,90 +163,90 @@ public namespace SftpPoller {
         }
 
         private {
-            # host or address name
+            #! host or address name
             string host;
 
-            # port
+            #! port
             int port;
 
-            # user
+            #! user
             string user;
 
-            # url
+            #! url
             string url;
 
-            # password; one of \c "pass" or \c "keyfile" *must* be set
+            #! password; one of \c "pass" or \c "keyfile" *must* be set
             *string pass;
 
-            # path to the ssh private key in PEM format; one of \c "pass" or \c "keyfile" *must* be set
+            #! path to the ssh private key in PEM format; one of \c "pass" or \c "keyfile" *must* be set
             *string keyfile;
 
-            # path to poll
+            #! path to poll
             string path = ".";
 
-            # file glob name mask (ignored if \c "regex_mask" also set)
+            #! file glob name mask (ignored if \c "regex_mask" also set)
             *string mask;
 
-            # poll interval in seconds
+            #! poll interval in seconds
             int poll_interval;
 
-            # run flag
+            #! run flag
             bool runflag = False;
 
-            # internal "get files" flag
+            #! internal "get files" flag
             bool get_files;
 
-            # internal fatal error flag
+            #! internal fatal error flag
             bool fatal = False;
 
-            # internal poll counter
+            #! internal poll counter
             int pollcnt = 0;
 
-            # start mutex
+            #! start mutex
             Mutex m();
 
-            # polling tid
+            #! polling tid
             int tid;
 
-            # timeout in ms
+            #! timeout in ms
             timeout timeout;
 
-            # stop counter
+            #! stop counter
             Counter sc();
 
-            # SFTPClient object
-            SFTPClient sftp;
+            #! SFTPClient object
+            Qore::SSH2::SFTPClient sftp;
 
-            # file matching regex options
+            #! file matching regex options
             int reopts = 0;
 
-            # minimum file age
+            #! minimum file age
             *softint minage;
 
-            # file encoding for text files
+            #! file encoding for text files
             *string encoding;
 
-            # optional info log closure
+            #! optional info log closure
             *code log_info;
 
-            # optional detail log closure
+            #! optional detail log closure
             *code log_detail;
 
-            # optional debug log closure
+            #! optional debug log closure
             *code log_debug;
 
-            # optional start thread closure
+            #! optional start thread closure
             *code start_thread;
 
-            # optional sleep closure
+            #! optional sleep closure
             *code sleep;
 
-            # binary transfer flag (for singleFileEvent())
+            #! binary transfer flag (for singleFileEvent())
             bool binary;
         }
 
         #! creates the SftpPoller object from the @ref Qore::SSH2::SFTPClient "SFTPClient" argument and configuration hash argument passed
-        /** @param n_sftp the new SFTPClient object
+        /** @param n_sftp the new @ref Qore::SSH2::SFTPClient "SFTPClient" object
             @param nconf a hash with the following optional keys:
             - \c poll_interval: the integer polling interval in seconds (default: 10 seconds; must be > 0 if given)
             - \c mask: the file glob mask to use (default: \c "*", ignored if \c "regex_mask" is also present)
@@ -270,7 +270,7 @@ public namespace SftpPoller {
             @throw SSH2CLIENT-AUTH-ERROR no proper authentication method found
             @throw SFTPCLIENT-CONNECT-ERROR error initializing sftp session or getting remote path
             */
-        constructor(SFTPClient n_sftp, hash nconf) {
+        constructor(Qore::SSH2::SFTPClient n_sftp, hash nconf) {
             # create hash of keys with only valid options in argument hash
             hash conf = Defaults + nconf{AllKeys};
 

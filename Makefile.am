@@ -37,7 +37,7 @@ QDX = qdx
 DX_CLEANFILES = ${DOXYFILES} $(QLIB_TMP_DOXYFILES)
 
 docs/qlib/Doxyfile.SftpPoller: docs/qlib/Doxyfile.tmpl
-	$(QDX) -M=qlib/SftpPoller.qm:qlib/SftpPoller.qm.dox.h $< $@
+	$(QDX) -M=qlib/SftpPoller.qm:qlib/SftpPoller.qm.dox.h -tssh2.tag=../../ssh2/html $< $@
 
 docs/qlib/SftpPoller.qm.dox.h: qlib/SftpPoller.qm
 	$(QDX) $< $@
