@@ -478,11 +478,11 @@ public namespace SftpPoller {
             return sftp.stat(path, n_timeout ?? timeout);
         }
 
-        #! returns a list of file hashes matching any file name mask set for the object
+        #! returns a list of regular file hashes matching any file name mask set for the object
         /** @param sort the sort option for the list returned
             @param order the ordering of sorted data returned
 
-            @return a list of file hashes with the following keys in each list element:
+            @return a list of regular file hashes with the following keys in each list element:
             - \c name: the name of the file, link, or directory
             - \c size: the size of the file in bytes
             - \c uid: the UID of the owner of the file
@@ -490,7 +490,7 @@ public namespace SftpPoller {
             - \c mode: the permissions / mode of the file
             - \c atime: the last accessed date/time of the file
             - \c mtime: the last modified date/time of the file
-            - \c type: the type of file; one of: \c "REGULAR", \c "DIRECTORY", \c "SYMBOLIC-LINK", \c "BLOCK-DEVICE", \c "CHARACTER-DEVICE", \c "FIFO", \c "SYMBOLIC-LINK", \c "SOCKET", or \c "UNKNOWN"
+            - \c type: the type of file is always \c "REGULAR"
             - \c perm: a string giving UNIX-style permissions for the file (ex: "-rwxr-xr-x")
         */
         list getFiles(int sort = SftpPoller::SortNone, int order = SftpPoller::OrderAsc) {
