@@ -29,3 +29,13 @@ src/*.dox.h
 src/qc_*.cpp
 src/ql_*.cpp
 src/QC_*.cpp
+
+# ignore temp doxygen files
+docs/*.tag
+docs/ssh2/
+docs/SftpPoller/
+docs/doxyfile
+docs/*.doxygen
+docs/qlib/Doxyfile.*
+*.dox.h
+docs/*.tag
