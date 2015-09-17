@@ -41,13 +41,13 @@ module SftpPoller {
 */
 
 /** @mainpage SftpPoller Module
-    
+
     @section sftppollerintro Introduction to the SftpPoller Module
 
     The SftpPoller module implements an abstract class that will poll a remote directory with the SFTP protocol and return
     matching files.
 
-    To use this class, subclass the @ref SftpPoller::SftpPoller "SftpPoller" class and implement the @ref SftpPoller::SftpPoller::singleFileEvent() and 
+    To use this class, subclass the @ref SftpPoller::SftpPoller "SftpPoller" class and implement the @ref SftpPoller::SftpPoller::singleFileEvent() and
     @ref SftpPoller::SftpPoller::postSingleFileEvent() methods.
 
     @section sftppollerexamples SftpPoller Module Examples
@@ -86,7 +86,7 @@ my SftpPoller $poller($sc, $opts);
 $poller.waitStop();
     @endcode
 
-    Note that @ref SftpPoller::SftpPoller::stopNoWait() "SftpPoller::stopNoWait()" was called in the event thread because calling 
+    Note that @ref SftpPoller::SftpPoller::stopNoWait() "SftpPoller::stopNoWait()" was called in the event thread because calling
     @ref SftpPoller::SftpPoller::stop() "SftpPoller::stop()" in the event thread would cause an exception to be thrown.
 
     A useful poller class would implement the @ref SftpPoller::SftpPoller::singleFileEvent() "SftpPoller::singleFileEvent()" method which process already-transferred files and the @ref SftpPoller::SftpPoller::postSingleFileEvent() "SftpPoller::postSingleFileEvent()" by deleting / moving / renaming the files so that they would not be acquired on the next poll.
@@ -158,7 +158,7 @@ public namespace SftpPoller {
             #! pause when SFTP errors are detected
             const ErrorDelay = 1m;
         }
-        
+
         private {
             # host or address name
             string $.host;
@@ -174,7 +174,7 @@ public namespace SftpPoller {
 
             # password; one of \c "pass" or \c "keyfile" *must* be set
             *string $.pass;
-            
+
             # path to the ssh private key in PEM format; one of \c "pass" or \c "keyfile" *must* be set
             *string $.keyfile;
 
@@ -207,7 +207,7 @@ public namespace SftpPoller {
 
             # timeout in ms
             timeout $.timeout;
-            
+
             # stop counter
             Counter $.sc();
 
@@ -219,7 +219,7 @@ public namespace SftpPoller {
 
             # minimum file age
             *softint $.minage;
-            
+
             # file encoding for text files
             *string $.encoding;
 
@@ -243,7 +243,7 @@ public namespace SftpPoller {
         }
 
         #! creates the SftpPoller object from the @ref Qore::SSH2::SFTPClient "SFTPClient" argument and configuration hash argument passed
-        /** @param $nconf a hash with the following keys (see RequiredKeys for mandatory keys):
+        /** @param $nconf a hash with the following optional keys:
             - \c poll_interval: the integer polling interval in seconds (default: 10 seconds; must be > 0 if given)
             - \c mask: the file glob mask to use (default: \c "*", ignored if \c "regex_mask" is also present)
             - \c regex_mask: a regular expression to use as a mask (overrides any \c "mask" value)
@@ -255,10 +255,10 @@ public namespace SftpPoller {
             - \c log_info: a @ref closure "closure" or @ref call_reference "call reference" for logging important information; must accept a single string giving the log message
             - \c log_detail: a @ref closure "closure" or @ref call_reference "call reference" for logging detailed information; must accept a single string giving the log message
             - \c log_debug: a @ref closure "closure" or @ref call_reference "call reference" for logging verbose debgugging information; must accept a single string giving the log message
-            - \c start_thread: a @ref closure "closure" or @ref call_reference "call reference" for starting threads; must return the integer thread ID (if not set then @ref background will be used); note that this option is required when the module is imported in a Program where \c PO_NO_THREAD_CONTROL is set
-            - \c sleep: a @ref closure "closure" or @ref call_reference "call reference" to use instead of @ref Qore::sleep() (if not set then @ref Qore::sleep() will be used); note that this option is required when the module is imported in a Program where \c PO_NO_PROCESS_CONTROL is set
+            - \c start_thread: (required when imported into a context where @ref Qore::PO_NO_THREAD_CONTROL is set) a @ref closure "closure" or @ref call_reference "call reference" for starting threads; must return the integer thread ID (if not set then @ref background will be used)
+            - \c sleep: (required when imported into a context where @ref Qore::PO_NO_PROCESS_CONTROL is set) a @ref closure "closure" or @ref call_reference "call reference" to use instead of @ref Qore::sleep() (if not set then @ref Qore::sleep() will be used)
 
-            @throw SFTPPOLLER-CONSTRUCTOR-ERROR missing required key (see RequiredKeys), invalid port or poll_interval given
+            @throw SFTPPOLLER-CONSTRUCTOR-ERROR missing required key, invalid port or poll_interval given
             @throw SFTPCLIENT-PARAMETER-ERROR empty hostname passed
             @throw SOCKET-CONNECT-ERROR error establishing socket connection (no listener, port blocked, etc); timeout establishing socket connection
             @throw SSH2CLIENT-CONNECT-ERROR no user name set; ssh2 or libssh2 error
@@ -269,7 +269,7 @@ public namespace SftpPoller {
         constructor(SFTPClient $sftp, hash $nconf) {
             # create hash of keys with only valid options in argument hash
             my hash $conf = Defaults + $nconf{AllKeys};
-            
+
             $conf.poll_interval = int($conf.poll_interval);
 
             if ($conf.poll_interval <= 0)
@@ -315,8 +315,8 @@ public namespace SftpPoller {
         }
 
         #! creates the SftpPoller object from the configuration hash argument passed
-        /** @param $nconf a hash with the following keys (see RequiredKeys for mandatory keys):
-            - \c host: the hostname or address to connect to
+        /** @param $nconf a hash with the following keys:
+            - \c host: (required) the hostname or address to connect to
             - \c port: the integer port number to connect to (default 22; must be > 0 if given)
             - \c user: the username to use for the connection
             - \c pass: the password to use for the connection
@@ -332,9 +332,10 @@ public namespace SftpPoller {
             - \c log_info: a @ref closure "closure" or @ref call_reference "call reference" for logging important information; must accept a single string giving the log message
             - \c log_detail: a @ref closure "closure" or @ref call_reference "call reference" for logging detailed information; must accept a single string giving the log message
             - \c log_debug: a @ref closure "closure" or @ref call_reference "call reference" for logging verbose debgugging information; must accept a single string giving the log message
-            - \c start_thread: a @ref closure "closure" or @ref call_reference "call reference" for starting threads; must return the integer thread ID (if not set then @ref background will be used)
+            - \c start_thread: (required when imported into a context where @ref Qore::PO_NO_THREAD_CONTROL is set) a @ref closure "closure" or @ref call_reference "call reference" for starting threads; must return the integer thread ID (if not set then @ref background will be used)
+            - \c sleep: (required when imported into a context where @ref Qore::PO_NO_PROCESS_CONTROL is set) a @ref closure "closure" or @ref call_reference "call reference" to use instead of @ref Qore::sleep() (if not set then @ref Qore::sleep() will be used)
 
-            @throw SFTPPOLLER-CONSTRUCTOR-ERROR missing required key (see RequiredKeys), invalid port or poll_interval given
+            @throw SFTPPOLLER-CONSTRUCTOR-ERROR missing required key, invalid port or poll_interval given
             @throw SFTPCLIENT-PARAMETER-ERROR empty hostname passed
             @throw SOCKET-CONNECT-ERROR error establishing socket connection (no listener, port blocked, etc); timeout establishing socket connection
             @throw SSH2CLIENT-CONNECT-ERROR no user name set; ssh2 or libssh2 error
@@ -345,7 +346,7 @@ public namespace SftpPoller {
         constructor(hash $nconf) {
             # create hash of keys with only valid options in argument hash
             my hash $conf = Defaults + $nconf{AllKeys};
-            
+
             foreach my string $k in (RequiredKeys) {
                 if (!exists $conf.$k)
                     throw "SFTPPOLLER-CONSTRUCTOR-ERROR", sprintf("required key %y missing from constructor hash argument)", $k);
@@ -467,7 +468,7 @@ public namespace SftpPoller {
         removeFile(string $fn, *timeout $timeout) {
             $.sftp.removeFile($fn, $timeout ? $timeout : $.timeout);
         }
-        
+
         #! returns information about a remote file (see @ref Qore::SSH2::SFTPClient::stat() for a description of the return format)
         *hash stat(string $path, *timeout $timeout) {
             return $.sftp.stat($path, $timeout ? $timeout : $.timeout);
@@ -500,7 +501,7 @@ public namespace SftpPoller {
                 }
                 $l = $n;
             }
-            
+
             # remove all files that aren't old enough
             if ($.minage) {
                 my date $now = now();
@@ -525,7 +526,7 @@ public namespace SftpPoller {
                 case SftpPoller::SortName: {
                     # sort closure
                     my code $sort = int sub (hash $l, hash $r) { return $l.name <=> $r.name; };
-                    $l = ($order == SftpPoller::OrderAsc ? sort($l, $sort) : sort_descending($l, $sort)); 
+                    $l = ($order == SftpPoller::OrderAsc ? sort($l, $sort) : sort_descending($l, $sort));
                     break;
                 }
 
@@ -538,7 +539,7 @@ public namespace SftpPoller {
         }
 
         #! starts polling in the background; returns the thread ID of the polling thread
-        /** if polling had already been started, then the thread ID of the polling thread is 
+        /** if polling had already been started, then the thread ID of the polling thread is
             returned immediately
         */
         int start() {
@@ -599,7 +600,7 @@ public namespace SftpPoller {
         }
 
         #! starts the polling operation inline (not in a background thread)
-        /** 
+        /**
             @throw SFTPPOLLER-ERROR this exception is thrown if polling is already in progress
         */
         startInline() {
@@ -625,7 +626,7 @@ public namespace SftpPoller {
             my list $files = $.getFiles();
 
             if ($files) {
-                $.logDetail("got new files in %y: %y", $.path, $files);            
+                $.logDetail("got new files in %y: %y", $.path, $files);
 
                 if ($.fileEvent($files)) {
                     foreach my hash $fh in ($files) {
@@ -636,7 +637,7 @@ public namespace SftpPoller {
                         $.get_files = True;
                         $fh.data = $.binary ? $.getFile($fh.name) : $.getTextFile($fh.name);
                         $.logInfo("%y: retrieved %d bytes in %y", $fh.name, $fh.data.size(), now_us() - $t1);
-                        
+
                         # make sure any errors after this point cause the polling operation to stop
                         $.get_files = False;
                         $.singleFileEvent($fh);
@@ -675,7 +676,7 @@ public namespace SftpPoller {
                     if ($.run)
                         $.sleep($.poll_interval);
                 } catch (hash $ex) {
-                    if ($.get_files) {                        
+                    if ($.get_files) {
                         $.logInfo("SFTP error in %y: %s: %s; waiting %y for next try", $.path, $ex.err, $ex.desc, ErrorDelay);
                         if ($.run)
                             $.sleep(ErrorDelay);
@@ -687,7 +688,7 @@ public namespace SftpPoller {
                     }
                 }
             }
-            
+
             $.logInfo("polling finished");
         }
 
