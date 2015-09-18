@@ -675,8 +675,7 @@ public namespace SftpPoller {
 
             while (runflag) {
                 try {
-                    if (runOnce())
-                        continue;
+                    runOnce();
                     if (runflag)
                         sleep(poll_interval);
                 } catch (hash ex) {
