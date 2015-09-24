@@ -26,7 +26,7 @@
 %requires qore >= 0.8.12
 
 # requires ssh2 functionality
-%requires ssh2
+%requires (reexport) ssh2
 
 # assume local vars and do not allow $ chars
 %new-style
