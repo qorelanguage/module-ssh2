@@ -122,16 +122,18 @@ public namespace SftpPoller {
             const SortName = 1;
             #const SortDate = 2;
 
-            #! minimum required keys for constructor hash argument
+            #! minimum required keys for all constructors 
             const RequiredKeys = (
-                "host",
 %ifdef PO_NO_PROCESS_CONTROL
                 "sleep",
 %endif
 %ifdef PO_NO_THREAD_CONTROL
                 "start_thread",
 %endif
-                );
+            );
+
+            #! RequiredKeys for the constructor(hash) without an @ref Qore::SSH2::SFTPClient argument
+            const RequiredKeysWithHost = RequiredKeys + "host";
 
             #! default values for constructor hash argument
             const Defaults = (
@@ -156,7 +158,7 @@ public namespace SftpPoller {
                 );
 
             #! all keys
-            const AllKeys = RequiredKeys + Defaults.keys() + OptionalKeys;
+            const AllKeys = RequiredKeysWithHost + Defaults.keys() + OptionalKeys;
 
             #! pause when SFTP errors are detected
             const ErrorDelay = 1m;
@@ -274,6 +276,12 @@ public namespace SftpPoller {
             # create hash of keys with only valid options in argument hash
             hash conf = Defaults + nconf{AllKeys};
 
+            foreach string k in (RequiredKeys) {
+                if (!exists conf{k})
+                    throw "SFTPPOLLER-CONSTRUCTOR-ERROR", sprintf("required key %y missing from constructor hash argument)", k);
+            }
+
+
             conf.poll_interval = int(conf.poll_interval);
 
             if (conf.poll_interval <= 0)
@@ -351,7 +359,7 @@ public namespace SftpPoller {
             # create hash of keys with only valid options in argument hash
             hash conf = Defaults + nconf{AllKeys};
 
-            foreach string k in (RequiredKeys) {
+            foreach string k in (RequiredKeysWithHost) {
                 if (!exists conf{k})
                     throw "SFTPPOLLER-CONSTRUCTOR-ERROR", sprintf("required key %y missing from constructor hash argument)", k);
             }
@@ -682,7 +690,7 @@ public namespace SftpPoller {
                     if (get_files) {
                         logInfo("SFTP error in %y: %s: %s; waiting %y for next try", path, ex.err, ex.desc, ErrorDelay);
                         if (runflag)
-                            sleep(ErrorDelay);
+                            self.sleep(ErrorDelay);
                     }
                     else {
                         # error thrown in "post transfer" code
