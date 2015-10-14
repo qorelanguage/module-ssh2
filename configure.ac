@@ -140,10 +140,10 @@ if test "$enable_64bit" = "auto"; then
    # turn on 64-bit by default if compiling on a 64-bit platform
    case "${host_cpu}" in
        *64*)
-                 enable_64bit=yes 
+                 enable_64bit=yes
                  ;;
        s390x)
-                 enable_64bit=yes 
+                 enable_64bit=yes
                  ;;
        *)        case "${host_os}" in
                      darwin*)   mv=`uname -r|cut -f1 -d.`
@@ -279,6 +279,116 @@ AC_ARG_ENABLE([single-compilation-unit],
        *)      AC_MSG_ERROR(bad value ${enable_single_compilation_unit} for --enable-single-compilation-unit) ;;
       esac],
   [enable_single_compilation_unit=yes])
+
+set_openssl_cppflags() {
+    if test "$1" != "/usr/include"; then
+        OPENSSL_CPPFLAGS=-I$1
+    fi
+}
+
+find_openssl() {
+    dir="$1"
+    if test -z "$dir" -o "$dir" = "/"; then
+        if test -h /lib${LIBSUFFIX}; then
+	    dir=/usr
+	    lib=/usr/lib${LIBSUFFIX}
+	    inc=/usr/include
+        else
+            dir="/"
+   	    lib=/lib${LIBSUFFIX}
+	    inc=/usr/include
+        fi
+    else
+        lib="$dir/lib${LIBSUFFIX}"
+        inc="$dir/include"
+    fi
+    # if we only want the static openssl libraries
+    if test -n "$openssl_static"; then
+    	if test -f "$lib/libssl.a" -a -f "$lib/libcrypto.a"; then
+	    OPENSSL_LDFLAGS="$lib/libssl.a $lib/libcrypto.a"
+       	    AC_MSG_RESULT([$lib (forced static)])
+    	elif test "$bits" = 64 -a -f "$lib/64/libssl.a" -a -f "$lib/64/libcrypto.a"; then
+	    OPENSSL_LDFLAGS="$lib/64/libssl.a $lib/64/libcrypto.a"
+       	    AC_MSG_RESULT([$lib/64 (forced static)])
+    	fi
+    else
+        if test -f "$lib/libssl.${SHLIB_SUFFIX}" -a -f "$lib/libcrypto.${SHLIB_SUFFIX}"; then
+	    if test "$lib" != "/lib" -a "$lib" != "/usr/lib"; then
+       	        OPENSSL_LDFLAGS="-L$lib"
+    	    fi
+	    OPENSSL_LDFLAGS="$OPENSSL_LDFLAGS -lssl -lcrypto"
+       	    AC_MSG_RESULT([$lib (shared)])
+    	elif test -f "$lib/libssl.a" -a -f "$lib/libcrypto.a"; then
+	    if test "$lib" != "/lib" -a "$lib" != "/usr/lib"; then
+       	        OPENSSL_LDFLAGS="-L$lib"
+    	    fi
+	    OPENSSL_LDFLAGS="$OPENSSL_LDFLAGS -lssl -lcrypto"
+       	    AC_MSG_RESULT([$lib (static)])
+        elif test "$bits" = 64 -a -f "$lib/64/libssl.${SHLIB_SUFFIX}" -a -f "$lib/64/libcrypto.${SHLIB_SUFFIX}"; then
+	    OPENSSL_LDFLAGS="-L$lib/64 -lssl -lcrypto"
+       	    AC_MSG_RESULT([$lib/64 (shared)])
+    	elif test "$bits" = 64 -a -f "$lib/64/libssl.a" -a -f "$lib/64/libcrypto.a"; then
+	    OPENSSL_LDFLAGS="-L$lib -lssl -lcrypto"
+       	    AC_MSG_RESULT([$lib (static)])
+    	fi
+    fi
+    if test -z "$OPENSSL_LDFLAGS"; then
+        return
+    fi
+    AC_MSG_CHECKING([for openssl include files])
+    # try to find include files
+    if test -f "$inc/openssl/ssl.h"; then
+        AC_MSG_RESULT([found: $inc/openssl])
+        set_openssl_cppflags $inc
+    else
+	AC_MSG_ERROR([not found])
+    fi
+
+    AC_SUBST(OPENSSL_CPPFLAGS)
+    AC_SUBST(OPENSSL_LDFLAGS)
+}
+
+# see if we can figure out where the openssl library is
+AC_ARG_WITH([openssl-dir],
+  [AS_HELP_STRING([--with-openssl-dir@<:@=DIR@:>@],
+                  [openssl directory])],
+  [if test ! -d "${with_openssl_dir}"; then AC_MSG_ERROR(bad value ${with_openssl_dir} for --with-openssl-dir); unset with_openssl_dir; fi],
+  [with_openssl_dir="$OPENSSL_DIR"])
+
+AC_MSG_CHECKING([for openssl libraries and header files])
+for dir in "${with_openssl_dir}" "${with_lib_prefix}" "${find_prefix}" /usr / /usr/local /opt/gnu /opt/openssl /usr/local/openssl /opt/local /sw /usr/sfw /opt/sfw; do
+    find_openssl $dir
+    if test -n "$OPENSSL_LDFLAGS"; then
+        break
+    fi
+done
+if test -z "$OPENSSL_LDFLAGS"; then
+    AC_MSG_ERROR([no openssl library found])
+else
+    # check for openssl const correctness (later versions have it)
+    SAVE_CPPFLAGS="$CPPFLAGS"
+    SAVE_LDFLAGS="$LDFLAGS"
+    CPPFLAGS="$CPPFLAGS $OPENSSL_CPPFLAGS"
+    LDFLAGS="$LDFLAGS $OPENSSL_LDFLAGS"
+
+    AC_MSG_CHECKING([const correctness in openssl asn1 header])
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+#include <openssl/asn1.h>
+         ]],[[
+const unsigned char *p;
+d2i_ASN1_type_bytes(0, &p, 0, 0);
+        ]])],openssl_const_ok=yes, openssl_const_ok=no)
+
+    CPPFLAGS="$SAVE_CPPFLAGS"
+    LDFLAGS="$SAVE_LDFLAGS"
+
+    if test "${openssl_const_ok}" = "yes"; then
+       AC_MSG_RESULT([ok])
+       AC_DEFINE(HAVE_OPENSSL_CONST, 1, Define if openssl headers correctly use const)
+    else
+       AC_MSG_RESULT([old style, not const correct])
+    fi
+fi
 
 AC_ARG_WITH([doxygen],
     [AS_HELP_STRING([--with-doxygen@<:@=PATH@:>@],
@@ -595,7 +705,7 @@ if test "$enable_optimization" = "yes"; then
     elif test "$CXX" = "CC" -a "`echo $host_os|cut -b-7`" = "solaris"; then
         # remove -g with Solaris CC as it reduces optimization levels
 	CXXFLAGS="`echo $CXXFLAGS| sed s/-g//` -xO5" # Solaris CC
-    elif test -n "`echo $CXX|grep aCC`"; then 
+    elif test -n "`echo $CXX|grep aCC`"; then
         # remove -g with HP-UX aCC as it reduces optimization levels
 	CXXFLAGS="`echo $CXXFLAGS| sed s/-g//` +O4" # HP-UX aCC
     fi
