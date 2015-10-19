@@ -306,10 +306,10 @@ find_openssl() {
     if test -n "$openssl_static"; then
     	if test -f "$lib/libssl.a" -a -f "$lib/libcrypto.a"; then
 	    OPENSSL_LDFLAGS="$lib/libssl.a $lib/libcrypto.a"
-       	    AC_MSG_RESULT([$lib (forced static)])
+	    msg_lib="$lib (forced static)"
     	elif test "$bits" = 64 -a -f "$lib/64/libssl.a" -a -f "$lib/64/libcrypto.a"; then
 	    OPENSSL_LDFLAGS="$lib/64/libssl.a $lib/64/libcrypto.a"
-       	    AC_MSG_RESULT([$lib/64 (forced static)])
+	    msg_lib="$lib/64 (forced static)"
     	fi
     else
         if test -f "$lib/libssl.${SHLIB_SUFFIX}" -a -f "$lib/libcrypto.${SHLIB_SUFFIX}"; then
@@ -317,35 +317,39 @@ find_openssl() {
        	        OPENSSL_LDFLAGS="-L$lib"
     	    fi
 	    OPENSSL_LDFLAGS="$OPENSSL_LDFLAGS -lssl -lcrypto"
-       	    AC_MSG_RESULT([$lib (shared)])
+	    msg_lib="$lib (shared)"
     	elif test -f "$lib/libssl.a" -a -f "$lib/libcrypto.a"; then
 	    if test "$lib" != "/lib" -a "$lib" != "/usr/lib"; then
        	        OPENSSL_LDFLAGS="-L$lib"
     	    fi
 	    OPENSSL_LDFLAGS="$OPENSSL_LDFLAGS -lssl -lcrypto"
-       	    AC_MSG_RESULT([$lib (static)])
+	    msg_lib="$lib (static)"
         elif test "$bits" = 64 -a -f "$lib/64/libssl.${SHLIB_SUFFIX}" -a -f "$lib/64/libcrypto.${SHLIB_SUFFIX}"; then
 	    OPENSSL_LDFLAGS="-L$lib/64 -lssl -lcrypto"
-       	    AC_MSG_RESULT([$lib/64 (shared)])
+	    msg_lib="$lib/64 (shared)"
     	elif test "$bits" = 64 -a -f "$lib/64/libssl.a" -a -f "$lib/64/libcrypto.a"; then
 	    OPENSSL_LDFLAGS="-L$lib -lssl -lcrypto"
-       	    AC_MSG_RESULT([$lib (static)])
+	    msg_lib="$lib (static)"
     	fi
     fi
     if test -z "$OPENSSL_LDFLAGS"; then
+        unset msg_lib
         return
     fi
-    AC_MSG_CHECKING([for openssl include files])
     # try to find include files
     if test -f "$inc/openssl/ssl.h"; then
-        AC_MSG_RESULT([found: $inc/openssl])
+        msg_inc="$inc/openssl"
         set_openssl_cppflags $inc
     else
-	AC_MSG_ERROR([not found])
+        unset OPENSSL_LDFLAGS
+        unset msg_lib
+	return
     fi
 
-    AC_SUBST(OPENSSL_CPPFLAGS)
+    AC_MSG_RESULT([libs: $msg_lib includes: $msg_inc])
+
     AC_SUBST(OPENSSL_LDFLAGS)
+    AC_SUBST(OPENSSL_CPPFLAGS)
 }
 
 # see if we can figure out where the openssl library is
