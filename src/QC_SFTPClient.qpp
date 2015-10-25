@@ -104,7 +104,7 @@ SFTPClient::copy() {
     @code my hash $h = $sftpclient.info(); @endcode
 */
 hash SFTPClient::info() [flags=CONSTANT] {
-   return myself->sftp_info();
+   return myself->sftpInfo();
 }
 
 //! Returns the current path as a string or \c NOTHING if no path is set
@@ -114,7 +114,7 @@ hash SFTPClient::info() [flags=CONSTANT] {
     @code my *string $path = $sftpclient.path(); @endcode
 */
 *string SFTPClient::path() [flags=CONSTANT] {
-   return myself->sftp_path();
+   return myself->sftpPath();
 }
 
 //! Returns a hash of directory information; throws an exception if any errors occur
@@ -138,7 +138,7 @@ hash SFTPClient::info() [flags=CONSTANT] {
     @see SFTPClient::listFull()
 */
 hash SFTPClient::list(*string path, timeout timeout = 60s) [flags=RET_VALUE_ONLY] {
-   return myself->sftp_list(path ? path->getBuffer() : 0, (int)timeout, xsink);
+   return myself->sftpList(path ? path->getBuffer() : 0, (int)timeout, xsink);
 }
 
 //! Returns a list of directory information with detailed information for files, links, and directories; throws an exception if any errors occur
@@ -169,7 +169,7 @@ hash SFTPClient::list(*string path, timeout timeout = 60s) [flags=RET_VALUE_ONLY
     @since ssh2 0.9.8.1
 */
 list SFTPClient::listFull(*string path, timeout timeout = 60s) [flags=RET_VALUE_ONLY] {
-   return myself->sftp_list_full(path ? path->getBuffer() : 0, (int)timeout, xsink);
+   return myself->sftpListFull(path ? path->getBuffer() : 0, (int)timeout, xsink);
 }
 
 //! Returns a hash of information about a file or \c NOTHING if the file cannot be found
@@ -196,7 +196,7 @@ list SFTPClient::listFull(*string path, timeout timeout = 60s) [flags=RET_VALUE_
 */
 *hash SFTPClient::stat(string path, timeout timeout = 60s) [flags=RET_VALUE_ONLY] {
    LIBSSH2_SFTP_ATTRIBUTES attr;
-   int rc = myself->sftp_getAttributes(path->getBuffer(), &attr, (int)timeout, xsink);
+   int rc = myself->sftpGetAttributes(path->getBuffer(), &attr, (int)timeout, xsink);
    return rc < 0 ? 0 : attr2hash(attr);
 }
 
@@ -213,7 +213,7 @@ list SFTPClient::listFull(*string path, timeout timeout = 60s) [flags=RET_VALUE_
     @code $sftpclient.removeFile($path); @endcode
 */
 nothing SFTPClient::removeFile(string path, timeout timeout = 60s) {
-   myself->sftp_unlink(path->getBuffer(), (int)timeout, xsink);
+   myself->sftpUnlink(path->getBuffer(), (int)timeout, xsink);
 }
 
 //! Renames or moves a remote file; throws an exception if any errors occur
@@ -231,7 +231,7 @@ nothing SFTPClient::removeFile(string path, timeout timeout = 60s) {
     @code $sftpclient.name("file.txt", "file.txt.orig"); @endcode
 */
 nothing SFTPClient::rename(string old_name, string new_name, timeout timeout = 60s) {
-   myself->sftp_rename(old_name->getBuffer(), new_name->getBuffer(), (int)timeout, xsink);
+   myself->sftpRename(old_name->getBuffer(), new_name->getBuffer(), (int)timeout, xsink);
 }
 
 //! Changes the mode of a remote file or directory; sticky bits may not be set; throws an exception if any errors occur
@@ -255,7 +255,7 @@ nothing SFTPClient::chmod(string path, int mode, timeout timeout = 60s) {
       return 0;
    }
 
-  myself->sftp_chmod(path->getBuffer(), (int)mode, (int)timeout, xsink);
+  myself->sftpChmod(path->getBuffer(), (int)mode, (int)timeout, xsink);
 }
 
 //! Retrieves a remote file and returns it as a binary object; throws an exception if any errors occur
@@ -271,7 +271,7 @@ nothing SFTPClient::chmod(string path, int mode, timeout timeout = 60s) {
     @code my binary $b = $sftpclient.getFile("file.bin"); @endcode
 */
 binary SFTPClient::getFile(string path, timeout timeout = 60s) {
-   return myself->sftp_getFile(path->getBuffer(), (int)timeout, xsink);
+   return myself->sftpGetFile(path->getBuffer(), (int)timeout, xsink);
 }
 
 //! Retrieves a remote file and returns it as a string; throws an exception if any errors occur
@@ -289,7 +289,7 @@ binary SFTPClient::getFile(string path, timeout timeout = 60s) {
 */
 string SFTPClient::getTextFile(string path, timeout timeout = 60s, *string encoding) {
    const QoreEncoding *qe = encoding ? QEM.findCreate(encoding) : QCS_DEFAULT;
-   return myself->sftp_getTextFile(path->getBuffer(), (int)timeout, qe, xsink);
+   return myself->sftpGetTextFile(path->getBuffer(), (int)timeout, qe, xsink);
 }
 
 //! Saves a file on the remote server from a binary argument and returns the number of bytes sent; throws an exception if any errors occur
@@ -310,7 +310,7 @@ string SFTPClient::getTextFile(string path, timeout timeout = 60s, *string encod
 */
 int SFTPClient::putFile(binary bin, string path, int mode = 0644, timeout timeout = 60s) {
    // transfer the file
-   return myself->sftp_putFile((const char *)bin->getPtr(), bin->size(), path->getBuffer(), (int)mode, (int)timeout, xsink);
+   return myself->sftpPutFile((const char *)bin->getPtr(), bin->size(), path->getBuffer(), (int)mode, (int)timeout, xsink);
 }
 
 //! Saves a file on the remote server from a string argument and returns the number of bytes sent; throws an exception if any errors occur
@@ -331,7 +331,7 @@ int SFTPClient::putFile(binary bin, string path, int mode = 0644, timeout timeou
 */
 int SFTPClient::putFile(string data, string path, int mode = 0644, timeout timeout = 60s) {
    // transfer the file
-   return myself->sftp_putFile(data->getBuffer(), data->strlen(), path->getBuffer(), (int)mode, (int)timeout, xsink);
+   return myself->sftpPutFile(data->getBuffer(), data->strlen(), path->getBuffer(), (int)mode, (int)timeout, xsink);
 }
 
 //! Makes a directory on the remote server; throws an exception if any errors occur
@@ -349,7 +349,7 @@ int SFTPClient::putFile(string data, string path, int mode = 0644, timeout timeo
     @code $sftpclient.mkdir($path, 0700); @endcode
 */
 nothing SFTPClient::mkdir(string path, int mode = 0755, timeout timeout = 60s) {
-   myself->sftp_mkdir(path->getBuffer(), (int)mode, (int)timeout, xsink);
+   myself->sftpMkdir(path->getBuffer(), (int)mode, (int)timeout, xsink);
 }
 
 //! Removes a directory on the remote server; throws an exception if any errors occur
@@ -366,7 +366,7 @@ nothing SFTPClient::mkdir(string path, int mode = 0755, timeout timeout = 60s) {
     @code $sftpclient.rmdir($path); @endcode
 */
 nothing SFTPClient::rmdir(string path, timeout timeout = 60s) {
-   myself->sftp_rmdir(path->getBuffer(), (int)timeout, xsink);
+   myself->sftpRmdir(path->getBuffer(), (int)timeout, xsink);
 }
 
 //! Changes the directory on the remote server and returns the new directory; throws an exception if any errors occur
@@ -382,5 +382,5 @@ nothing SFTPClient::rmdir(string path, timeout timeout = 60s) {
     @code $sftpclient.chdir($path); @endcode
 */
 string SFTPClient::chdir(string path, timeout timeout = 60s) {
-   return myself->sftp_chdir(path->getBuffer(), (int)timeout, xsink);
+   return myself->sftpChdir(path->getBuffer(), (int)timeout, xsink);
 }
