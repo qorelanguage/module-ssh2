@@ -85,7 +85,7 @@ SSH2Client::copy() {
     @code my hash $h = $ssh2client.info(); @endcode
  */
 hash SSH2Client::info() [flags=CONSTANT] {
-   return c->ssh_info();
+   return c->sshInfo();
 }
 
 //! Opens a login session and returns a SSH2Channel object for the session

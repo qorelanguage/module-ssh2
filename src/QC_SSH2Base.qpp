@@ -132,7 +132,7 @@ nothing SSH2Base::setKeys(string priv_key, *string pub_key) [dom=FILESYSTEM] {
     @since ssh2 0.9.8.1
  */
 bool SSH2Base::connected() [flags=CONSTANT] {
-  return myself->ssh_connected();
+  return myself->sshConnected();
 }
 
 //! Removes any warning @ref Qore::Thread::Queue "Queue" object from the Socket
