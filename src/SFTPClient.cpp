@@ -191,6 +191,7 @@ int SFTPClient::sftpConnected() {
 }
 
 int SFTPClient::disconnectUnlocked(bool force, int timeout_ms, AbstractDisconnectionHelper* adh, ExceptionSink* xsink) {
+   //printd(5, "SFTPClient::disconnectUnlocked() force: %d timeout_ms: %d adh: %p xsink: %p\n", force, timeout_ms, adh, xsink);
    int rc;
 
    // disconnect dependent opbjects first
@@ -813,7 +814,7 @@ BinaryNode* SFTPClient::sftpGetFile(const char* file, int timeout_ms, ExceptionS
       qh.err("libssh2_sftp_stat(%s) returned an error", fname.c_str());
       return 0;
    }
-   //printd(0, "SFTPClient::sftp_getFile() permissions: %lo\n", attrs.permissions);
+   //printd(5, "SFTPClient::sftpGetFile() permissions: %lo\n", attrs.permissions);
    size_t fsize = attrs.filesize;
 
    {
