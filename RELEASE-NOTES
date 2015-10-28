@@ -11,11 +11,14 @@ version 1.0
 * socket performance instrumentation supported in the SFTPClient class when
   compiled with Qore 0.8.10+
 * user modules moved to top-level qore module directory from version-specific
-  module directory since they are valid for multiple versions of qore 
+  module directory since they are valid for multiple versions of qore
 * fixed a bug where a crash would result when attempting a connection and
   libssh2 would not return any user authentication methods
 * implemented an automatic disconnection when timeouts occur to avoid dead
   connections
+* fixed crashing bugs in the SFTPClient class handling disconnect events when
+  an sftp handle was open; the handle must be closed before the socket
+  connection is closed or a crash will result
 
 
 *************
@@ -44,7 +47,7 @@ version 0.9.8
 * send the file mode when opening files read-only in case broken servers will
   erroneously set the remote file's mode to 0 and then the file will not be
   readable
-    
+
 
 *************
 version 0.9.7
