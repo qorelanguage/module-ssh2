@@ -84,19 +84,19 @@ stdout.printf("exit status: %d\n", $chan.getExitStatus());@endcode
     This tag is equal to @ref NOOP, except that \c RUNTIME_NOOP is also enforced at runtime.
 
     @subsection RET_VALUE_ONLY RET_VALUE_ONLY
-	
+
     This flag indicates that the function or method has no side effects; it only returns a value, for example.
 
     This tag is identical to @ref CONSTANT except that functions or methods tagged with \c RET_VALUE_ONLY could throw exceptions.
 
     @subsection CONSTANT CONSTANT
-	
+
     This flag indicates that the function or method has no side effects and does not throw any exceptions.
 
     This tag is identical to @ref RET_VALUE_ONLY except that functions or methods tagged with \c CONSTANT do not throw exceptions.
 
     @subsection DEPRECATED DEPRECATED
-	
+
     Code with this flag is deprecated and may be removed in a future version of this module; if a variant with this flag is resolved at parse time, a \c "deprecated" warning is raised (assuming this warning is enabled).
 
     @section ssh2releasenotes Release Notes
@@ -111,6 +111,7 @@ stdout.printf("exit status: %d\n", $chan.getExitStatus());@endcode
     - user modules moved to top-level qore module directory from version-specific module directory since they are valid for multiple versions of qore
     - fixed a bug where a crash would result when attempting a connection and libssh2 would not return any user authentication methods
     - implemented an automatic disconnection when timeouts occur to avoid dead connections
+    - fixed crashing bugs in the @ref Qore::SSH2::SFTPClient "SFTPClient" class handling disconnect events when an sftp handle was open; the handle must be closed before the socket connection is closed or a crash will result
 
     @subsection ssh2v099 Version 0.9.9
     - closed some gaps in the non-blocking I/O solution introduced in the last release
