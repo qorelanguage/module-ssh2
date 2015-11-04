@@ -102,8 +102,8 @@ stdout.printf("exit status: %d\n", $chan.getExitStatus());@endcode
     @section ssh2releasenotes Release Notes
 
     @subsection ssh2v10 Version 1.0
-    - SftpPoller reexports ssh2
-    - SftpPoller sleeps for poll_interval even when matched files are not deleted
+    - <a href="../../SftpPoller/html/index.html">SftpPoller</a> reexports ssh2
+    - <a href="../../SftpPoller/html/index.html">SftpPoller</a> sleeps for \a poll_interval even when matched files are not deleted
     - fixed crashing bugs handling errors and handle scope in the @ref Qore::SSH2::SFTPClient "SFTPClient" class
     - added the <a href="../../SftpPoller/html/index.html">SftpPoller</a> user module
     - force socket disconnect in case of a timeout error when trying to close a file descriptor
@@ -112,6 +112,8 @@ stdout.printf("exit status: %d\n", $chan.getExitStatus());@endcode
     - fixed a bug where a crash would result when attempting a connection and libssh2 would not return any user authentication methods
     - implemented an automatic disconnection when timeouts occur to avoid dead connections
     - fixed crashing bugs in the @ref Qore::SSH2::SFTPClient "SFTPClient" class handling disconnect events when an sftp handle was open; the handle must be closed before the socket connection is closed or a crash will result
+    - implemented the @ref Qore::SSH2::SFTPClient::retrieveFile() "SFTPClient::retrieveFile()" and @ref Qore::SSH2::SFTPClient::transferFile() "SFTPClient::transferFile()" methods
+    - ported the @ref Qore::SSH2::SFTPClient "SFTPClient" class tests to QUnit and added tests for the new methods
 
     @subsection ssh2v099 Version 0.9.9
     - closed some gaps in the non-blocking I/O solution introduced in the last release

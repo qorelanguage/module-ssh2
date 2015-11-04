@@ -19,6 +19,10 @@ version 1.0
 * fixed crashing bugs in the SFTPClient class handling disconnect events when
   an sftp handle was open; the handle must be closed before the socket
   connection is closed or a crash will result
+* implemented the SFTPClient::retrieveFile() and SFTPClient::transferFile()
+  methods
+* ported the SFTPClient class tests to QUnit and added tests for the new
+  methods
 
 
 *************
