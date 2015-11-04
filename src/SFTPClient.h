@@ -45,6 +45,9 @@ DLLLOCAL extern qore_classid_t CID_SFTP_CLIENT;
 // the mask for user/group/other permissions
 #define SFTP_UGOMASK ((unsigned long)(LIBSSH2_SFTP_S_IRWXU | LIBSSH2_SFTP_S_IRWXG | LIBSSH2_SFTP_S_IRWXO))
 
+// SFTP blocksize
+#define SFTP_BLOCK 16384
+
 class SFTPClient;
 
 class QSftpHelper : public AbstractDisconnectionHelper {
@@ -86,7 +89,7 @@ public:
       if (sftp_handle)
          closeIntern();
    }
-   
+
    DLLLOCAL int close() {
       return closeIntern();
    }
@@ -115,7 +118,7 @@ protected:
    DLLLOCAL void doShutdown(int timeout_ms = DEFAULT_TIMEOUT_MS, ExceptionSink* xsink = 0);
 
    DLLLOCAL virtual int disconnectUnlocked(bool force, int timeout_ms = DEFAULT_TIMEOUT_MS, AbstractDisconnectionHelper* adh = 0, ExceptionSink* xsink = 0);
-   
+
 public:
    // session props
    std::string sftppath;
@@ -128,7 +131,7 @@ public:
    DLLLOCAL virtual int connect(int timeout_ms, ExceptionSink* xsink) {
       return sftpConnect(timeout_ms, xsink);
    }
-   
+
    DLLLOCAL int sftpConnect(int timeout_ms, ExceptionSink* xsink = 0);
 
    DLLLOCAL int sftpConnected();
@@ -147,6 +150,9 @@ public:
    DLLLOCAL BinaryNode *sftpGetFile(const char* file, int timeout_ms, ExceptionSink* xsink);
    DLLLOCAL QoreStringNode *sftpGetTextFile(const char* file, int timeout_ms, const QoreEncoding *encoding, ExceptionSink* xsink);
    DLLLOCAL qore_size_t sftpPutFile(const char* data, qore_size_t len, const char* fname, int mode, int timeout_ms, ExceptionSink* xsink);
+
+   DLLLOCAL int sftpRetrieveFile(const char* remote_file, const char* local_file, int timeout_ms, int mode, ExceptionSink* xsink);
+   DLLLOCAL qore_size_t sftpTransferFile(const char* local_path, const char* remote_path, int mode, int timeout_ms, ExceptionSink* xsink);
 
    DLLLOCAL int sftpGetAttributes(const char* fname, LIBSSH2_SFTP_ATTRIBUTES *attrs, int timeout_ms, ExceptionSink* xsink);
 
@@ -171,4 +177,3 @@ static inline std::string absolute_filename(const SFTPClient* me, const char* f)
 }
 
 #endif // _QORE_SFTPCLIENT_H
-

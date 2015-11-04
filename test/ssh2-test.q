@@ -2,8 +2,10 @@
 # -*- mode: qore; indent-tabs-mode: nil -*-
 
 %require-our
-%requires qore >= 0.8
-%requires ssh2 >= 0.9.6
+%requires qore >= 0.8.12
+%requires ssh2 >= 1.0
+
+%requires Util
 
 our hash $ehash;
 our int $errors = 0;
@@ -26,9 +28,9 @@ const opts = (
     "help": "h,help"
     );
 
-sub get_random_filename() returns string {    
+sub get_random_filename() returns string {
     my string $name;
-    
+
     for (my int $i = 0; $i < FileNameLen; ++$i) {
         my int $c = rand() % 52;
         if ($c < 26)
@@ -69,12 +71,12 @@ sub ssh_test(string $url) {
 
     if ($o.privkey)
         $sc.setKeys($o.privkey);
-    
+
     $sc.connect();
 
     my hash $info = $sc.info();
     stdout.printf("SSH %s@%s:%d auth: %s, hostkey: %n, crypt_cs: %n, tmp: %s\n", $info.ssh2user, $info.ssh2host, $info.ssh2port, $info.authenticated, $info.methods.HOSTKEY, $info.methods.CRYPT_CS, $fn);
-    
+
     # test SSHClient::scpPut()
     my SSH2Channel $chan = $sc.scpPut($fn, FileLen, 0622, 1982-01-05, 2010-02-01);
     test_value($chan instanceof SSH2Channel, True, "SSH2Client::scpPut()");
@@ -117,7 +119,7 @@ sub ssh_test(string $url) {
     readUntilPrompt($chan);
     $chan.write("ls -l | head -5\n");
     readUntilPrompt($chan);
-    
+
     $chan.sendEof();
     $chan.close();
     stdout.printf("exit\n");
@@ -125,100 +127,6 @@ sub ssh_test(string $url) {
     stdout.printf("----------- end SSH session -----------\n");
     stdout.printf("=======================================\n");
     stdout.printf("exit status: %d\n", $chan.getExitStatus());
-}
-
-sub sftp_test_intern(SFTPClient $sc) {
-    my string $file = get_random_filename();
-    my string $fn = "/tmp/" + $file;
-
-    my hash $info = $sc.info();
-
-    stdout.printf("SFTP %s@%s:%d auth: %s, hostkey: %n, crypt_cs: %n, tmp: %s\n", $info.ssh2user, $info.ssh2host, $info.ssh2port, $info.authenticated, $info.methods.HOSTKEY, $info.methods.CRYPT_CS, $fn);
-    
-    test_value($info.connected, True, "SFTPClient::info()");
-    test_value(type($sc.list(NOTHING, $timeout)), Type::Hash, "SFTPClient::list()");
-    test_value(type($sc.listFull(NOTHING, $timeout)), Type::List, "SFTPClient::listFull()");
-
-    # create a file: seems that sshd ignores the mode when creating a file
-    my int $rc = $sc.putFile(FileContents, $fn, NOTHING, $timeout);
-    test_value($rc, strlen(FileContents), "SFTPClient::putFile()");
-
-    $sc.chmod($fn, FileMode, $timeout);
-    $info = $sc.stat($fn, $timeout);
-    test_value($info.size, strlen(FileContents), "SFTPClient::stat() size");
-    test_value($info.mode & 0777, FileMode, "SFTPClient::stat() mode");
-    test_value($info.permissions, "-rwxr-xr-x", "SFTPClient::stat() permissions");
-
-    test_value("/tmp", $sc.chdir("/tmp"), "(before getFile()) SFTPClient::chdir()");
-
-    # retrieve the file as a binary object
-    my binary $b = $sc.getFile(basename($fn), $timeout);
-    test_value($b, BinContents, "SFTPClient::getFile()");
-
-    # retrieve the file as a string
-    my string $s = $sc.getTextFile($fn, $timeout);
-    test_value($s, FileContents, "SFTPClient::getTextFile()");
-
-    # test various encodings
-    my string $sutf8 = $sc.getTextFile($fn, $timeout, "utf8");
-    test_value($sutf8.encoding(), "UTF-8", "SFTPClient::getTextFile(utf8)");
-    my string $siso88592 = $sc.getTextFile($fn, $timeout, "iso-8859-2");
-    test_value($siso88592.encoding(), "ISO-8859-2", "SFTPClient::getTextFile(iso-8859-2)");
-
-    # make new file name
-    my string $nfn = $fn + ".new";
-
-    # move (rename) file
-    $sc.rename($fn, $nfn, $timeout);
-    $info = $sc.stat($nfn, $timeout);
-    test_value($info.size, strlen(FileContents), "SFTPClient::rename() and SFTPClient::stat() size");
-    test_value($sc.stat($fn, $timeout), NOTHING, "SFTPClient::stat() on non-existent file");
-
-    # delete file
-    $sc.removeFile($nfn, $timeout);
-    test_value($sc.stat($nfn, $timeout), NOTHING, "SFTPClient::removeFile()");
-
-    $sc.mkdir($fn, NOTHING, $timeout);
-    $info = $sc.stat($fn, $timeout);
-
-    # move (rename) directory
-    $sc.rename($fn, $nfn, $timeout);
-    $info = $sc.stat($nfn, $timeout);
-    test_value(type($info.atime), Type::Date, "SFTPClient::rename() and SFTPClient::stat() on dir");
-    test_value($sc.stat($fn, $timeout), NOTHING, "SFTPClient::stat() on non-existent file");
-
-    my $np = $sc.chdir("/tmp", $timeout);
-    test_value("/tmp", $np, "SFTPClient::chdir()");
-
-    # remove directory
-    $sc.rmdir($file + ".new", $timeout);
-    test_value($sc.stat($nfn, $timeout), NOTHING, "SFTPClient::rmdir()");
-}
-
-sub sftp_test(string $url) {
-    my Counter $c();
-
-    while ($o.threads--) {
-        my SFTPClient $sc($url);
-        if ($o.privkey)
-            $sc.setKeys($o.privkey);
-    
-        $sc.connect($timeout);
-
-        my code $test = sub () {
-            on_exit $c.dec();
-            my int $iters = $o.iters;
-            while ($iters--) {
-                sftp_test_intern($sc);
-            }
-        };
-
-        $c.inc();
-        background $test();
-    }
-
-    # do not return from function call until all threads have exited
-    $c.waitForZero();
 }
 
 sub main() {
@@ -229,8 +137,7 @@ sub main() {
     if (!exists $url || $o.help || $o.iters < 0 || $o.threads < 0) {
 	printf("usage: %s <url>
   url examples:
-    ssh://user:password@host  (for SSH2 tests)
-    sftp://user:password@host (for SFTP tests)
+    ssh://user:password@host
  -i,--iters=ARG        iterations per test
  -k,--private-key=ARG  set private key to use for authentication
  -t,--threads=ARG      number of threads
@@ -250,10 +157,7 @@ sub main() {
 
     printf("using libssh2 version: %s\n", SSH2::Version);
 
-    if ($url =~ /^sftp/)
-	sftp_test($url);
-    else
-	ssh_test($url);
+    ssh_test($url);
 }
 
 main();
