@@ -107,13 +107,14 @@ stdout.printf("exit status: %d\n", $chan.getExitStatus());@endcode
     - fixed crashing bugs handling errors and handle scope in the @ref Qore::SSH2::SFTPClient "SFTPClient" class
     - added the <a href="../../SftpPoller/html/index.html">SftpPoller</a> user module
     - force socket disconnect in case of a timeout error when trying to close a file descriptor
-    - socket performance instrumentation supported in the @ref Qore::SSH2::SFTPClient "SFTPClient" class when compiled with Qore 0.8.10+
+    - socket performance instrumentation supported in the @ref Qore::SSH2::SFTPClient "SFTPClient" class
     - user modules moved to top-level qore module directory from version-specific module directory since they are valid for multiple versions of qore
     - fixed a bug where a crash would result when attempting a connection and libssh2 would not return any user authentication methods
     - implemented an automatic disconnection when timeouts occur to avoid dead connections
     - fixed crashing bugs in the @ref Qore::SSH2::SFTPClient "SFTPClient" class handling disconnect events when an sftp handle was open; the handle must be closed before the socket connection is closed or a crash will result
     - implemented the @ref Qore::SSH2::SFTPClient::retrieveFile() "SFTPClient::retrieveFile()" and @ref Qore::SSH2::SFTPClient::transferFile() "SFTPClient::transferFile()" methods
     - ported the @ref Qore::SSH2::SFTPClient "SFTPClient" class tests to QUnit and added tests for the new methods
+    - requires %Qore 0.8.12+ to build (uses the new QoreValue API)
 
     @subsection ssh2v099 Version 0.9.9
     - closed some gaps in the non-blocking I/O solution introduced in the last release

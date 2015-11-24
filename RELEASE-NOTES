@@ -8,8 +8,7 @@ version 1.0
 * added the SftpPoller user module
 * force socket disconnect in case of a timeout error when trying to close a
   file descriptor
-* socket performance instrumentation supported in the SFTPClient class when
-  compiled with Qore 0.8.10+
+* socket performance instrumentation supported in the SFTPClient class
 * user modules moved to top-level qore module directory from version-specific
   module directory since they are valid for multiple versions of qore
 * fixed a bug where a crash would result when attempting a connection and
@@ -23,6 +22,7 @@ version 1.0
   methods
 * ported the SFTPClient class tests to QUnit and added tests for the new
   methods
+* requires Qore 0.8.12+ to build (uses the new QoreValue API)
 
 
 *************

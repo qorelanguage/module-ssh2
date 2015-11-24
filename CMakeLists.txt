@@ -65,7 +65,7 @@ set(CPP_SRC
 
 set(QMOD qlib/SftpPoller.qm)
 
-qore_wrap_qpp(QPP_SOURCES ${QPP_SRC})
+qore_wrap_qpp_value(QPP_SOURCES ${QPP_SRC})
 
 set(module_name "ssh2")
 

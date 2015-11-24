@@ -1,7 +1,7 @@
 MNAME=ssh2
 
 .qpp.cpp:
-	qpp $<
+	qpp -V $<
 
 GENERATED_SRC = QC_SSH2Base.cpp QC_SSH2Client.cpp QC_SSH2Channel.cpp QC_SFTPClient.cpp
 CLEANFILES = $(GENERATED_SRC)
