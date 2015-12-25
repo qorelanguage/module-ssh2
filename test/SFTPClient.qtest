@@ -1,9 +1,10 @@
-#!/usr/bin/env qr
+#!/usr/bin/env qore
 # -*- mode: qore; indent-tabs-mode: nil -*-
 
 %new-style
 %require-types
 %require-our
+%strict-args
 
 %requires qore >= 0.8.12
 %requires ssh2 >= 1.0
