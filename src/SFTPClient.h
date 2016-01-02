@@ -7,7 +7,7 @@
   Qore Programming Language
 
   Copyright (C) 2009 Wolfgang Ritzinger
-  Copyright (C) 2010 - 2015 Qore Technologies, sro
+  Copyright (C) 2010 - 2016 Qore Technologies, sro
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -149,10 +149,12 @@ public:
 
    DLLLOCAL BinaryNode *sftpGetFile(const char* file, int timeout_ms, ExceptionSink* xsink);
    DLLLOCAL QoreStringNode *sftpGetTextFile(const char* file, int timeout_ms, const QoreEncoding *encoding, ExceptionSink* xsink);
-   DLLLOCAL qore_size_t sftpPutFile(const char* data, qore_size_t len, const char* fname, int mode, int timeout_ms, ExceptionSink* xsink);
+   DLLLOCAL size_t sftpPutFile(const char* data, size_t len, const char* fname, int mode, int timeout_ms, ExceptionSink* xsink);
 
-   DLLLOCAL int sftpRetrieveFile(const char* remote_file, const char* local_file, int timeout_ms, int mode, ExceptionSink* xsink);
-   DLLLOCAL qore_size_t sftpTransferFile(const char* local_path, const char* remote_path, int mode, int timeout_ms, ExceptionSink* xsink);
+   // returns the number of bytes transferred or -1 if an error occurred
+   DLLLOCAL int64 sftpRetrieveFile(const char* remote_file, const char* local_file, int timeout_ms, int mode, ExceptionSink* xsink);
+   // returns the number of bytes transferred or -1 if an error occurred
+   DLLLOCAL int64 sftpTransferFile(const char* local_path, const char* remote_path, int mode, int timeout_ms, ExceptionSink* xsink);
 
    DLLLOCAL int sftpGetAttributes(const char* fname, LIBSSH2_SFTP_ATTRIBUTES *attrs, int timeout_ms, ExceptionSink* xsink);
 

@@ -3,10 +3,9 @@
 
 %new-style
 %require-types
-%require-our
 %strict-args
+%enable-all-warnings
 
-%requires qore >= 0.8.12
 %requires ssh2 >= 1.0
 
 %requires Util
@@ -32,6 +31,8 @@ class SFTPClientTest inherits QUnit::Test {
             "privkey": "k,private-key=s",
             "timeout": "T,timeout=i",
             );
+
+        const ColumnOffset = 25;
     }
 
     constructor() : Test("SFTPClientTest", "1.0", \ARGV, MyOpts) {
@@ -53,7 +54,8 @@ class SFTPClientTest inherits QUnit::Test {
         sc.connect();
         hash info = sc.info();
 
-        stdout.printf("SFTP %s@%s:%d auth: %y, hostkey: %y, crypt_cs: %y, tmp: %s\n", info.ssh2user, info.ssh2host, info.ssh2port, info.authenticated, info.methods.HOSTKEY, info.methods.CRYPT_CS, fn);
+        if (m_options.verbose)
+            stdout.printf("SFTP %s@%s:%d auth: %y, hostkey: %y, crypt_cs: %y, tmp: %s\n", info.ssh2user, info.ssh2host, info.ssh2port, info.authenticated, info.methods.HOSTKEY, info.methods.CRYPT_CS, fn);
 
         testAssertionValue("SFTPClient::info()", info.connected, True);
         testAssertionValue("SFTPClient::list()", sc.list(NOTHING, timeout).type(), Type::Hash);
@@ -65,11 +67,11 @@ class SFTPClientTest inherits QUnit::Test {
 
         sc.chmod(fn, FileMode, timeout);
         info = sc.stat(fn, timeout);
-        testAssertionValue("SFTPClient::stat() size", info.size, strlen(FileContents));
+        testAssertionValue("SFTPClient::stat() size", info.size, FileContents.size());
         testAssertionValue("SFTPClient::stat() mode", info.mode & 0777, FileMode);
         testAssertionValue("SFTPClient::stat() permissions", info.permissions, "-rwxr-xr-x");
 
-        testAssertionValue("(before getFile()) SFTPClient::chdir()", "/tmp", sc.chdir("/tmp"));
+        testAssertionValue("(before getFile()) SFTPClient::chdir()", realpath("/tmp"), sc.chdir("/tmp"));
 
         # retrieve the file as a binary object
         binary b = sc.getFile(basename(fn), timeout);
@@ -86,15 +88,16 @@ class SFTPClientTest inherits QUnit::Test {
         testAssertionValue("SFTPClient::getTextFile(iso-8859-2)", siso88592.encoding(), "ISO-8859-2");
 
         {
-            string rfn = sprintf("/tmp/%s", tmp_location(), get_random_string());
-            int rc = sc.transferFile(fn, rfn, timeout);
+            string rfn = sprintf("/%s/%s", tmp_location(), get_random_string());
+            rc = sc.transferFile(fn, rfn, timeout);
             testAssertionValue("SFTPClient::transferFile()", rc, FileContents.size());
 
             string lfn = sprintf("%s/%s", tmp_location(), get_random_string());
             # retrieve the file to the fs
-            sc.retrieveFile(rfn, lfn);
+            int len = sc.retrieveFile(rfn, lfn);
             on_exit unlink(lfn);
             testAssertionValue("SFTPClient::retrieveFile()", ReadOnlyFile::readTextFile(lfn), FileContents);
+            assertEq(FileContents.size(), len);
 
             # delete file
             sc.removeFile(rfn, timeout);
@@ -124,7 +127,7 @@ class SFTPClientTest inherits QUnit::Test {
         testAssertionValue("SFTPClient::stat() on non-existent file", sc.stat(fn, timeout));
 
         string np = sc.chdir("/tmp", timeout);
-        testAssertionValue("SFTPClient::chdir()", "/tmp", np);
+        testAssertionValue("SFTPClient::chdir()", realpath("/tmp"), np);
 
         # remove directory
         sc.rmdir(file + ".new", timeout);
@@ -132,11 +135,8 @@ class SFTPClientTest inherits QUnit::Test {
     }
 
     private usageIntern() {
-        TestReporter::usageIntern();
-	printf("
- -k,--private-key=ARG  set private key to use for authentication
- -T,--timeout=ARG      set timeout in seconds (def: %ds)
-",
-            timeout);
+        TestReporter::usageIntern(ColumnOffset);
+	printOption("-k,--private-key=ARG", "set private key to use for authentication", ColumnOffset);
+        printOption("-T,--timeout=ARG", sprintf("set timeout in seconds (def: %ds)", timeout), ColumnOffset);
     }
 }
