@@ -5,7 +5,7 @@
   libssh2 SFTP client integration into qore
 
   Copyright (C) 2009 Wolfgang Ritzinger
-  Copyright (C) 2010 - 2015 Qore Technologies, sro
+  Copyright (C) 2010 - 2016 Qore Technologies, sro
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -959,7 +959,7 @@ QoreStringNode* SFTPClient::sftpGetTextFile(const char* file, int timeout_ms, co
    return str.release();
 }
 
-int SFTPClient::sftpRetrieveFile(const char* remote_file, const char* local_file, int timeout_ms, int mode, ExceptionSink* xsink) {
+int64 SFTPClient::sftpRetrieveFile(const char* remote_file, const char* local_file, int timeout_ms, int mode, ExceptionSink* xsink) {
    AutoLocker al(m);
 
    // try to make an implicit connection
@@ -1025,23 +1025,29 @@ int SFTPClient::sftpRetrieveFile(const char* remote_file, const char* local_file
 #endif
 
    size_t tot = 0;
+
    while (true) {
       size_t bs = fsize - tot;
       if (bs > SFTP_BLOCK)
          bs = SFTP_BLOCK;
 
       while ((rc = libssh2_sftp_read(*qh, buf, bs)) == LIBSSH2_ERROR_EAGAIN) {
-         if (qh.waitSocket())
+         if (qh.waitSocket()) {
+            assert(*xsink);
             return -1;
+         }
       }
       if (rc < 0) {
          qh.err("libssh2_sftp_read(%ld) failed: total read: %ld while reading '%s' size %ld", fsize - tot, tot, fname.c_str(), fsize);
-         return 0;
+         assert(*xsink);
+         return -1;
       }
       if (rc) {
          tot += rc;
-         if (f.write(buf, rc, xsink))
+         if (f.write(buf, rc, xsink) < 0) {
+            assert(*xsink);
             return -1;
+         }
       }
       if (tot >= fsize)
          break;
@@ -1051,11 +1057,11 @@ int SFTPClient::sftpRetrieveFile(const char* remote_file, const char* local_file
    th.finalize(tot);
 #endif
 
-   return 0;
+   return tot;
 }
 
 // putFile(binary to put, filename on server, mode of the created file)
-qore_size_t SFTPClient::sftpPutFile(const char* outb, qore_size_t towrite, const char* fname, int mode, int timeout_ms, ExceptionSink* xsink) {
+size_t SFTPClient::sftpPutFile(const char* outb, size_t towrite, const char* fname, int mode, int timeout_ms, ExceptionSink* xsink) {
    AutoLocker al(m);
 
    // try to make an implicit connection
@@ -1093,7 +1099,7 @@ qore_size_t SFTPClient::sftpPutFile(const char* outb, qore_size_t towrite, const
    QoreSocketThroughputHelper th(socket, true);
 #endif
 
-   qore_size_t size = 0;
+   size_t size = 0;
    while (size < towrite) {
       ssize_t rc;
       while ((rc = libssh2_sftp_write(*qh, outb, towrite - size)) == LIBSSH2_ERROR_EAGAIN) {
@@ -1119,11 +1125,11 @@ qore_size_t SFTPClient::sftpPutFile(const char* outb, qore_size_t towrite, const
       return -1;
    }
 
-   return size; // the bytes actually written
+   return (int64)size; // the bytes actually written
 }
 
 // transferFile(local path, filename on server, mode of the created file)
-qore_size_t SFTPClient::sftpTransferFile(const char* local_path, const char* remote_path, int mode, int timeout_ms, ExceptionSink* xsink) {
+int64 SFTPClient::sftpTransferFile(const char* local_path, const char* remote_path, int mode, int timeout_ms, ExceptionSink* xsink) {
    // open local file
    QoreFile f;
    if (f.open2(xsink, local_path))
@@ -1132,7 +1138,7 @@ qore_size_t SFTPClient::sftpTransferFile(const char* local_path, const char* rem
    struct stat sbuf;
    if (fstat(f.getFD(), &sbuf)) {
       xsink->raiseErrnoException("FILE-STAT-ERROR", errno, "%s: fstat() call failed", local_path);
-      return 0;
+      return -1;
    }
 
    if (!mode)
@@ -1183,7 +1189,7 @@ qore_size_t SFTPClient::sftpTransferFile(const char* local_path, const char* rem
    QoreSocketThroughputHelper th(socket, true);
 #endif
 
-   qore_size_t size = 0;
+   size_t size = 0;
    while (size < towrite) {
       size_t bs = towrite - size;
       if (bs > SFTP_BLOCK)

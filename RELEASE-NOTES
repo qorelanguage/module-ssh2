@@ -22,6 +22,7 @@ version 1.0
   methods
 * ported the SFTPClient class tests to QUnit and added tests for the new
   methods
+* ported test/sftp-poller.q to QUnit
 * requires Qore 0.8.12+ to build (uses the new QoreValue API)
 
 

@@ -114,6 +114,7 @@ stdout.printf("exit status: %d\n", $chan.getExitStatus());@endcode
     - fixed crashing bugs in the @ref Qore::SSH2::SFTPClient "SFTPClient" class handling disconnect events when an sftp handle was open; the handle must be closed before the socket connection is closed or a crash will result
     - implemented the @ref Qore::SSH2::SFTPClient::retrieveFile() "SFTPClient::retrieveFile()" and @ref Qore::SSH2::SFTPClient::transferFile() "SFTPClient::transferFile()" methods
     - ported the @ref Qore::SSH2::SFTPClient "SFTPClient" class tests to QUnit and added tests for the new methods
+    - ported test/sftp-poller.q to QUnit
     - requires %Qore 0.8.12+ to build (uses the new QoreValue API)
 
     @subsection ssh2v099 Version 0.9.9

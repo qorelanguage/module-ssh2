@@ -1,7 +1,7 @@
 # -*- mode: qore; indent-tabs-mode: nil -*-
 #! @file SftpPoller.qm SftpPoller module implementation for polling for files with the SFTP protocol
 
-/*  SftpPoller.qm Copyright (C) 2014 David Nichols
+/*  SftpPoller.qm Copyright (C) 2014 - 2016 David Nichols
 
     Permission is hereby granted, free of charge, to any person obtaining a
     copy of this software and associated documentation files (the "Software"),
@@ -122,7 +122,7 @@ public namespace SftpPoller {
             const SortName = 1;
             #const SortDate = 2;
 
-            #! minimum required keys for all constructors 
+            #! minimum required keys for all constructors
             const RequiredKeys = (
 %ifdef PO_NO_PROCESS_CONTROL
                 "sleep",
@@ -252,6 +252,7 @@ public namespace SftpPoller {
             @param nconf a hash with the following optional keys:
             - \c poll_interval: the integer polling interval in seconds (default: 10 seconds; must be > 0 if given)
             - \c mask: the file glob mask to use (default: \c "*", ignored if \c "regex_mask" is also present)
+            - \c path: the remote path for retrieving the files
             - \c regex_mask: a regular expression to use as a mask (overrides any \c "mask" value)
             - \c reopts: regular expression match options (ex RE_Caseless for case-insensitive matches)
             - \c timeout: connection timeout (default \c 30s)
@@ -459,6 +460,17 @@ public namespace SftpPoller {
         #! joins a list with \c "/" characters as path separators
         static string osPath(list pathComponents) {
             return join("/", pathComponents);
+        }
+
+        #! retrieves a remote file and stores it to a local path
+        /** @param remote_path the remote file path
+            @param local_path the local file path
+            @param n_timeout a timeout in milliseconds
+
+            @return the number of bytes transferred
+        */
+        int getStoreFile(string remote_path, string local_path, *timeout n_timeout) {
+            return sftp.retrieveFile(remote_path, local_path);
         }
 
         #! retrieves a text file and returns the file's contents
