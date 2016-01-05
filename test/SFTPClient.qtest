@@ -39,8 +39,19 @@ class SFTPClientTest inherits QUnit::Test {
         string uri = shift ARGV ?? sprintf("%s@localhost", getusername());
 
         sc = new SFTPClient(uri);
-        if (m_options.privkey)
+        if (m_options.privkey) {
             sc.setKeys(m_options.privkey);
+        }
+        else {
+            if (PlatformOS == "Windows")
+                exit(0);
+
+            string sshdir = `echo -n ~/.ssh`;
+            if (is_file(sshdir + "/id_rsa"))
+                sc.setKeys(sshdir + "/id_rsa");
+            else if (is_file(sshdir + "/id_dsa"))
+                sc.setKeys(sshdir + "/id_dsa");
+        }
 
         addTestCase("SFTPClientTests", \sftpTests());
 
