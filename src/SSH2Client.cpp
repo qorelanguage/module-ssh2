@@ -43,6 +43,7 @@
 static const char *SSH2CLIENT_TIMEOUT = "SSH2CLIENT-TIMEOUT";
 static const char *SSH2CLIENT_NOT_CONNECTED = "SSH2CLIENT-NOT-CONNECTED";
 const char *SSH2_ERROR = "SSH2-ERROR";
+const char *SSH2_CONNECTED = "SSH2-CONNECTED";
 
 std::string mode2str(const int mode) {
    std::string ret=std::string("----------");

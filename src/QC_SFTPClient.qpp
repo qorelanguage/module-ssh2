@@ -23,8 +23,8 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include "SFTPClient.h"
-#include "QC_SSH2Base.h"
+#include <SFTPClient.h>
+#include <QC_SSH2Base.h>
 
 static QoreHashNode *attr2hash(const LIBSSH2_SFTP_ATTRIBUTES &attr) {
    QoreHashNode *ret = new QoreHashNode;

@@ -58,6 +58,7 @@ DLLLOCAL std::string mode2str(const int mode);
 #define QKEEPALIVE_DEFAULT  60
 
 DLLLOCAL extern const char *SSH2_ERROR;
+DLLLOCAL extern const char *SSH2_CONNECTED;
 
 class SSH2Channel;
 class BlockingHelper;
