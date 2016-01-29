@@ -27,8 +27,6 @@
 #include "QC_SSH2Base.h"
 #include "SSH2Client.h"
 
-static const char *SSH2_CONNECTED = "SSH2-CONNECTED";
-
 #ifndef _QORE_HAS_SOCKET_PERF_API
 static AbstractQoreNode *missing_method_error(const char *meth, const char *qv, ExceptionSink *xsink) {
    xsink->raiseException("MISSING-FEATURE-ERROR", "the %s() method is not available on this build; to use thie method compile the ssh2 module with Qore v%s of higher and reinstall", meth, qv);

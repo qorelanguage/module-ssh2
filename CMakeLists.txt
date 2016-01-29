@@ -25,6 +25,7 @@ message(FATAL_ERROR "POSIX threads do not seem to be supported on this platform,
 endif()
 
 include_directories(${LIBSSH2_INCLUDE_DIRS})
+include_directories(${CMAKE_SOURCE_DIR}/src)
 
 check_include_file_cxx(arpa/inet.h HAVE_ARPA_INET_H)
 check_include_file_cxx(pwd.h HAVE_PWD_H)
