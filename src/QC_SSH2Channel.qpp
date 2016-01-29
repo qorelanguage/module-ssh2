@@ -22,7 +22,7 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include <SSH2Channel.h>
+#include "SSH2Channel.h"
 
 //! allows Qore programs to send and receive data through an ssh2 channel
 /**
