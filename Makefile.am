@@ -44,13 +44,11 @@ docs/qlib/SftpPoller.qm.dox.h: qlib/SftpPoller.qm
 
 docs/SftpPoller/html: docs/qlib/SftpPoller.qm.dox.h docs/qlib/Doxyfile.SftpPoller
 	cd docs; $(DOXYGEN_CMD) qlib/Doxyfile.SftpPoller
-	$(QDX) --post docs/SftpPoller/html/*html
-	$(QDX) --post docs/SftpPoller/html/search/*html
+	$(QDX) --post docs/SftpPoller/html docs/SftpPoller/html/search
 
 docs/ssh2/html: $(DOXYFILES)
 	cd docs; $(DOXYGEN_CMD) doxyfile;
-	$(QDX) --post docs/ssh2/html/*html
-	$(QDX) --post docs/ssh2/html/search/*html
+	$(QDX) --post docs/ssh2/html docs/ssh2/html/search
 
 docs/mainpage.doxygen: docs/mainpage.doxygen.tmpl
 	$(QDX) -d $< $@
