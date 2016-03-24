@@ -96,7 +96,7 @@ case "${host_os}" in
 		windows=yes
      		;;
      *mingw32*) SHLIB_SUFFIX=dll
-     		windows=yes
+		windows=yes
 		mingw=yes
 		#CPPFLAGS="$CPPFLAGS -D_WIN32_WINNT=0x0501"
 		LDFLAGS="$LDFLAGS -lwsock32 -lws2_32 -lgdi32 -lz -lsecur32 -lpthread"
@@ -107,6 +107,29 @@ case "${host_os}" in
 		# set LIB_PREFIX if not already set
 		if test -z "$LIB_PREFIX"; then
    		   AC_MSG_CHECKING([for mingw32 library prefix])
+		   cc_loc=`which $CXX|head -1`
+		   mingw_base=`dirname $cc_loc|sed 's/\/@<:@^/@:>@*$//'`
+		   cc_targ=`echo $CXX|sed s/-g++$//`
+		   if test -d $mingw_base/$cc_targ; then
+		      LIB_PREFIX=$mingw_base/$cc_targ
+		      AC_MSG_RESULT([$LIB_PREFIX])
+		   else
+		      AC_MSG_RESULT([not found])
+		   fi
+		fi
+		;;
+     *mingw64*) SHLIB_SUFFIX=dll
+		windows=yes
+		mingw=yes
+		#CPPFLAGS="$CPPFLAGS -D_WIN32_WINNT=0x0501"
+		LDFLAGS="$LDFLAGS -lwsock32 -lws2_32 -lgdi32 -lz -lsecur32 -lpthread"
+		#make_dll=yes
+		CPPFLAGS="$CPPFLAGS -DBUILDING_DLL=1"
+		MODULE_LDFLAGS="-no-undefined"
+		OS=Windows
+		# set LIB_PREFIX if not already set
+		if test -z "$LIB_PREFIX"; then
+   		   AC_MSG_CHECKING([for mingw64 library prefix])
 		   cc_loc=`which $CXX|head -1`
 		   mingw_base=`dirname $cc_loc|sed 's/\/@<:@^/@:>@*$//'`
 		   cc_targ=`echo $CXX|sed s/-g++$//`
