@@ -603,7 +603,7 @@ public namespace SftpPoller {
             @see stopNoWait()
         */
         stop() {
-            if (gettid() == tid)
+            if (gettid() == tid && sc.getCount())
                 throw "THREAD-ERROR", sprintf("cannot call SftpPoller::stop() from the event thread (%d)", tid);
             m.lock();
             on_exit m.unlock();
@@ -691,7 +691,8 @@ public namespace SftpPoller {
 
         #! starts the polling operation
         synchronized private run() {
-            on_exit sc.dec();
+            on_exit
+                sc.dec();
 
             while (runflag) {
                 try {

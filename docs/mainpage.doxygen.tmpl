@@ -102,8 +102,6 @@ stdout.printf("exit status: %d\n", $chan.getExitStatus());@endcode
     @section ssh2releasenotes Release Notes
 
     @subsection ssh2v10 Version 1.0
-    - <a href="../../SftpPoller/html/index.html">SftpPoller</a> reexports ssh2
-    - <a href="../../SftpPoller/html/index.html">SftpPoller</a> sleeps for \a poll_interval even when matched files are not deleted
     - fixed crashing bugs handling errors and handle scope in the @ref Qore::SSH2::SFTPClient "SFTPClient" class
     - added the <a href="../../SftpPoller/html/index.html">SftpPoller</a> user module
     - force socket disconnect in case of a timeout error when trying to close a file descriptor
