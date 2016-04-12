@@ -448,15 +448,66 @@ find_libssh2() {
     if test \( "$a" = "/" -o -z "$a" \) -a -h "$a/lib${LIBSUFFIX}"; then
         a=/usr
     fi
+    lib=$a/lib
 
-    if test -f "$a/include/libssh2.h" -a -f "$a/include/libssh2_sftp.h" ; then
-        LIBSSH2_CPPFLAGS="-I$a/include"
-	LIBSSH2_LDFLAGS="-L$a/lib${LIBSUFFIX} -lssh2"
-	libssh2h=$a/include/libssh2.h
-	libssh2_version=$( grep "^\#define LIBSSH2_VERSION " $a/include/libssh2.h | cut -d'"' -f2 )
+    # if we only want the static libssh2 libraries
+    if test -n "$libssh2_static"; then
+        if test -f "$lib${LIBSUFFIX}/libssh2.a"; then
+            LIBSSH2_LDFLAGS="$lib${LIBSUFFIX}/libssh2.a"
+            AC_MSG_RESULT([$lib${LIBSUFFIX} (forced static)])
+        elif test -f "$lib/libssh2.a"; then
+            LIBSSH2_LDFLAGS="$lib/libssh2.a"
+            AC_MSG_RESULT([$lib (forced static)])
+        fi
     else
-	return
+        if test -f "$lib${LIBSUFFIX}/libssh2.${SHLIB_SUFFIX}"; then
+            if test "$lib" != "/lib" -a "$lib" != "/usr/lib"; then
+                LIBSSH2_LDFLAGS="-L$lib${LIBSUFFIX}"
+            fi
+            LIBSSH2_LDFLAGS="$LIBSSH2_LDFLAGS -lssh2"
+            AC_MSG_RESULT([$lib (shared)])
+        elif test -f "$lib/libssh2.${SHLIB_SUFFIX}"; then
+            if test "$lib" != "/lib" -a "$lib" != "/usr/lib"; then
+                LIBSSH2_LDFLAGS="-L$lib"
+            fi
+            LIBSSH2_LDFLAGS="$LIBSSH2_LDFLAGS -lssh2"
+            AC_MSG_RESULT([$lib (shared)])
+        elif test -f "$lib${LIBSUFFIX}/libssh2.a"; then
+            if test "$lib" != "/lib" -a "$lib" != "/usr/lib"; then
+                LIBSSH2_LDFLAGS="-L$lib${LIBSUFFIX}"
+            fi
+            LIBSSH2_LDFLAGS="$LIBSSH2_LDFLAGS -lssh2"
+            AC_MSG_RESULT([$lib (static)])
+        elif test -f "$lib/libssh2.a"; then
+            if test "$lib" != "/lib" -a "$lib" != "/usr/lib"; then
+                LIBSSH2_LDFLAGS="-L$lib"
+            fi
+            LIBSSH2_LDFLAGS="$LIBSSH2_LDFLAGS -lssh2"
+            AC_MSG_RESULT([$lib (static)])
+        fi
     fi
+    if test -z "$LIBSSH2_LDFLAGS"; then
+        return
+    fi
+
+    AC_MSG_CHECKING([for libssh2 include files])
+    # try to find include files
+    if test "$a" = "/"; then
+        inc=/usr/include
+    else
+        inc=$a/include
+    fi
+    if test -f "$inc/libssh2.h" -a -f "$inc/libssh2_sftp.h"; then
+        LIBSSH2_CPPFLAGS="-I$inc"
+        libssh2h=$inc/libssh2.h
+        libssh2_version=$( grep "^\#define LIBSSH2_VERSION " $libssh2h | cut -d'"' -f2 )
+        AC_MSG_RESULT([found: $inc])
+    else
+        AC_MSG_ERROR([not found])
+    fi
+
+    AC_SUBST(LIBSSH2_LDFLAGS)
+    AC_SUBST(LIBSSH2_CPPFLAGS)
 }
 
 # see if we can figure out where the libssh2 library is
