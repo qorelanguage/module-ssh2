@@ -1302,7 +1302,7 @@ void SFTPClient::doSessionErrUnlocked(ExceptionSink* xsink, QoreStringNode* desc
    xsink->raiseException(SSH2_ERROR, desc);
 
    // check if we're still connected: if there is data to be read, we assume it's the EOF marker and close the session
-   int rc = waitSocketSelectUnlocked(LIBSSH2_SESSION_BLOCK_INBOUND, 0);
+   int rc = waitSocketUnlocked(LIBSSH2_SESSION_BLOCK_INBOUND, 0);
 
    if (rc > 0) {
       printd(5, "doSessionErrUnlocked() session %p: detected disconnected session, marking as closed\n", ssh_session);

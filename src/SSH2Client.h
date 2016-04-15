@@ -7,7 +7,7 @@
   Qore Programming Language
 
   Copyright 2009 Wolfgang Ritzinger
-  Copyright (C) 2010 - 2015 Qore Technologies, sro
+  Copyright (C) 2010 - 2016 Qore Technologies, sro
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -45,6 +45,15 @@
 #include <set>
 #include <string>
 
+#ifdef HAVE_POLL_H
+#include <poll.h>
+#else
+// we assume we have select even if sys/select.h is not available (ex: windows)
+#ifdef HAVE_SYS_SELECT_H
+#include <sys/select.h>
+#endif
+#endif
+
 DLLLOCAL QoreClass *initSSH2ClientClass(QoreNamespace& ns);
 DLLLOCAL extern qore_classid_t CID_SSH2CLIENT;
 
@@ -80,7 +89,7 @@ private:
    typedef std::set<SSH2Channel*> channel_set_t;
 
    // connection host
-   std::string sshhost, 
+   std::string sshhost,
       // authentication
       sshuser,
       sshpass,
@@ -184,35 +193,12 @@ protected:
       return 0;
    }
 
-   DLLLOCAL int waitSocketUnlocked(int timeout_ms = DEFAULT_TIMEOUT_MS) {
-      return waitSocketSelectUnlocked(libssh2_session_block_directions(ssh_session), timeout_ms);
+   DLLLOCAL int waitSocketUnlocked(int timeout_ms) const {
+      return waitSocketUnlocked(libssh2_session_block_directions(ssh_session), timeout_ms);
    }
 
-   DLLLOCAL int waitSocketSelectUnlocked(int dir, int timeout_ms = DEFAULT_TIMEOUT_MS) {
-      assert(ssh_session);
-
-      struct timeval timeout;
-      fd_set fd;
-      fd_set* writefd = 0;
-      fd_set* readfd = 0;
- 
-      if (timeout_ms >= 0) {
-	 timeout.tv_sec = timeout_ms / 1000;
-	 timeout.tv_usec = (timeout_ms % 1000) * 1000;
-      }
-
-      FD_ZERO(&fd);
- 
-      FD_SET(socket.getSocket(), &fd);
- 
-      if (dir & LIBSSH2_SESSION_BLOCK_INBOUND)
-	 readfd = &fd;
- 
-      if (dir & LIBSSH2_SESSION_BLOCK_OUTBOUND)
-	 writefd = &fd;
- 
-      //printd(5, "waitSocketUnlocked() sock=%d readfd=%p writefd=%p timeout_ms=%d\n", socket.getSocket() + 1, readfd, writefd, timeout_ms);
-      return select(socket.getSocket() + 1, readfd, writefd, 0, timeout_ms >= 0 ? &timeout : 0);
+   DLLLOCAL int waitSocketUnlocked(int dir, int timeout_ms) const {
+      return socket.asyncIoWait(timeout_ms, dir & LIBSSH2_SESSION_BLOCK_INBOUND, dir & LIBSSH2_SESSION_BLOCK_OUTBOUND);
    }
 
    DLLLOCAL QoreObject *registerChannelUnlocked(LIBSSH2_CHANNEL *channel);
@@ -234,10 +220,10 @@ public:
    DLLLOCAL virtual int connect(int timeout_ms, ExceptionSink *xsink) {
       return sshConnect(timeout_ms, xsink);
    }
-   
+
    DLLLOCAL int disconnect(bool force = false, int timeout_ms = DEFAULT_TIMEOUT_MS, ExceptionSink *xsink = 0) {
       AutoLocker al(m);
-      
+
       return disconnectUnlocked(force, timeout_ms, 0, xsink);
    }
 
@@ -275,4 +261,3 @@ public:
 };
 
 #endif // _QORE_SSH2CLIENT_H
-
