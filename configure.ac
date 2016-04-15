@@ -96,10 +96,10 @@ case "${host_os}" in
 		windows=yes
      		;;
      *mingw32*) SHLIB_SUFFIX=dll
-     		windows=yes
+		windows=yes
 		mingw=yes
 		#CPPFLAGS="$CPPFLAGS -D_WIN32_WINNT=0x0501"
-		LDFLAGS="$LDFLAGS -lwsock32 -lws2_32 -lgdi32 -lz -lsecur32"
+		LDFLAGS="$LDFLAGS -lwsock32 -lws2_32 -lgdi32 -lz -lsecur32 -lpthread"
 		#make_dll=yes
 		CPPFLAGS="$CPPFLAGS -DBUILDING_DLL=1"
 		MODULE_LDFLAGS="-no-undefined"
@@ -107,6 +107,29 @@ case "${host_os}" in
 		# set LIB_PREFIX if not already set
 		if test -z "$LIB_PREFIX"; then
    		   AC_MSG_CHECKING([for mingw32 library prefix])
+		   cc_loc=`which $CXX|head -1`
+		   mingw_base=`dirname $cc_loc|sed 's/\/@<:@^/@:>@*$//'`
+		   cc_targ=`echo $CXX|sed s/-g++$//`
+		   if test -d $mingw_base/$cc_targ; then
+		      LIB_PREFIX=$mingw_base/$cc_targ
+		      AC_MSG_RESULT([$LIB_PREFIX])
+		   else
+		      AC_MSG_RESULT([not found])
+		   fi
+		fi
+		;;
+     *mingw64*) SHLIB_SUFFIX=dll
+		windows=yes
+		mingw=yes
+		#CPPFLAGS="$CPPFLAGS -D_WIN32_WINNT=0x0501"
+		LDFLAGS="$LDFLAGS -lwsock32 -lws2_32 -lgdi32 -lz -lsecur32 -lpthread"
+		#make_dll=yes
+		CPPFLAGS="$CPPFLAGS -DBUILDING_DLL=1"
+		MODULE_LDFLAGS="-no-undefined"
+		OS=Windows
+		# set LIB_PREFIX if not already set
+		if test -z "$LIB_PREFIX"; then
+   		   AC_MSG_CHECKING([for mingw64 library prefix])
 		   cc_loc=`which $CXX|head -1`
 		   mingw_base=`dirname $cc_loc|sed 's/\/@<:@^/@:>@*$//'`
 		   cc_targ=`echo $CXX|sed s/-g++$//`
@@ -137,29 +160,41 @@ AC_ARG_ENABLE([64bit],
   [enable_64bit=auto])
 
 if test "$enable_64bit" = "auto"; then
-   # turn on 64-bit by default if compiling on itanium or x86_64
-   if test "$host_cpu" = "ia64" -o "$host_cpu" = "x86_64"; then
-      enable_64bit=yes
-   else
-      case "${host_os}" in
-          darwin*)   mv=`uname -r|cut -f1 -d.`
-                     if test $mv -ge 10 -a "${host_cpu}" = "i386"; then
-                         enable_64bit=yes
-                     fi
-                     ;;
-	  solaris*)  if test "${host_cpu}" = "i386"; then
-			 # if we are running on a 64-bit machine, then enable a 64-bit build
-			 if test -n "`isainfo -v 2>/dev/null| grep 64-bit`"; then
-			     enable_64bit=yes
-			 fi
-		     fi
+   # turn on 64-bit by default if compiling on a 64-bit platform
+   case "${host_cpu}" in
+       *64*)
+                 enable_64bit=yes
+                 ;;
+       s390x)
+                 enable_64bit=yes
+                 ;;
+       *)        case "${host_os}" in
+                     darwin*)   mv=`uname -r|cut -f1 -d.`
+ 		                if test $mv -ge 10 -a "${host_cpu}" = "i386"; then
+		         	    enable_64bit=yes
+		      		fi
 		     ;;
-       esac
-      if test "$enable_64bit" = "auto"; then
-          enable_64bit=no
-      fi
-   fi
+		     solaris*)  if test "${host_cpu}" = "i386"; then
+		     	            # if we are running on a 64-bit machine, then enable a 64-bit build
+				    if test -n "`isainfo -v 2>/dev/null| grep 64-bit`"; then
+		         	        enable_64bit=yes
+		     		    fi
+		     	        fi
+		     ;;
+       		 esac
+		 if test "$enable_64bit" = "auto"; then
+		     enable_64bit=no
+		 fi
+                 ;;
+    esac
 fi
+
+# allow users to explicitly set libsuffix
+AC_ARG_WITH([libsuffix],
+  [AS_HELP_STRING([--with-libsuffix@<:@=LIBSUFFIX@:>@],
+                  [explitily set libsuffix])],
+  [LIBSUFFIX=$with_libsuffix; LIBSUFFIX_SET=yes;AC_SUBST(LIBSUFFIX)],
+  [])
 
 # see if we know how to set flags properly for different hosts and architectures
 # FIXME: add test on HP-UX if the compiler can generate the appropriate binaries
@@ -169,14 +204,16 @@ if test "$enable_64bit" = "yes"; then
 		   CXXFLAGS="$CXXFLAGS -m64"
 		fi
 		# only set LIBSUFFIX=64 if /usr/lib64 exists
-		if test -d /usr/lib64; then
-		   LIBSUFFIX=64
-                fi
-                target="${host_cpu}-${host_os}"
-                if test -d /usr/lib/$target; then
-                   LIBSUFFIX=/$target
-                fi
-		AC_SUBST(LIBSUFFIX)
+		if test "$LIBSUFFIX_SET" != "yes"; then
+		  if test -d /usr/lib64; then
+		     LIBSUFFIX=64
+                  fi
+		  target="${host_cpu}-${host_os}"
+		  if test -d /usr/lib/$target; then
+		     LIBSUFFIX=/$target
+                  fi
+		  AC_SUBST(LIBSUFFIX)
+		fi
 		;;
       *hpux*)	if test "$host_cpu" = "ia64"; then
                     if test -n "`echo $CXX|grep aCC`"; then
@@ -210,10 +247,12 @@ else
 		   CXXFLAGS="$CXXFLAGS -m32"
 		fi
                 # multiarch
-                if test -a "$host_cpu" = "x86_64" -a -d /usr/lib32; then
-                   LIBSUFFIX=32
-                fi
-                AC_SUBST(LIBSUFFIX)
+                if test "$LIBSUFFIX_SET" != "yes"; then
+		   if test -a "$host_cpu" = "x86_64" -a -d /usr/lib32; then
+		      LIBSUFFIX=32
+                   fi
+		   AC_SUBST(LIBSUFFIX)
+		fi
 		;;
      *hpux*)	if test "$host_cpu" != "ia64"; then
 		    if test "$GXX" = "yes"; then
@@ -264,6 +303,120 @@ AC_ARG_ENABLE([single-compilation-unit],
       esac],
   [enable_single_compilation_unit=yes])
 
+set_openssl_cppflags() {
+    if test "$1" != "/usr/include"; then
+        OPENSSL_CPPFLAGS=-I$1
+    fi
+}
+
+find_openssl() {
+    dir="$1"
+    if test -z "$dir" -o "$dir" = "/"; then
+        if test -h /lib${LIBSUFFIX}; then
+	    dir=/usr
+	    lib=/usr/lib${LIBSUFFIX}
+	    inc=/usr/include
+        else
+            dir="/"
+   	    lib=/lib${LIBSUFFIX}
+	    inc=/usr/include
+        fi
+    else
+        lib="$dir/lib${LIBSUFFIX}"
+        inc="$dir/include"
+    fi
+    # if we only want the static openssl libraries
+    if test -n "$openssl_static"; then
+    	if test -f "$lib/libssl.a" -a -f "$lib/libcrypto.a"; then
+	    OPENSSL_LDFLAGS="$lib/libssl.a $lib/libcrypto.a"
+	    msg_lib="$lib (forced static)"
+    	elif test "$bits" = 64 -a -f "$lib/64/libssl.a" -a -f "$lib/64/libcrypto.a"; then
+	    OPENSSL_LDFLAGS="$lib/64/libssl.a $lib/64/libcrypto.a"
+	    msg_lib="$lib/64 (forced static)"
+    	fi
+    else
+        if test -f "$lib/libssl.${SHLIB_SUFFIX}" -a -f "$lib/libcrypto.${SHLIB_SUFFIX}"; then
+	    if test "$lib" != "/lib" -a "$lib" != "/usr/lib"; then
+       	        OPENSSL_LDFLAGS="-L$lib"
+    	    fi
+	    OPENSSL_LDFLAGS="$OPENSSL_LDFLAGS -lssl -lcrypto"
+	    msg_lib="$lib (shared)"
+    	elif test -f "$lib/libssl.a" -a -f "$lib/libcrypto.a"; then
+	    if test "$lib" != "/lib" -a "$lib" != "/usr/lib"; then
+       	        OPENSSL_LDFLAGS="-L$lib"
+    	    fi
+	    OPENSSL_LDFLAGS="$OPENSSL_LDFLAGS -lssl -lcrypto"
+	    msg_lib="$lib (static)"
+        elif test "$bits" = 64 -a -f "$lib/64/libssl.${SHLIB_SUFFIX}" -a -f "$lib/64/libcrypto.${SHLIB_SUFFIX}"; then
+	    OPENSSL_LDFLAGS="-L$lib/64 -lssl -lcrypto"
+	    msg_lib="$lib/64 (shared)"
+    	elif test "$bits" = 64 -a -f "$lib/64/libssl.a" -a -f "$lib/64/libcrypto.a"; then
+	    OPENSSL_LDFLAGS="-L$lib -lssl -lcrypto"
+	    msg_lib="$lib (static)"
+    	fi
+    fi
+    if test -z "$OPENSSL_LDFLAGS"; then
+        unset msg_lib
+        return
+    fi
+    # try to find include files
+    if test -f "$inc/openssl/ssl.h"; then
+        msg_inc="$inc/openssl"
+        set_openssl_cppflags $inc
+    else
+        unset OPENSSL_LDFLAGS
+        unset msg_lib
+	return
+    fi
+
+    AC_MSG_RESULT([libs: $msg_lib includes: $msg_inc])
+
+    AC_SUBST(OPENSSL_LDFLAGS)
+    AC_SUBST(OPENSSL_CPPFLAGS)
+}
+
+# see if we can figure out where the openssl library is
+AC_ARG_WITH([openssl-dir],
+  [AS_HELP_STRING([--with-openssl-dir@<:@=DIR@:>@],
+                  [openssl directory])],
+  [if test ! -d "${with_openssl_dir}"; then AC_MSG_ERROR(bad value ${with_openssl_dir} for --with-openssl-dir); unset with_openssl_dir; fi],
+  [with_openssl_dir="$OPENSSL_DIR"])
+
+AC_MSG_CHECKING([for openssl libraries and header files])
+for dir in "${with_openssl_dir}" "${with_lib_prefix}" "${find_prefix}" /usr / /usr/local /opt/gnu /opt/openssl /usr/local/openssl /opt/local /sw /usr/sfw /opt/sfw; do
+    find_openssl $dir
+    if test -n "$OPENSSL_LDFLAGS"; then
+        break
+    fi
+done
+if test -z "$OPENSSL_LDFLAGS"; then
+    AC_MSG_ERROR([no openssl library found])
+else
+    # check for openssl const correctness (later versions have it)
+    SAVE_CPPFLAGS="$CPPFLAGS"
+    SAVE_LDFLAGS="$LDFLAGS"
+    CPPFLAGS="$CPPFLAGS $OPENSSL_CPPFLAGS"
+    LDFLAGS="$LDFLAGS $OPENSSL_LDFLAGS"
+
+    AC_MSG_CHECKING([const correctness in openssl asn1 header])
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+#include <openssl/asn1.h>
+         ]],[[
+const unsigned char *p;
+d2i_ASN1_type_bytes(0, &p, 0, 0);
+        ]])],openssl_const_ok=yes, openssl_const_ok=no)
+
+    CPPFLAGS="$SAVE_CPPFLAGS"
+    LDFLAGS="$SAVE_LDFLAGS"
+
+    if test "${openssl_const_ok}" = "yes"; then
+       AC_MSG_RESULT([ok])
+       AC_DEFINE(HAVE_OPENSSL_CONST, 1, Define if openssl headers correctly use const)
+    else
+       AC_MSG_RESULT([old style, not const correct])
+    fi
+fi
+
 AC_ARG_WITH([doxygen],
     [AS_HELP_STRING([--with-doxygen@<:@=PATH@:>@],
                     [path to doxygen binary])],
@@ -295,15 +448,66 @@ find_libssh2() {
     if test \( "$a" = "/" -o -z "$a" \) -a -h "$a/lib${LIBSUFFIX}"; then
         a=/usr
     fi
+    lib=$a/lib
 
-    if test -f "$a/include/libssh2.h" -a -f "$a/include/libssh2_sftp.h" ; then
-        LIBSSH2_CPPFLAGS="-I$a/include"
-	LIBSSH2_LDFLAGS="-L$a/lib${LIBSUFFIX} -lssh2"
-	libssh2h=$a/include/libssh2.h
-	libssh2_version=$( grep "^\#define LIBSSH2_VERSION " $a/include/libssh2.h | cut -d'"' -f2 )
+    # if we only want the static libssh2 libraries
+    if test -n "$libssh2_static"; then
+        if test -f "$lib${LIBSUFFIX}/libssh2.a"; then
+            LIBSSH2_LDFLAGS="$lib${LIBSUFFIX}/libssh2.a"
+            AC_MSG_RESULT([$lib${LIBSUFFIX} (forced static)])
+        elif test -f "$lib/libssh2.a"; then
+            LIBSSH2_LDFLAGS="$lib/libssh2.a"
+            AC_MSG_RESULT([$lib (forced static)])
+        fi
     else
-	return
+        if test -f "$lib${LIBSUFFIX}/libssh2.${SHLIB_SUFFIX}"; then
+            if test "$lib" != "/lib" -a "$lib" != "/usr/lib"; then
+                LIBSSH2_LDFLAGS="-L$lib${LIBSUFFIX}"
+            fi
+            LIBSSH2_LDFLAGS="$LIBSSH2_LDFLAGS -lssh2"
+            AC_MSG_RESULT([$lib (shared)])
+        elif test -f "$lib/libssh2.${SHLIB_SUFFIX}"; then
+            if test "$lib" != "/lib" -a "$lib" != "/usr/lib"; then
+                LIBSSH2_LDFLAGS="-L$lib"
+            fi
+            LIBSSH2_LDFLAGS="$LIBSSH2_LDFLAGS -lssh2"
+            AC_MSG_RESULT([$lib (shared)])
+        elif test -f "$lib${LIBSUFFIX}/libssh2.a"; then
+            if test "$lib" != "/lib" -a "$lib" != "/usr/lib"; then
+                LIBSSH2_LDFLAGS="-L$lib${LIBSUFFIX}"
+            fi
+            LIBSSH2_LDFLAGS="$LIBSSH2_LDFLAGS -lssh2"
+            AC_MSG_RESULT([$lib (static)])
+        elif test -f "$lib/libssh2.a"; then
+            if test "$lib" != "/lib" -a "$lib" != "/usr/lib"; then
+                LIBSSH2_LDFLAGS="-L$lib"
+            fi
+            LIBSSH2_LDFLAGS="$LIBSSH2_LDFLAGS -lssh2"
+            AC_MSG_RESULT([$lib (static)])
+        fi
     fi
+    if test -z "$LIBSSH2_LDFLAGS"; then
+        return
+    fi
+
+    AC_MSG_CHECKING([for libssh2 include files])
+    # try to find include files
+    if test "$a" = "/"; then
+        inc=/usr/include
+    else
+        inc=$a/include
+    fi
+    if test -f "$inc/libssh2.h" -a -f "$inc/libssh2_sftp.h"; then
+        LIBSSH2_CPPFLAGS="-I$inc"
+        libssh2h=$inc/libssh2.h
+        libssh2_version=$( grep "^\#define LIBSSH2_VERSION " $libssh2h | cut -d'"' -f2 )
+        AC_MSG_RESULT([found: $inc])
+    else
+        AC_MSG_ERROR([not found])
+    fi
+
+    AC_SUBST(LIBSSH2_LDFLAGS)
+    AC_SUBST(LIBSSH2_CPPFLAGS)
 }
 
 # see if we can figure out where the libssh2 library is
@@ -476,18 +680,14 @@ else
       if test "$libdir" != "$qlibdir"; then
          AC_MSG_WARN([warning, installed qore's module dir is $qlibdir, this module will be installed in $libdir])
       fi
-      if test "$windows" = yes; then
-         userlibdir="${qlibdir}"
+      if test -n "echo ${datarootdir}|grep \$"; then
+         userlibdir="`eval echo ${datarootdir}`/qore-modules"
       else
-         if test -n "echo ${datarootdir}|grep \$"; then
-            userlibdir="`eval echo ${datarootdir}`/qore-modules"
-         else
-            userlibdir="${datarootdir}/qore-modules"
-         fi
-         qlibdir=`qore --user-module-dir`
-         if test "$userlibdir" != "$qlibdir"; then
-            AC_MSG_WARN([warning, installed qore's user module dir is $qlibdir, this module will be installed in $userlibdir])
-         fi
+         userlibdir="${datarootdir}/qore-modules"
+      fi
+      qlibdir=`qore --user-module-dir`
+      if test "$userlibdir" != "$qlibdir"; then
+         AC_MSG_WARN([warning, installed qore's user module dir is $qlibdir, this module will be installed in $userlibdir])
       fi
    fi
 fi

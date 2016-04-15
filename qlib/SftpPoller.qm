@@ -1,7 +1,7 @@
 # -*- mode: qore; indent-tabs-mode: nil -*-
 #! @file SftpPoller.qm SftpPoller module implementation for polling for files with the SFTP protocol
 
-/*  SftpPoller.qm Copyright (C) 2014 David Nichols
+/*  SftpPoller.qm Copyright (C) 2014 - 2016 David Nichols
 
     Permission is hereby granted, free of charge, to any person obtaining a
     copy of this software and associated documentation files (the "Software"),
@@ -23,10 +23,13 @@
 */
 
 # make sure we have the required qore version
-%requires qore >= 0.8.10
+%requires qore >= 0.8.12
 
 # requires ssh2 functionality
-%requires ssh2
+%requires (reexport) ssh2
+
+# assume local vars and do not allow $ chars
+%new-style
 
 module SftpPoller {
     version = "1.0";
@@ -41,13 +44,13 @@ module SftpPoller {
 */
 
 /** @mainpage SftpPoller Module
-    
+
     @section sftppollerintro Introduction to the SftpPoller Module
 
     The SftpPoller module implements an abstract class that will poll a remote directory with the SFTP protocol and return
     matching files.
 
-    To use this class, subclass the @ref SftpPoller::SftpPoller "SftpPoller" class and implement the @ref SftpPoller::SftpPoller::singleFileEvent() and 
+    To use this class, subclass the @ref SftpPoller::SftpPoller "SftpPoller" class and implement the @ref SftpPoller::SftpPoller::singleFileEvent() and
     @ref SftpPoller::SftpPoller::postSingleFileEvent() methods.
 
     @section sftppollerexamples SftpPoller Module Examples
@@ -58,35 +61,35 @@ module SftpPoller {
 %requires SftpPoller
 
 class MySftpPoller inherits SftpPoller {
-    constructor(SFTPClient $sc, hash $opts) : SftpPoller($sc, $opts) {
+    constructor(SFTPClient sc, hash opts) : SftpPoller(sc, opts) {
     }
 
-    nothing singleFileEvent(hash $fh) {
-        printf("GOT FILE: %y\n", $fh - "data" + ("data_type": $fh.data.type(), "data_size": $fh.data.size()));
+    nothing singleFileEvent(hash fh) {
+        printf("GOT FILE: %y\n", fh - "data" + ("data_type": fh.data.type(), "data_size": fh.data.size()));
         # in this case, the polling stop operation will take effect after all the singleFileEvent() calls are made for the polling operation
-        $.stopNoWait();
+        stopNoWait();
     }
 
-    nothing postSingleFileEvent(hash $fh) {
+    nothing postSingleFileEvent(hash fh) {
     }
 }
 
-my code $info = sub (string $msg) { printf("INFO: %s\n", $msg); };
-my code $detail = sub (string $msg) { printf("DETAIL: %s\n", $msg); };
-my code $debug = sub (string $msg) { printf("DEBUG: %s\n", $msg); };
+code info = sub (string msg) { printf("INFO: %s\n", msg); };
+code detail = sub (string msg) { printf("DETAIL: %s\n", msg); };
+code debug = sub (string msg) { printf("DEBUG: %s\n", msg); };
 
-my hash $opts = (
-    "log_info": $info,
-    "log_detail": $detail,
-    "log_debug": $debug,
+hash opts = (
+    "log_info": info,
+    "log_detail": detail,
+    "log_debug": debug,
     );
 
-my SftpClient $sc("sftp://user@pass:localhost");
-my SftpPoller $poller($sc, $opts);
-$poller.waitStop();
+SftpClient sc("sftp://user@pass:localhost");
+SftpPoller poller(sc, opts);
+poller.waitStop();
     @endcode
 
-    Note that @ref SftpPoller::SftpPoller::stopNoWait() "SftpPoller::stopNoWait()" was called in the event thread because calling 
+    Note that @ref SftpPoller::SftpPoller::stopNoWait() "SftpPoller::stopNoWait()" was called in the event thread because calling
     @ref SftpPoller::SftpPoller::stop() "SftpPoller::stop()" in the event thread would cause an exception to be thrown.
 
     A useful poller class would implement the @ref SftpPoller::SftpPoller::singleFileEvent() "SftpPoller::singleFileEvent()" method which process already-transferred files and the @ref SftpPoller::SftpPoller::postSingleFileEvent() "SftpPoller::postSingleFileEvent()" by deleting / moving / renaming the files so that they would not be acquired on the next poll.
@@ -119,16 +122,18 @@ public namespace SftpPoller {
             const SortName = 1;
             #const SortDate = 2;
 
-            #! minimum required keys for constructor hash argument
+            #! minimum required keys for all constructors
             const RequiredKeys = (
-                "host",
 %ifdef PO_NO_PROCESS_CONTROL
                 "sleep",
 %endif
 %ifdef PO_NO_THREAD_CONTROL
                 "start_thread",
 %endif
-                );
+            );
+
+            #! RequiredKeys for the constructor(hash) without an @ref Qore::SSH2::SFTPClient argument
+            const RequiredKeysWithHost = RequiredKeys + "host";
 
             #! default values for constructor hash argument
             const Defaults = (
@@ -153,99 +158,101 @@ public namespace SftpPoller {
                 );
 
             #! all keys
-            const AllKeys = RequiredKeys + Defaults.keys() + OptionalKeys;
+            const AllKeys = RequiredKeysWithHost + Defaults.keys() + OptionalKeys;
 
             #! pause when SFTP errors are detected
             const ErrorDelay = 1m;
         }
-        
+
         private {
-            # host or address name
-            string $.host;
+            #! host or address name
+            string host;
 
-            # port
-            int $.port;
+            #! port
+            int port;
 
-            # user
-            string $.user;
+            #! user
+            string user;
 
-            # url
-            string $.url;
+            #! url
+            string url;
 
-            # password; one of \c "pass" or \c "keyfile" *must* be set
-            *string $.pass;
-            
-            # path to the ssh private key in PEM format; one of \c "pass" or \c "keyfile" *must* be set
-            *string $.keyfile;
+            #! password; one of \c "pass" or \c "keyfile" *must* be set
+            *string pass;
 
-            # path to poll
-            string $.path = ".";
+            #! path to the ssh private key in PEM format; one of \c "pass" or \c "keyfile" *must* be set
+            *string keyfile;
 
-            # file glob name mask (ignored if \c "regex_mask" also set)
-            *string $.mask;
+            #! path to poll
+            string path = ".";
 
-            # poll interval in seconds
-            int $.poll_interval;
+            #! file glob name mask (ignored if \c "regex_mask" also set)
+            *string mask;
 
-            # run flag
-            bool $.run = False;
+            #! poll interval in seconds
+            int poll_interval;
 
-            # internal "get files" flag
-            bool $.get_files;
+            #! run flag
+            bool runflag = False;
 
-            # internal fatal error flag
-            bool $.fatal = False;
+            #! internal "get files" flag
+            bool get_files;
 
-            # internal poll counter
-            int $.pollcnt = 0;
+            #! internal fatal error flag
+            bool fatal = False;
 
-            # start mutex
-            Mutex $.m();
+            #! internal poll counter
+            int pollcnt = 0;
 
-            # polling tid
-            int $.tid;
+            #! start mutex
+            Mutex m();
 
-            # timeout in ms
-            timeout $.timeout;
-            
-            # stop counter
-            Counter $.sc();
+            #! polling tid
+            int tid;
 
-            # SFTPClient object
-            SFTPClient $.sftp;
+            #! timeout in ms
+            timeout timeout;
 
-            # file matching regex options
-            int $.reopts = 0;
+            #! stop counter
+            Counter sc();
 
-            # minimum file age
-            *softint $.minage;
-            
-            # file encoding for text files
-            *string $.encoding;
+            #! SFTPClient object
+            Qore::SSH2::SFTPClient sftp;
 
-            # optional info log closure
-            *code $.log_info;
+            #! file matching regex options
+            int reopts = 0;
 
-            # optional detail log closure
-            *code $.log_detail;
+            #! minimum file age
+            *softint minage;
 
-            # optional debug log closure
-            *code $.log_debug;
+            #! file encoding for text files
+            *string encoding;
 
-            # optional start thread closure
-            *code $.start_thread;
+            #! optional info log closure
+            *code log_info;
 
-            # optional sleep closure
-            *code $.sleep;
+            #! optional detail log closure
+            *code log_detail;
 
-            # binary transfer flag (for singleFileEvent())
-            bool $.binary;
+            #! optional debug log closure
+            *code log_debug;
+
+            #! optional start thread closure
+            *code start_thread;
+
+            #! optional sleep closure
+            *code sleep;
+
+            #! binary transfer flag (for singleFileEvent())
+            bool binary;
         }
 
         #! creates the SftpPoller object from the @ref Qore::SSH2::SFTPClient "SFTPClient" argument and configuration hash argument passed
-        /** @param $nconf a hash with the following keys (see RequiredKeys for mandatory keys):
+        /** @param n_sftp the new @ref Qore::SSH2::SFTPClient "SFTPClient" object
+            @param nconf a hash with the following optional keys:
             - \c poll_interval: the integer polling interval in seconds (default: 10 seconds; must be > 0 if given)
             - \c mask: the file glob mask to use (default: \c "*", ignored if \c "regex_mask" is also present)
+            - \c path: the remote path for retrieving the files
             - \c regex_mask: a regular expression to use as a mask (overrides any \c "mask" value)
             - \c reopts: regular expression match options (ex RE_Caseless for case-insensitive matches)
             - \c timeout: connection timeout (default \c 30s)
@@ -255,10 +262,10 @@ public namespace SftpPoller {
             - \c log_info: a @ref closure "closure" or @ref call_reference "call reference" for logging important information; must accept a single string giving the log message
             - \c log_detail: a @ref closure "closure" or @ref call_reference "call reference" for logging detailed information; must accept a single string giving the log message
             - \c log_debug: a @ref closure "closure" or @ref call_reference "call reference" for logging verbose debgugging information; must accept a single string giving the log message
-            - \c start_thread: a @ref closure "closure" or @ref call_reference "call reference" for starting threads; must return the integer thread ID (if not set then @ref background will be used); note that this option is required when the module is imported in a Program where \c PO_NO_THREAD_CONTROL is set
-            - \c sleep: a @ref closure "closure" or @ref call_reference "call reference" to use instead of @ref Qore::sleep() (if not set then @ref Qore::sleep() will be used); note that this option is required when the module is imported in a Program where \c PO_NO_PROCESS_CONTROL is set
+            - \c start_thread: (required when imported into a context where @ref Qore::PO_NO_THREAD_CONTROL is set) a @ref closure "closure" or @ref call_reference "call reference" for starting threads; must return the integer thread ID (if not set then @ref background will be used)
+            - \c sleep: (required when imported into a context where @ref Qore::PO_NO_PROCESS_CONTROL is set) a @ref closure "closure" or @ref call_reference "call reference" to use instead of @ref Qore::sleep() (if not set then @ref Qore::sleep() will be used)
 
-            @throw SFTPPOLLER-CONSTRUCTOR-ERROR missing required key (see RequiredKeys), invalid port or poll_interval given
+            @throw SFTPPOLLER-CONSTRUCTOR-ERROR missing required key, invalid port or poll_interval given
             @throw SFTPCLIENT-PARAMETER-ERROR empty hostname passed
             @throw SOCKET-CONNECT-ERROR error establishing socket connection (no listener, port blocked, etc); timeout establishing socket connection
             @throw SSH2CLIENT-CONNECT-ERROR no user name set; ssh2 or libssh2 error
@@ -266,57 +273,63 @@ public namespace SftpPoller {
             @throw SSH2CLIENT-AUTH-ERROR no proper authentication method found
             @throw SFTPCLIENT-CONNECT-ERROR error initializing sftp session or getting remote path
             */
-        constructor(SFTPClient $sftp, hash $nconf) {
+        constructor(Qore::SSH2::SFTPClient n_sftp, hash nconf) {
             # create hash of keys with only valid options in argument hash
-            my hash $conf = Defaults + $nconf{AllKeys};
-            
-            $conf.poll_interval = int($conf.poll_interval);
+            hash conf = Defaults + nconf{AllKeys};
 
-            if ($conf.poll_interval <= 0)
-                throw "SFTPPOLLER-CONSTRUCTOR-ERROR", sprintf("poll_interval cannot be <= 0 (val: %d)", $conf.poll_interval);
+            foreach string k in (RequiredKeys) {
+                if (!exists conf{k})
+                    throw "SFTPPOLLER-CONSTRUCTOR-ERROR", sprintf("required key %y missing from constructor hash argument)", k);
+            }
 
-            my bool $re = False;
-            if ($conf.regex_mask) {
-                $.mask = remove $conf.regex_mask;
-                $re = True;
-                $conf -= "mask";
+
+            conf.poll_interval = int(conf.poll_interval);
+
+            if (conf.poll_interval <= 0)
+                throw "SFTPPOLLER-CONSTRUCTOR-ERROR", sprintf("poll_interval cannot be <= 0 (val: %d)", conf.poll_interval);
+
+            bool re = False;
+            if (conf.regex_mask) {
+                mask = remove conf.regex_mask;
+                re = True;
+                conf -= "mask";
             }
 
             # set options
-            $self += $conf;
+            self += conf;
 
             # set regex for mask if regex_mask was not already used
-            if (!$re)
-                $.setMask();
+            if (!re)
+                setMask();
 
             # assign SFTPClient object
-            $.sftp = $sftp;
+            sftp = n_sftp;
 
-            my hash $ih = $sftp.info();
-            $.url = sprintf("%s@%s:%d", $ih.ssh2user ? $ih.ssh2user : "<none>", $ih.ssh2host, $ih.ssh2port);
+            hash ih = sftp.info();
+            url = sprintf("%s@%s:%d", ih.ssh2user ? ih.ssh2user : "<none>", ih.ssh2host, ih.ssh2port);
 
-            if ($.mask)
-                $.logDetail("%s: file regex mask: %s", $.url, $.mask);
+            if (mask)
+                logDetail("%s: file regex mask: %s", url, mask);
 
-            if (!$ih.connected) {
-                $.logDetail("%s: logging in (timeout %y)", $.url, $.timeout);
+            if (!ih.connected) {
+                logDetail("%s: logging in (timeout %y)", url, timeout);
                 # connect to the remote system
-                $.sftp.connect($.timeout);
+                sftp.connect(timeout);
             }
             else
-                $.logDetail("%s: already connected: %y", $.url, $ih);
-            if ($.path && $.path != ".") {
-                $.logInfo("%s: connected; changing directory to %s", $.url, $.path);
+                logDetail("%s: already connected: %y", url, ih);
+            if (path && path != ".") {
+                logInfo("%s: connected; changing directory to %s", url, path);
                 # change to the target directory
-                $.sftp.chdir($.path, $.timeout);
+                sftp.chdir(path, timeout);
             }
             else
-                $.logInfo("%s: connected", $.url);
+                logInfo("%s: connected", url);
         }
 
         #! creates the SftpPoller object from the configuration hash argument passed
-        /** @param $nconf a hash with the following keys (see RequiredKeys for mandatory keys):
-            - \c host: the hostname or address to connect to
+        /** @param nconf a hash with the following keys:
+            - \c host: (required) the hostname or address to connect to
             - \c port: the integer port number to connect to (default 22; must be > 0 if given)
             - \c user: the username to use for the connection
             - \c pass: the password to use for the connection
@@ -332,9 +345,10 @@ public namespace SftpPoller {
             - \c log_info: a @ref closure "closure" or @ref call_reference "call reference" for logging important information; must accept a single string giving the log message
             - \c log_detail: a @ref closure "closure" or @ref call_reference "call reference" for logging detailed information; must accept a single string giving the log message
             - \c log_debug: a @ref closure "closure" or @ref call_reference "call reference" for logging verbose debgugging information; must accept a single string giving the log message
-            - \c start_thread: a @ref closure "closure" or @ref call_reference "call reference" for starting threads; must return the integer thread ID (if not set then @ref background will be used)
+            - \c start_thread: (required when imported into a context where @ref Qore::PO_NO_THREAD_CONTROL is set) a @ref closure "closure" or @ref call_reference "call reference" for starting threads; must return the integer thread ID (if not set then @ref background will be used)
+            - \c sleep: (required when imported into a context where @ref Qore::PO_NO_PROCESS_CONTROL is set) a @ref closure "closure" or @ref call_reference "call reference" to use instead of @ref Qore::sleep() (if not set then @ref Qore::sleep() will be used)
 
-            @throw SFTPPOLLER-CONSTRUCTOR-ERROR missing required key (see RequiredKeys), invalid port or poll_interval given
+            @throw SFTPPOLLER-CONSTRUCTOR-ERROR missing required key, invalid port or poll_interval given
             @throw SFTPCLIENT-PARAMETER-ERROR empty hostname passed
             @throw SOCKET-CONNECT-ERROR error establishing socket connection (no listener, port blocked, etc); timeout establishing socket connection
             @throw SSH2CLIENT-CONNECT-ERROR no user name set; ssh2 or libssh2 error
@@ -342,142 +356,153 @@ public namespace SftpPoller {
             @throw SSH2CLIENT-AUTH-ERROR no proper authentication method found
             @throw SFTPCLIENT-CONNECT-ERROR error initializing sftp session or getting remote path
             */
-        constructor(hash $nconf) {
+        constructor(hash nconf) {
             # create hash of keys with only valid options in argument hash
-            my hash $conf = Defaults + $nconf{AllKeys};
-            
-            foreach my string $k in (RequiredKeys) {
-                if (!exists $conf.$k)
-                    throw "SFTPPOLLER-CONSTRUCTOR-ERROR", sprintf("required key %y missing from constructor hash argument)", $k);
+            hash conf = Defaults + nconf{AllKeys};
+
+            foreach string k in (RequiredKeysWithHost) {
+                if (!exists conf{k})
+                    throw "SFTPPOLLER-CONSTRUCTOR-ERROR", sprintf("required key %y missing from constructor hash argument)", k);
             }
 
-            $conf.poll_interval = int($conf.poll_interval);
-            $conf.port = int($conf.port);
+            conf.poll_interval = int(conf.poll_interval);
+            conf.port = int(conf.port);
 
-            if ($conf.poll_interval <= 0)
-                throw "SFTPPOLLER-CONSTRUCTOR-ERROR", sprintf("poll_interval cannot be <= 0 (val: %d)", $conf.poll_interval);
-            if ($conf.port <= 0)
-                throw "SFTPPOLLER-CONSTRUCTOR-ERROR", sprintf("port cannot be <= 0 (val: %d)", $conf.port);
+            if (conf.poll_interval <= 0)
+                throw "SFTPPOLLER-CONSTRUCTOR-ERROR", sprintf("poll_interval cannot be <= 0 (val: %d)", conf.poll_interval);
+            if (conf.port <= 0)
+                throw "SFTPPOLLER-CONSTRUCTOR-ERROR", sprintf("port cannot be <= 0 (val: %d)", conf.port);
 
-            my bool $re = False;
-            if ($conf.regex_mask) {
-                $.mask = remove $conf.regex_mask;
-                $re = True;
-                $conf -= "mask";
+            bool re = False;
+            if (conf.regex_mask) {
+                mask = remove conf.regex_mask;
+                re = True;
+                conf -= "mask";
             }
 
             # set options
-            $self += $conf;
+            self += conf;
 
             # set regex for mask if regex_mask was not already used
-            if (!$re)
-                $.setMask();
+            if (!re)
+                setMask();
 
             # create SFTPClient object
-            $.sftp = new SFTPClient($.host, $.port);
-            if ($.user)
-                $.sftp.setUser($.user);
-            if ($.pass)
-                $.sftp.setPassword($.pass);
-            if ($.keyfile)
-                $.sftp.setKeys($.keyfile);
+            sftp = new SFTPClient(host, port);
+            if (user)
+                sftp.setUser(user);
+            if (pass)
+                sftp.setPassword(pass);
+            if (keyfile)
+                sftp.setKeys(keyfile);
 
-            $.url = sprintf("%s@%s:%d", $.user ? $.user : "<none>", $.host, $.port);
+            url = sprintf("%s@%s:%d", user ? user : "<none>", host, port);
 
-            if ($.mask)
-                $.logDetail("%s: file regex mask: %s", $.url, $.mask);
+            if (mask)
+                logDetail("%s: file regex mask: %s", url, mask);
 
-            $.logDetail("%s: logging in (timeout %y)", $.url, $.timeout);
+            logDetail("%s: logging in (timeout %y)", url, timeout);
             # connect to the remote system
-            $.sftp.connect($.timeout);
-            if ($.path && $.path != ".") {
-                $.logInfo("%s: connected; changing directory to %s", $.url, $.path);
+            sftp.connect(timeout);
+            if (path && path != ".") {
+                logInfo("%s: connected; changing directory to %s", url, path);
                 # change to the target directory
-                $.sftp.chdir($.path, $.timeout);
+                sftp.chdir(path, timeout);
             }
             else
-                $.logInfo("%s: connected", $.url);
+                logInfo("%s: connected", url);
         }
 
         #! stops the polling operation if in progress and destroys the object
         destructor() {
-            $.stop();
+            stop();
         }
 
         #! returns the current poll count
         int getPollCount() {
-            return $.pollcnt;
+            return pollcnt;
         }
 
         #! calls the \c "log_info" @ref closure "closure" or @ref call_reference "call reference" with important information
-        private logInfo(string $fmt) {
-            if ($.log_info)
-                call_function($.log_info, vsprintf($fmt, $argv));
+        private logInfo(string fmt) {
+            if (log_info)
+                call_function(log_info, vsprintf(fmt, argv));
         }
 
         #! calls the \c "log_detail" @ref closure "closure" or @ref call_reference "call reference" with detail information
-        private logDetail(string $fmt) {
-            if ($.log_detail)
-                call_function($.log_detail, vsprintf($fmt, $argv));
+        private logDetail(string fmt) {
+            if (log_detail)
+                call_function(log_detail, vsprintf(fmt, argv));
         }
 
         #! calls the \c "log_debug" @ref closure "closure" or @ref call_reference "call reference" with verbose debugging information
-        private logDebug(string $fmt) {
-            if ($.log_debug)
-                call_function($.log_debug, vsprintf($fmt, $argv));
+        private logDebug(string fmt) {
+            if (log_debug)
+                call_function(log_debug, vsprintf(fmt, argv));
         }
 
         #! converts a glob mask into a regex
         private setMask() {
-            if ($.mask == "*") {
-                delete $.mask;
+            if (mask == "*") {
+                delete mask;
                 return;
             }
 
             # replace . -> \.
-            $.mask =~ s/\./\\./g;
+            mask =~ s/\./\\./g;
             # replace ? -> .
-            $.mask =~ s/\?/./g;
+            mask =~ s/\?/./g;
             # replace * -> .*
-            $.mask =~ s/\*/.*/g; #//; # previous comment needed only for broken emacs qore-mode syntax highlighting
-            $.mask = sprintf("^%s$", $.mask); #");
+            mask =~ s/\*/.*/g; #//; # previous comment needed only for broken emacs qore-mode syntax highlighting
+            mask = sprintf("^%s$", mask); #");
         }
 
         #! joins a list with \c "/" characters as path separators
-        static string osPath(list $pathComponents) {
-            return join("/", $pathComponents);
+        static string osPath(list pathComponents) {
+            return join("/", pathComponents);
+        }
+
+        #! retrieves a remote file and stores it to a local path
+        /** @param remote_path the remote file path
+            @param local_path the local file path
+            @param n_timeout a timeout in milliseconds
+
+            @return the number of bytes transferred
+        */
+        int getStoreFile(string remote_path, string local_path, *timeout n_timeout) {
+            return sftp.retrieveFile(remote_path, local_path);
         }
 
         #! retrieves a text file and returns the file's contents
-        string getTextFile(string $path, *timeout $timeout, *string $encoding) {
-            return $.sftp.getTextFile($path, $timeout ? $timeout : $.timeout, $encoding ? $encoding : $.encoding);
+        string getTextFile(string path, *timeout n_timeout, *string n_encoding) {
+            return sftp.getTextFile(path, n_timeout ?? timeout, n_encoding ?? encoding);
         }
 
         #! retrieves a binary file and returns the file's contents
-        binary getFile(string $path, *timeout $timeout) {
-            return $.sftp.getFile($path, $timeout ? $timeout : $.timeout);
+        binary getFile(string path, *timeout n_timeout) {
+            return sftp.getFile(path, n_timeout ?? timeout);
         }
 
         #! renames a file on the server
-        rename(string $old, string $nnew, *timeout $timeout) {
-            $.sftp.rename($old, $nnew, $timeout ? $timeout : $.timeout);
+        rename(string old, string nnew, *timeout n_timeout) {
+            sftp.rename(old, nnew, n_timeout ?? timeout);
         }
 
         #! deletes a file on the server
-        removeFile(string $fn, *timeout $timeout) {
-            $.sftp.removeFile($fn, $timeout ? $timeout : $.timeout);
-        }
-        
-        #! returns information about a remote file (see @ref Qore::SSH2::SFTPClient::stat() for a description of the return format)
-        *hash stat(string $path, *timeout $timeout) {
-            return $.sftp.stat($path, $timeout ? $timeout : $.timeout);
+        removeFile(string fn, *timeout n_timeout) {
+            sftp.removeFile(fn, n_timeout ?? timeout);
         }
 
-        #! returns a list of file hashes matching any file name mask set for the object
+        #! returns information about a remote file (see @ref Qore::SSH2::SFTPClient::stat() for a description of the return format)
+        *hash stat(string path, *timeout n_timeout) {
+            return sftp.stat(path, n_timeout ?? timeout);
+        }
+
+        #! returns a list of regular file hashes matching any file name mask set for the object
         /** @param sort the sort option for the list returned
             @param order the ordering of sorted data returned
 
-            @return a list of file hashes with the following keys in each list element:
+            @return a list of regular file hashes with the following keys in each list element:
             - \c name: the name of the file, link, or directory
             - \c size: the size of the file in bytes
             - \c uid: the UID of the owner of the file
@@ -485,38 +510,38 @@ public namespace SftpPoller {
             - \c mode: the permissions / mode of the file
             - \c atime: the last accessed date/time of the file
             - \c mtime: the last modified date/time of the file
-            - \c type: the type of file; one of: \c "REGULAR", \c "DIRECTORY", \c "SYMBOLIC-LINK", \c "BLOCK-DEVICE", \c "CHARACTER-DEVICE", \c "FIFO", \c "SYMBOLIC-LINK", \c "SOCKET", or \c "UNKNOWN"
+            - \c type: the type of file is always \c "REGULAR"
             - \c perm: a string giving UNIX-style permissions for the file (ex: "-rwxr-xr-x")
         */
-        list getFiles(int $sort = SftpPoller::SortNone, int $order = SftpPoller::OrderAsc) {
-            my list $l = (select $.sftp.listFull(NOTHING, $.timeout), $1.type == "REGULAR");
+        list getFiles(int sort = SftpPoller::SortNone, int order = SftpPoller::OrderAsc) {
+            list l = (select sftp.listFull(NOTHING, timeout), $1.type == "REGULAR");
 
             # remove all files that don't fit the mask
-            if ($.mask) {
-                my list $n = ();
-                foreach my hash $h in ($l) {
-                    if (regex($h.name, $.mask, $.reopts))
-                        $n += $h;
+            if (mask) {
+                list n = ();
+                foreach hash h in (l) {
+                    if (regex(h.name, mask, reopts))
+                        n += h;
                 }
-                $l = $n;
+                l = n;
             }
-            
+
             # remove all files that aren't old enough
-            if ($.minage) {
-                my date $now = now();
-                my list $n = ();
-                foreach my hash $h in ($l) {
-                    if (($now - $h.mtime).durationSeconds() < $.minage) {
-                        $.logDebug("file %y is not old enough (minage: %d, current age: %d)", $h.name, $.minage, ($now - $h.mtime).durationSeconds());
+            if (minage) {
+                date now = Qore::now();
+                list n = ();
+                foreach hash h in (l) {
+                    if ((now - h.mtime).durationSeconds() < minage) {
+                        logDebug("file %y is not old enough (minage: %d, current age: %d)", h.name, minage, (now - h.mtime).durationSeconds());
                         continue;
                     }
-                    $n += $h;
+                    n += h;
                 }
-                $l = $n;
+                l = n;
             }
 
             # return list of files
-            switch ($sort) {
+            switch (sort) {
                 case SftpPoller::SortNone: {
                     break;
                 }
@@ -524,39 +549,39 @@ public namespace SftpPoller {
                 # sort by file name
                 case SftpPoller::SortName: {
                     # sort closure
-                    my code $sort = int sub (hash $l, hash $r) { return $l.name <=> $r.name; };
-                    $l = ($order == SftpPoller::OrderAsc ? sort($l, $sort) : sortDescending($l, $sort)); 
+                    code sort = int sub (hash l, hash r) { return l.name <=> r.name; };
+                    l = (order == SftpPoller::OrderAsc ? sort(l, sort) : sort_descending(l, sort));
                     break;
                 }
 
                 # it *never* should get here
-                default: throw "SFTPPOLLER-GETFILES", sprintf("Unknown sort mode %y", $sort);
+                default: throw "SFTPPOLLER-GETFILES", sprintf("Unknown sort mode %y", sort);
             }
 
-            $.logDetail("%s: polled %d matching file%s", $.url, $l.size(), $l.size() == 1 ? "" : "s");
-            return $l;
+            logDetail("%s: polled %d matching file%s", url, l.size(), l.size() == 1 ? "" : "s");
+            return l;
         }
 
         #! starts polling in the background; returns the thread ID of the polling thread
-        /** if polling had already been started, then the thread ID of the polling thread is 
+        /** if polling had already been started, then the thread ID of the polling thread is
             returned immediately
         */
         int start() {
-            $.m.lock();
-            on_exit $.m.unlock();
+            m.lock();
+            on_exit m.unlock();
 
-            if ($.run)
-                return $.tid;
+            if (runflag)
+                return tid;
 
-            $.sc.waitForZero();
+            sc.waitForZero();
 
-            $.run = True;
-            $.sc.inc();
+            runflag = True;
+            sc.inc();
 
 %ifdef PO_NO_THREAD_CONTROL
-            return call_function($.start_thread, \$.run());
+            return call_function(start_thread, \run());
 %else
-            return $.start_thread ? call_function($.start_thread, \$.run()) : background $.run();
+            return start_thread ? call_function(start_thread, \run()) : background run();
 %endif
         }
 
@@ -564,10 +589,10 @@ public namespace SftpPoller {
         /** @see stop()
         */
         stopNoWait() {
-            $.m.lock();
-            on_exit $.m.unlock();
+            m.lock();
+            on_exit m.unlock();
 
-            $.run = False;
+            runflag = False;
         }
 
         #! stops the polling operation, returns when the polling operation has been stopped
@@ -578,14 +603,14 @@ public namespace SftpPoller {
             @see stopNoWait()
         */
         stop() {
-            if (gettid() == $.tid)
-                throw "THREAD-ERROR", sprintf("cannot call SftpPoller::stop() from the event thread (%d)", $.tid);
-            $.m.lock();
-            on_exit $.m.unlock();
+            if (gettid() == tid && sc.getCount())
+                throw "THREAD-ERROR", sprintf("cannot call SftpPoller::stop() from the event thread (%d)", tid);
+            m.lock();
+            on_exit m.unlock();
 
-            $.run = False;
+            runflag = False;
 
-            $.sc.waitForZero();
+            sc.waitForZero();
         }
 
         #! waits indefinitely for the polling operation to stop; if polling was not in progress then this method returns immediately
@@ -593,59 +618,59 @@ public namespace SftpPoller {
             @throw THREAD-ERROR this exception is thrown if this method is called from the event thread since it would result in a deadlock
         */
         waitStop() {
-            if (gettid() == $.tid)
-                throw "THREAD-ERROR", sprintf("cannot call SftpPoller::waitStop() from the event thread (%d)", $.tid);
-            $.sc.waitForZero();
+            if (gettid() == tid)
+                throw "THREAD-ERROR", sprintf("cannot call SftpPoller::waitStop() from the event thread (%d)", tid);
+            sc.waitForZero();
         }
 
         #! starts the polling operation inline (not in a background thread)
-        /** 
+        /**
             @throw SFTPPOLLER-ERROR this exception is thrown if polling is already in progress
         */
         startInline() {
             {
-                $.m.lock();
-                on_exit $.m.unlock();
+                m.lock();
+                on_exit m.unlock();
 
-                if ($.run)
-                    throw "SFTPPOLLER-ERROR", sprintf("the polling thread is already running in TID %d", $.tid);
+                if (runflag)
+                    throw "SFTPPOLLER-ERROR", sprintf("the polling thread is already running in TID %d", tid);
 
-                $.run = True;
-                $.tid = gettid();
+                runflag = True;
+                tid = gettid();
             }
-            $.sc.inc();
-            $.run();
+            sc.inc();
+            run();
         }
 
         #! runs a single poll (useful for checking for errors inline before starting a background thread)
         bool runOnce() {
-            ++$.pollcnt;
-            $.get_files = True;
+            ++pollcnt;
+            get_files = True;
 
-            my list $files = $.getFiles();
+            list files = getFiles();
 
-            if ($files) {
-                $.logDetail("got new files in %y: %y", $.path, $files);            
+            if (files) {
+                logDetail("got new files in %y: %y", path, files);
 
-                if ($.fileEvent($files)) {
-                    foreach my hash $fh in ($files) {
+                if (fileEvent(files)) {
+                    foreach hash fh in (files) {
                         # transfer file from server
-                        $.logInfo("%y: retrieving %s file data", $fh.name, $.binary ? "binary" : "text");
-                        my date $t1 = now_us();
+                        logInfo("%y: retrieving %s file data", fh.name, binary ? "binary" : "text");
+                        date t1 = now_us();
 
-                        $.get_files = True;
-                        $fh.data = $.binary ? $.getFile($fh.name) : $.getTextFile($fh.name);
-                        $.logInfo("%y: retrieved %d bytes in %y", $fh.name, $fh.data.size(), now_us() - $t1);
-                        
+                        get_files = True;
+                        fh.data = binary ? getFile(fh.name) : getTextFile(fh.name);
+                        logInfo("%y: retrieved %d bytes in %y", fh.name, fh.data.size(), now_us() - t1);
+
                         # make sure any errors after this point cause the polling operation to stop
-                        $.get_files = False;
-                        $.singleFileEvent($fh);
+                        get_files = False;
+                        singleFileEvent(fh);
 
                         try {
-                            $.postSingleFileEvent($fh);
+                            postSingleFileEvent(fh);
                         }
-                        catch (hash $ex) {
-                            $.fatal = True;
+                        catch (hash ex) {
+                            fatal = True;
                             rethrow;
                         }
                     }
@@ -656,48 +681,48 @@ public namespace SftpPoller {
         }
 
         #! sleeps for the specificed number of seconds
-        private sleep(softint $secs) {
+        private sleep(softint secs) {
 %ifdef PO_NO_PROCESS_CONTROL
-            call_function($.sleep, $secs);
+            call_function(sleep, secs);
 %else
-            $.sleep ? call_function($.sleep, $secs) : sleep($secs);
+            sleep ? call_function(sleep, secs) : sleep(secs);
 %endif
         }
 
         #! starts the polling operation
         synchronized private run() {
-            on_exit $.sc.dec();
+            on_exit
+                sc.dec();
 
-            while ($.run) {
+            while (runflag) {
                 try {
-                    if ($.runOnce())
-                        continue;
-                    if ($.run)
-                        $.sleep($.poll_interval);
-                } catch (hash $ex) {
-                    if ($.get_files) {                        
-                        $.logInfo("SFTP error in %y: %s: %s; waiting %y for next try", $.path, $ex.err, $ex.desc, ErrorDelay);
-                        if ($.run)
-                            $.sleep(ErrorDelay);
+                    runOnce();
+                    if (runflag)
+                        sleep(poll_interval);
+                } catch (hash ex) {
+                    if (get_files) {
+                        logInfo("SFTP error in %y: %s: %s; waiting %y for next try", path, ex.err, ex.desc, ErrorDelay);
+                        if (runflag)
+                            self.sleep(ErrorDelay);
                     }
                     else {
                         # error thrown in "post transfer" code
-                        $.logInfo("error in post transfer code; polling terminated: %s: %s", $ex.err, $ex.desc);
+                        logInfo("error in post transfer code; polling terminated: %s: %s", ex.err, ex.desc);
                         rethrow;
                     }
                 }
             }
-            
-            $.logInfo("polling finished");
+
+            logInfo("polling finished");
         }
 
         #! called for each poll with a list of all files matched before transfer; if this method returns False or @ref nothing, then the singleFileEvent method is not called
-        *bool fileEvent(list $l) {
+        *bool fileEvent(list l) {
             return True;
         }
 
         #! called for each matching file individually whenever matching files are polled with the list of matching file names; if any error occurs here, the error is logged and the polling operation is retried
-        /** @param $fih a hash of file data and information with the following keys:
+        /** @param fih a hash of file data and information with the following keys:
             - \c name: the name of the file, link, or directory
             - \c size: the size of the file in bytes
             - \c uid: the UID of the owner of the file
@@ -709,14 +734,14 @@ public namespace SftpPoller {
             - \c perm: a string giving UNIX-style permissions for the file (ex: "-rwxr-xr-x")
             - \c data: the file's data; this will be a string unless the \a "binary" option is set to @ref Qore::True "True", in which case this key is assigned to the files binary data
         */
-        abstract singleFileEvent(hash $fih);
+        abstract singleFileEvent(hash fih);
 
         #! called after singleFileEvent() for each matching file individually whenever matching files are polled with the list of matching file names; if any error occurs here, the polling operation stops
         /** This method would normally delete / rename / move files processed by singleFileEvent() so that they would not be polled a second time.
             If an error occurs in this operation, then the polling event will stop since continuing after failing to delete, rename, or move a file already processed
             would cause the file to be processed more than once.
 
-            @param $fih a hash of file data and information with the following keys:
+            @param fih a hash of file data and information with the following keys:
             - \c name: the name of the file, link, or directory
             - \c size: the size of the file in bytes
             - \c uid: the UID of the owner of the file
@@ -728,26 +753,26 @@ public namespace SftpPoller {
             - \c perm: a string giving UNIX-style permissions for the file (ex: "-rwxr-xr-x")
             - \c data: the file's data; this will be a string unless the \a "binary" option is set to @ref Qore::True "True", in which case this key is assigned to the files binary data
         */
-        abstract postSingleFileEvent(hash $fih);
+        abstract postSingleFileEvent(hash fih);
 
         #! checks a path on the local file system
         /**
             @throw DIR-ERROR this exception is thrown if the local path does not exist, is not readable, is not a directory, or should be writable and is not
         */
-        static checkPath(string $path, string $type, bool $write = False) {
-            my *hash $h = hstat($path);
-            if (!$h)
-                throw "DIR-ERROR", sprintf("%y: %s path does not exist", $path, $type);
-            if ($h.type != "DIRECTORY")
-                throw "DIR-ERROR", sprintf("%y: %s path is not a directory (%s)", $path, $type, $h.type);
+        static checkPath(string path, string type, bool write = False) {
+            *hash h = hstat(path);
+            if (!h)
+                throw "DIR-ERROR", sprintf("%y: %s path does not exist", path, type);
+            if (h.type != "DIRECTORY")
+                throw "DIR-ERROR", sprintf("%y: %s path is not a directory (%s)", path, type, h.type);
 
             # check if the directory is readable
-            if (!is_readable($path))
-                throw "DIR-ERROR", sprintf("%y: %s path is not readable", $path, $type);
+            if (!is_readable(path))
+                throw "DIR-ERROR", sprintf("%y: %s path is not readable", path, type);
 
             # check if the directory is writable
-            if ($write && !is_writable($path))
-                throw "DIR-ERROR", sprintf("%y: %s path is not writable", $path, $type);
+            if (write && !is_writable(path))
+                throw "DIR-ERROR", sprintf("%y: %s path is not writable", path, type);
         }
     }
 }

@@ -45,7 +45,7 @@ protected:
    SSH2Client *parent;
    const QoreEncoding *enc;
 
-   void close_unlocked() {
+   void closeUnlocked() {
       libssh2_channel_free(channel);
       channel = 0;
    }
