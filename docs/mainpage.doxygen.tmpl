@@ -113,6 +113,7 @@ stdout.printf("exit status: %d\n", $chan.getExitStatus());@endcode
     - implemented the @ref Qore::SSH2::SFTPClient::retrieveFile() "SFTPClient::retrieveFile()" and @ref Qore::SSH2::SFTPClient::transferFile() "SFTPClient::transferFile()" methods
     - ported the @ref Qore::SSH2::SFTPClient "SFTPClient" class tests to QUnit and added tests for the new methods
     - ported test/sftp-poller.q to QUnit
+    - fixed a bug in socket handling related to asyncronous socket event polling and select(2) and lack of socket descriptor bounds checking (<a href="https://github.com/qorelanguage/qore/issues/714">issue 714</a>)
     - requires %Qore 0.8.12+ to build (uses the new QoreValue API)
 
     @subsection ssh2v099 Version 0.9.9

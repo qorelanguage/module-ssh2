@@ -22,6 +22,9 @@ version 1.0
   methods
 * ported test/sftp-poller.q to QUnit
 * requires Qore 0.8.12+ to build (uses the new QoreValue API)
+* fixed a bug in socket handling related to asyncronous socket event
+  polling and select(2) and lack of socket descriptor bounds checking
+  (https://github.com/qorelanguage/qore/issues/714)
 
 
 *************
