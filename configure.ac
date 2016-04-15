@@ -570,7 +570,7 @@ AC_HEADER_TIME
 AC_STRUCT_TM
 AC_C_VOLATILE
 
-AC_CHECK_HEADERS([stdint.h])
+AC_CHECK_HEADERS([stdint.h sys/select.h poll.h])
 
 # turn on optimizations if we know how
 if test "$enable_optimization" = "yes"; then
@@ -579,7 +579,7 @@ if test "$enable_optimization" = "yes"; then
     elif test "$CXX" = "CC" -a "`echo $host_os|cut -b-7`" = "solaris"; then
         # remove -g with Solaris CC as it reduces optimization levels
 	CXXFLAGS="`echo $CXXFLAGS| sed s/-g//` -xO5" # Solaris CC
-    elif test -n "`echo $CXX|grep aCC`"; then 
+    elif test -n "`echo $CXX|grep aCC`"; then
         # remove -g with HP-UX aCC as it reduces optimization levels
 	CXXFLAGS="`echo $CXXFLAGS| sed s/-g//` +O4" # HP-UX aCC
     fi
