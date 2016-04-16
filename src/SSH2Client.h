@@ -45,15 +45,6 @@
 #include <set>
 #include <string>
 
-#ifdef HAVE_POLL_H
-#include <poll.h>
-#else
-// we assume we have select even if sys/select.h is not available (ex: windows)
-#ifdef HAVE_SYS_SELECT_H
-#include <sys/select.h>
-#endif
-#endif
-
 DLLLOCAL QoreClass *initSSH2ClientClass(QoreNamespace& ns);
 DLLLOCAL extern qore_classid_t CID_SSH2CLIENT;
 
