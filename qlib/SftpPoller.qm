@@ -183,8 +183,11 @@ public namespace SftpPoller {
             #! path to the ssh private key in PEM format; one of \c "pass" or \c "keyfile" *must* be set
             *string keyfile;
 
-            #! path to poll
-            string path = ".";
+            #! path(s) to poll
+            softlist path = ".";
+
+            #! path after connect to SFTP server
+            string rootSftpPath;
 
             #! file glob name mask (ignored if \c "regex_mask" also set)
             *string mask;
@@ -252,7 +255,7 @@ public namespace SftpPoller {
             @param nconf a hash with the following optional keys:
             - \c poll_interval: the integer polling interval in seconds (default: 10 seconds; must be > 0 if given)
             - \c mask: the file glob mask to use (default: \c "*", ignored if \c "regex_mask" is also present)
-            - \c path: the remote path for retrieving the files
+            - \c path: the remote path(s) for retrieving the files
             - \c regex_mask: a regular expression to use as a mask (overrides any \c "mask" value)
             - \c reopts: regular expression match options (ex RE_Caseless for case-insensitive matches)
             - \c timeout: connection timeout (default \c 30s)
@@ -304,6 +307,7 @@ public namespace SftpPoller {
 
             # assign SFTPClient object
             sftp = n_sftp;
+            rootSftpPath = sftp.path();
 
             hash ih = sftp.info();
             url = sprintf("%s@%s:%d", ih.ssh2user ? ih.ssh2user : "<none>", ih.ssh2host, ih.ssh2port);
@@ -318,10 +322,11 @@ public namespace SftpPoller {
             }
             else
                 logDetail("%s: already connected: %y", url, ih);
-            if (path && path != ".") {
-                logInfo("%s: connected; changing directory to %s", url, path);
+            if (path && path.size() == 1 && path[0] != ".") {
+                logInfo("path is %n", path);
+                logInfo("%s: connected; changing directory to %s", url, path[0]);
                 # change to the target directory
-                sftp.chdir(path, timeout);
+                sftp.chdir(path[0], timeout);
             }
             else
                 logInfo("%s: connected", url);
@@ -334,7 +339,7 @@ public namespace SftpPoller {
             - \c user: the username to use for the connection
             - \c pass: the password to use for the connection
             - \c keyfile: the SSH key (file and path to it)
-            - \c path: the remote path for retrieving the files
+            - \c path: the remote path(s) for retrieving the files
             - \c poll_interval: the integer polling interval in seconds (default: 10 seconds; must be > 0 if given)
             - \c mask: the file glob mask to use (default: \c "*", ignored if \c "regex_mask" is also present)
             - \c regex_mask: a regular expression to use as a mask (overrides any \c "mask" value)
@@ -404,10 +409,12 @@ public namespace SftpPoller {
             logDetail("%s: logging in (timeout %y)", url, timeout);
             # connect to the remote system
             sftp.connect(timeout);
-            if (path && path != ".") {
-                logInfo("%s: connected; changing directory to %s", url, path);
+            rootSftpPath = sftp.path();
+
+            if (path && path.size() == 1 && path[0] != ".") {
+                logInfo("%s: connected; changing directory to %s", url, path[0]);
                 # change to the target directory
-                sftp.chdir(path, timeout);
+                sftp.chdir(path[0], timeout);
             }
             else
                 logInfo("%s: connected", url);
@@ -645,39 +652,48 @@ public namespace SftpPoller {
         #! runs a single poll (useful for checking for errors inline before starting a background thread)
         bool runOnce() {
             ++pollcnt;
-            get_files = True;
+            bool ret = False;
+            logInfo("Path is %n\n", path);
+            foreach string subdir in (path) {
+                get_files = True;
+                if (path.size() != 1) {
+                    sftp.chdir(rootSftpPath);
+                    sftp.chdir(subdir);
+                    logInfo("Current SFTPClient path is %s\n", sftp.path());
+                }
+                list files = getFiles();
 
-            list files = getFiles();
+                if (files) {
+                    logDetail("got new files in %y: %y", path, files);
 
-            if (files) {
-                logDetail("got new files in %y: %y", path, files);
+                    if (fileEvent(files)) {
+                        foreach hash fh in (files) {
+                            # transfer file from server
+                            logInfo("%y: retrieving %s file data", fh.name, binary ? "binary" : "text");
+                            date t1 = now_us();
 
-                if (fileEvent(files)) {
-                    foreach hash fh in (files) {
-                        # transfer file from server
-                        logInfo("%y: retrieving %s file data", fh.name, binary ? "binary" : "text");
-                        date t1 = now_us();
+                            get_files = True;
+                            fh.data = binary ? getFile(fh.name) : getTextFile(fh.name);
+                            logInfo("%y: retrieved %d bytes in %y", fh.name, fh.data.size(), now_us() - t1);
 
-                        get_files = True;
-                        fh.data = binary ? getFile(fh.name) : getTextFile(fh.name);
-                        logInfo("%y: retrieved %d bytes in %y", fh.name, fh.data.size(), now_us() - t1);
+                            # make sure any errors after this point cause the polling operation to stop
+                            get_files = False;
+                            fh.subdir = subdir;
+                            singleFileEvent(fh);
 
-                        # make sure any errors after this point cause the polling operation to stop
-                        get_files = False;
-                        singleFileEvent(fh);
-
-                        try {
-                            postSingleFileEvent(fh);
-                        }
-                        catch (hash ex) {
-                            fatal = True;
-                            rethrow;
+                            try {
+                                postSingleFileEvent(fh);
+                            }
+                            catch (hash ex) {
+                                fatal = True;
+                                rethrow;
+                            }
                         }
                     }
+                    ret = True;
                 }
-                return True;
             }
-            return False;
+            return ret;
         }
 
         #! sleeps for the specificed number of seconds
@@ -701,7 +717,7 @@ public namespace SftpPoller {
                         sleep(poll_interval);
                 } catch (hash ex) {
                     if (get_files) {
-                        logInfo("SFTP error in %y: %s: %s; waiting %y for next try", path, ex.err, ex.desc, ErrorDelay);
+                        logInfo("SFTP error in %n: %s: %s; waiting %y for next try", path, ex.err, ex.desc, ErrorDelay);
                         if (runflag)
                             self.sleep(ErrorDelay);
                     }
@@ -733,6 +749,7 @@ public namespace SftpPoller {
             - \c type: the type of file; one of: \c "REGULAR", \c "DIRECTORY", \c "SYMBOLIC-LINK", \c "BLOCK-DEVICE", \c "CHARACTER-DEVICE", \c "FIFO", \c "SYMBOLIC-LINK", \c "SOCKET", or \c "UNKNOWN"
             - \c perm: a string giving UNIX-style permissions for the file (ex: "-rwxr-xr-x")
             - \c data: the file's data; this will be a string unless the \a "binary" option is set to @ref Qore::True "True", in which case this key is assigned to the files binary data
+            - \c subdir: the remote subdir
         */
         abstract singleFileEvent(hash fih);
 
@@ -752,6 +769,7 @@ public namespace SftpPoller {
             - \c type: the type of file; one of: \c "REGULAR", \c "DIRECTORY", \c "SYMBOLIC-LINK", \c "BLOCK-DEVICE", \c "CHARACTER-DEVICE", \c "FIFO", \c "SYMBOLIC-LINK", \c "SOCKET", or \c "UNKNOWN"
             - \c perm: a string giving UNIX-style permissions for the file (ex: "-rwxr-xr-x")
             - \c data: the file's data; this will be a string unless the \a "binary" option is set to @ref Qore::True "True", in which case this key is assigned to the files binary data
+            - \c subdir: the remote subdir
         */
         abstract postSingleFileEvent(hash fih);
 
