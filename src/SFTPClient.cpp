@@ -1345,7 +1345,7 @@ int QSftpHelper::closeIntern() {
    // close the handle
    int rc;
    while ((rc = libssh2_sftp_close_handle(sftp_handle)) == LIBSSH2_ERROR_EAGAIN) {
-      if (client->waitSocketUnlocked(xsink, SFTPCLIENT_TIMEOUT, errstr, meth, timeout_ms)) {
+      if (client->waitSocketUnlocked(xsink, SFTPCLIENT_TIMEOUT, errstr, meth, timeout_ms, true)) {
          // note: memory leak here! we cannot close the handle due to the timeout
          printd(0, "QSftpHelper::closeIntern() session %p: cannot close remote file descriptor, forcing session disconnect; leaking descriptor\n", client->ssh_session);
          client->disconnectUnlocked(true, 10, 0, xsink);
