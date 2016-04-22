@@ -86,7 +86,7 @@ class SftpPollerMultiDirsTest inherits QUnit::Test {
              "size": 3,
              "type": "REGULAR",
              "data": "def",
-             "filepath" : "./d.php",
+             "filepath" : "d.php",
             ),
             );
     }

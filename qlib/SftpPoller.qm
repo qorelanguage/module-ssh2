@@ -255,7 +255,7 @@ public namespace SftpPoller {
             @param nconf a hash with the following optional keys:
             - \c poll_interval: the integer polling interval in seconds (default: 10 seconds; must be > 0 if given)
             - \c mask: the file glob mask to use (default: \c "*", ignored if \c "regex_mask" is also present)
-            - \c path: the remote path(s) for retrieving the files
+            - \c path: the remote path(s) for retrieving the files; if a list of strings is given then each path will be polled for matching files according to the \c "mask" or \c "regex_mask" option
             - \c regex_mask: a regular expression to use as a mask (overrides any \c "mask" value)
             - \c reopts: regular expression match options (ex RE_Caseless for case-insensitive matches)
             - \c timeout: connection timeout (default \c 30s)
@@ -284,7 +284,6 @@ public namespace SftpPoller {
                 if (!exists conf{k})
                     throw "SFTPPOLLER-CONSTRUCTOR-ERROR", sprintf("required key %y missing from constructor hash argument)", k);
             }
-
 
             conf.poll_interval = int(conf.poll_interval);
 
@@ -456,17 +455,12 @@ public namespace SftpPoller {
             }
 
             # replace . -> \.
-            mask =~ s/\./\\./g;
+            mask =~ s/\./\./g;
             # replace ? -> .
             mask =~ s/\?/./g;
             # replace * -> .*
             mask =~ s/\*/.*/g; #//; # previous comment needed only for broken emacs qore-mode syntax highlighting
             mask = sprintf("^%s$", mask); #");
-        }
-
-        #! joins a list with \c "/" characters as path separators
-        static string osPath(list pathComponents) {
-            return join("/", pathComponents);
         }
 
         #! retrieves a remote file and stores it to a local path
@@ -677,7 +671,7 @@ public namespace SftpPoller {
 
                             # make sure any errors after this point cause the polling operation to stop
                             get_files = False;
-                            fh.filepath = subdir + "/" + fh.name;
+                            fh.filepath = subdir == "." ? fh.name : (subdir + DirSep + fh.name);
                             singleFileEvent(fh);
 
                             try {
