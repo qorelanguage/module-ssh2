@@ -719,7 +719,7 @@ public namespace SftpPoller {
                     if (get_files) {
                         logInfo("SFTP error in %n: %s: %s; waiting %y for next try", path, ex.err, ex.desc, ErrorDelay);
                         if (runflag)
-                            sfptSleep(ErrorDelay);
+                            sftpSleep(ErrorDelay);
                     }
                     else {
                         # error thrown in "post transfer" code
