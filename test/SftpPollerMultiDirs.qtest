@@ -11,7 +11,7 @@
 %requires QUnit
 %requires Util
 
-%exec-class SftpPollerTest
+%exec-class SftpPollerMultiDirsTest
 
 class MySftpPoller inherits SftpPoller {
     public {}
@@ -41,7 +41,7 @@ class MySftpPoller inherits SftpPoller {
     }
 }
 
-class SftpPollerTest inherits QUnit::Test {
+class SftpPollerMultiDirsTest inherits QUnit::Test {
     public {}
 
     private {
@@ -57,32 +57,41 @@ class SftpPollerTest inherits QUnit::Test {
         const ColumnOffset = 25;
 
         const Files = (
-            "a.txt": "abc",
-            "b.txt": "bcd",
-            "c.txt": "cde",
+            "A/B/C/a.php": "abc",
+            "B/b.php": "bcd",
+            "A/B/c.php": "cde",
             "d.php": "def",
             );
 
         const Result = (
-            ("name": "a.txt",
+            ("name": "a.php",
              "size": 3,
              "type": "REGULAR",
              "data": "abc",
+             "filepath" : "A/B/C/a.php",
             ),
-            ("name": "b.txt",
+            ("name": "b.php",
              "size": 3,
              "type": "REGULAR",
              "data": "bcd",
+             "filepath" : "B/b.php"
             ),
-            ("name": "c.txt",
+            ("name": "c.php",
              "size": 3,
              "type": "REGULAR",
              "data": "cde",
+             "filepath" : "A/B/c.php",
+            ),
+            ("name": "d.php",
+             "size": 3,
+             "type": "REGULAR",
+             "data": "def",
+             "filepath" : "d.php",
             ),
             );
     }
 
-    constructor() : Test("SftpPollerTest", "1.0", \ARGV, MyOpts) {
+    constructor() : Test("SftpPollerMultiDirsTest", "1.0", \ARGV, MyOpts) {
         addTestCase("SftpPollerTests", \sftpPollerTests());
 
         string uri = shift ARGV ?? sprintf("%s@localhost", getusername());
@@ -128,21 +137,32 @@ class SftpPollerTest inherits QUnit::Test {
             "log_info": info,
             "log_detail": detail,
             "log_debug": debug,
-            "mask": "*.txt",
+            "mask" : "*.php",
+            "path" : ("A/B/C", "B/", "A/B", ".")
             );
 
         # setup directory
-        string nd = sprintf("%s/%s/", tmp_location(), get_random_string());
-        sc.mkdir(nd);
-        map sc.putFile($1.value, nd + $1.key), Files.pairIterator();
+        string path1 = "A";
+        string path2 = "A/B";
+        string path3 = "A/B/C";
+        string path4 = "B";
+        sc.mkdir(path1);
+        sc.mkdir(path2);
+        sc.mkdir(path3);
+        sc.mkdir(path4);
+
+        map sc.putFile($1.value, $1.key), Files.pairIterator();
         on_exit {
-            map sc.removeFile(nd + $1), Files.keyIterator();
-            sc.rmdir(nd);
+            map sc.removeFile($1), Files.keyIterator();
+            sc.rmdir(path4);
+            sc.rmdir(path3);
+            sc.rmdir(path2);
+            sc.rmdir(path1);
         }
 
-        opts.path = nd;
+        opts.path = (path1, path2, path3, path4, ".");
 
-        MySftpPoller poller(sc, opts, m_options.verbose > 2);
+        MySftpPoller poller(sc, opts, True);
         poller.start();
         poller.waitStop();
         list fl = poller.getFileList();
