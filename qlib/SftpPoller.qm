@@ -653,13 +653,12 @@ public namespace SftpPoller {
         bool runOnce() {
             ++pollcnt;
             bool ret = False;
-            logInfo("Path is %n\n", path);
             foreach string subdir in (path) {
                 get_files = True;
                 if (path.size() != 1) {
                     sftp.chdir(rootSftpPath);
                     sftp.chdir(subdir);
-                    logInfo("Current SFTPClient path is %s\n", sftp.path());
+                    logInfo("Current SFTPClient path is %s", sftp.path());
                 }
                 list files = getFiles();
 
@@ -678,7 +677,7 @@ public namespace SftpPoller {
 
                             # make sure any errors after this point cause the polling operation to stop
                             get_files = False;
-                            fh.subdir = subdir;
+                            fh.filepath = subdir + "/" + fh.name;
                             singleFileEvent(fh);
 
                             try {
@@ -717,7 +716,7 @@ public namespace SftpPoller {
                         sftpSleep(poll_interval);
                 } catch (hash ex) {
                     if (get_files) {
-                        logInfo("SFTP error in %n: %s: %s; waiting %y for next try", path, ex.err, ex.desc, ErrorDelay);
+                        logInfo("SFTP error in %y: %s: %s; waiting %y for next try", path, ex.err, ex.desc, ErrorDelay);
                         if (runflag)
                             sftpSleep(ErrorDelay);
                     }
@@ -749,7 +748,7 @@ public namespace SftpPoller {
             - \c type: the type of file; one of: \c "REGULAR", \c "DIRECTORY", \c "SYMBOLIC-LINK", \c "BLOCK-DEVICE", \c "CHARACTER-DEVICE", \c "FIFO", \c "SYMBOLIC-LINK", \c "SOCKET", or \c "UNKNOWN"
             - \c perm: a string giving UNIX-style permissions for the file (ex: "-rwxr-xr-x")
             - \c data: the file's data; this will be a string unless the \a "binary" option is set to @ref Qore::True "True", in which case this key is assigned to the files binary data
-            - \c subdir: the remote subdir
+            - \c filepath: the remote filepath relative to SFTP root directory
         */
         abstract singleFileEvent(hash fih);
 
@@ -769,7 +768,7 @@ public namespace SftpPoller {
             - \c type: the type of file; one of: \c "REGULAR", \c "DIRECTORY", \c "SYMBOLIC-LINK", \c "BLOCK-DEVICE", \c "CHARACTER-DEVICE", \c "FIFO", \c "SYMBOLIC-LINK", \c "SOCKET", or \c "UNKNOWN"
             - \c perm: a string giving UNIX-style permissions for the file (ex: "-rwxr-xr-x")
             - \c data: the file's data; this will be a string unless the \a "binary" option is set to @ref Qore::True "True", in which case this key is assigned to the files binary data
-            - \c subdir: the remote subdir
+            - \c filepath: the remote filepath relative to SFTP root directory
         */
         abstract postSingleFileEvent(hash fih);
 
