@@ -1,0 +1,173 @@
+#!/usr/bin/env qore
+# -*- mode: qore; indent-tabs-mode: nil -*-
+
+%new-style
+%require-types
+%strict-args
+%enable-all-warnings
+
+%requires ssh2 >= 1.0
+%requires ../qlib/SftpPoller.qm
+%requires QUnit
+%requires Util
+
+%exec-class SftpPollerMultiDirsTest
+
+class MySftpPoller inherits SftpPoller {
+    public {}
+
+    private {
+        list l = ();
+        bool verbose;
+    }
+
+    constructor(SFTPClient sc, hash opts, bool n_verbose) : SftpPoller(sc, opts) {
+        verbose = n_verbose;
+    }
+
+    nothing singleFileEvent(hash fh) {
+        if (verbose)
+            printf("GOT FILE: %y\n", fh - "data" + ("data_type": fh.data.type(), "data_size": fh.data.size()));
+        # in this case, the polling stop operation will take effect after all the singleFileEvent() calls are made for the polling operation
+        stopNoWait();
+    }
+
+    nothing postSingleFileEvent(hash fh) {
+        l += fh + ("data": sftp.getTextFile(fh.name));
+    }
+
+    list getFileList() {
+        return l;
+    }
+}
+
+class SftpPollerMultiDirsTest inherits QUnit::Test {
+    public {}
+
+    private {
+        const Timeout = 10s;
+
+        const MyOpts = Opts + (
+            "privkey": "k,private-key=s",
+            "mask": "m,mask=s",
+            );
+
+        SFTPClient sc;
+
+        const ColumnOffset = 25;
+
+        const Files = (
+            "A/B/C/a.php": "abc",
+            "B/b.php": "bcd",
+            "A/B/c.php": "cde",
+            "d.php": "def",
+            );
+
+        const Result = (
+            ("name": "a.php",
+             "size": 3,
+             "type": "REGULAR",
+             "data": "abc",
+             "filepath" : "A/B/C/a.php",
+            ),
+            ("name": "b.php",
+             "size": 3,
+             "type": "REGULAR",
+             "data": "bcd",
+             "filepath" : "B/b.php"
+            ),
+            ("name": "c.php",
+             "size": 3,
+             "type": "REGULAR",
+             "data": "cde",
+             "filepath" : "A/B/c.php",
+            ),
+            ("name": "d.php",
+             "size": 3,
+             "type": "REGULAR",
+             "data": "def",
+             "filepath" : "d.php",
+            ),
+            );
+    }
+
+    constructor() : Test("SftpPollerMultiDirsTest", "1.0", \ARGV, MyOpts) {
+        addTestCase("SftpPollerTests", \sftpPollerTests());
+
+        string uri = shift ARGV ?? sprintf("%s@localhost", getusername());
+
+        sc = new SFTPClient(uri);
+        if (m_options.privkey) {
+            sc.setKeys(m_options.privkey);
+        }
+        else {
+            if (PlatformOS == "Windows")
+                exit(0);
+
+            string sshdir = `echo -n ~/.ssh`;
+            if (is_file(sshdir + "/id_rsa"))
+                sc.setKeys(sshdir + "/id_rsa");
+            else if (is_file(sshdir + "/id_dsa"))
+                sc.setKeys(sshdir + "/id_dsa");
+        }
+
+        set_return_value(main());
+    }
+
+    private usageIntern() {
+        TestReporter::usageIntern(ColumnOffset);
+        printOption("-k,--private-key=ARG", "set private key to use for authentication", ColumnOffset);
+    }
+
+    sftpPollerTests() {
+        code info = sub (string msg) {
+            if (m_options.verbose)
+                printf("INFO: %s\n", msg);
+        };
+        code detail = sub (string msg) {
+            if (m_options.verbose > 1)
+                printf("DETAIL: %s\n", msg);
+        };
+        code debug = sub (string msg) {
+            if (m_options.verbose > 2)
+                printf("DEBUG: %s\n", msg);
+        };
+
+        hash opts = (
+            "log_info": info,
+            "log_detail": detail,
+            "log_debug": debug,
+            "mask" : "*.php",
+            "path" : ("A/B/C", "B/", "A/B", ".")
+            );
+
+        # setup directory
+        string path1 = "A";
+        string path2 = "A/B";
+        string path3 = "A/B/C";
+        string path4 = "B";
+        sc.mkdir(path1);
+        sc.mkdir(path2);
+        sc.mkdir(path3);
+        sc.mkdir(path4);
+
+        map sc.putFile($1.value, $1.key), Files.pairIterator();
+        on_exit {
+            map sc.removeFile($1), Files.keyIterator();
+            sc.rmdir(path4);
+            sc.rmdir(path3);
+            sc.rmdir(path2);
+            sc.rmdir(path1);
+        }
+
+        opts.path = (path1, path2, path3, path4, ".");
+
+        MySftpPoller poller(sc, opts, True);
+        poller.start();
+        poller.waitStop();
+        list fl = poller.getFileList();
+        # sort by file name
+        fl = map $1.(Result[0].keys()), sort(fl, int sub (hash l, hash r) { return l.name <=> r.name; });
+        assertEq(fl, Result);
+    }
+}

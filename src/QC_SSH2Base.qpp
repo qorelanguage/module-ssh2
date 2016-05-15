@@ -27,8 +27,6 @@
 #include "QC_SSH2Base.h"
 #include "SSH2Client.h"
 
-static const char *SSH2_CONNECTED = "SSH2-CONNECTED";
-
 #ifndef _QORE_HAS_SOCKET_PERF_API
 static AbstractQoreNode *missing_method_error(const char *meth, const char *qv, ExceptionSink *xsink) {
    xsink->raiseException("MISSING-FEATURE-ERROR", "the %s() method is not available on this build; to use thie method compile the ssh2 module with Qore v%s of higher and reinstall", meth, qv);
@@ -132,7 +130,7 @@ nothing SSH2Base::setKeys(string priv_key, *string pub_key) [dom=FILESYSTEM] {
     @since ssh2 0.9.8.1
  */
 bool SSH2Base::connected() [flags=CONSTANT] {
-  return myself->ssh_connected();
+  return myself->sshConnected();
 }
 
 //! Removes any warning @ref Qore::Thread::Queue "Queue" object from the Socket
@@ -164,8 +162,8 @@ $sftpclient.setWarningQueue(5000, 5000, $queue, "socket-1");
     - \c "type": a string with the constant value \c "SOCKET-OPERATION-WARNING"
     - \c "operation": a string giving the operation that caused the warning (ex: \c "connect")
     - \c "us": an integer giving the number of microseconds for the operation
-    - \c "timeout": an integer giving the warning threshold in microseconds 
-    - \c "arg": if any \c "arg" argument is passed to the @ref Qore::Socket::setWarningQueue() "Socket::setWarningQueue()" method, it will be included in the warning hash here 
+    - \c "timeout": an integer giving the warning threshold in microseconds
+    - \c "arg": if any \c "arg" argument is passed to the @ref Qore::Socket::setWarningQueue() "Socket::setWarningQueue()" method, it will be included in the warning hash here
     @param warning_bs value in bytes per second; if any call has performance below this threshold, a socket warning is placed on the warning queue with th following keys:
     - \c "type": a string with the constant value \c "SOCKET-THROUGHPUT-WARNING"
     - \c "dir": either \c "send" or \c "recv" depending on the direction of the data flow
@@ -173,7 +171,7 @@ $sftpclient.setWarningQueue(5000, 5000, $queue, "socket-1");
     - \c "us": an integer giving the number of microseconds for the operation
     - \c "bytes_sec": a float giving the transfer speed in bytes per second
     - \c "threshold": an integer giving the warning threshold in bytes per second
-    - \c "arg": if any \c "arg" argument is passed to the @ref Qore::Socket::setWarningQueue() "Socket::setWarningQueue()" method, it will be included in the warning hash here 
+    - \c "arg": if any \c "arg" argument is passed to the @ref Qore::Socket::setWarningQueue() "Socket::setWarningQueue()" method, it will be included in the warning hash here
     @param queue the @ref Qore::Thread::Queue "Queue" object to receive warning events
     @param arg an optional argument to be placed in the \c "arg" key in each warning hash (could be used to identify the socket for example)
     @param min_ms the minimum transfer time with a resolution of milliseconds for a transfer to be eligible for triggering a warning; transfers that take less than this period of time are not eligible for raising a warning
@@ -197,7 +195,7 @@ nothing SSH2Base::setWarningQueue(int warning_ms, int warning_bs, Queue[Queue] q
       return 0;
    }
    // pass reference from QoreObject::getReferencedPrivateData() to function
-   myself->setWarningQueue(xsink, warning_ms, warning_bs, q.release(), arg ? arg->refSelf() : 0, min_ms);
+   myself->setWarningQueue(xsink, warning_ms, warning_bs, q.release(), arg.getReferencedValue(), min_ms);
 #else
    missing_method_error("SSH2Base::setWarningQueue", "0.8.10", xsink);
    return 0;

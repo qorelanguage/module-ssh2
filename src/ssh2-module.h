@@ -26,7 +26,7 @@
 #define _QORE_SSH2_MODULE_H
 
 // include configure defines first
-#include "../config.h"
+#include <config.h>
 
 // include Qore API
 #include <qore/Qore.h>

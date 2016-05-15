@@ -25,7 +25,7 @@
 #include "SSH2Channel.h"
 
 //! allows Qore programs to send and receive data through an ssh2 channel
-/** 
+/**
  */
 qclass SSH2Channel [arg=SSH2Channel* c; ns=Qore::SSH2; dom=NETWORK];
 
@@ -242,7 +242,7 @@ binary SSH2Channel::readBinary(softint stream_id = 0, timeout timeout = 10000) {
     @return a string representing the block read; note that if a multibyte character encoding is being read and the end of the block lands in the middle of a character, then the string returned (or the next string read) could have invalid bytes if an attempt is made to use the string as-is
 
     @throw SSH2CHANNEL-READBLOCK-ERROR zero or negative value passed for block size; negative value passed for stream id; libssh2 reported an error on the channel while waiting for data from the server
-    @throw SSH2CHANNEL-ERROR the channel has been closed; 
+    @throw SSH2CHANNEL-ERROR the channel has been closed;
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
 
     @par Example:
@@ -306,11 +306,11 @@ nothing SSH2Channel::write(data data, softint stream_id = 0, timeout timeout = -
    const void *buf = 0;
    qore_size_t buflen;
 
-   qore_type_t t = data->getType();
+   qore_type_t t = data.getType();
 
    TempEncodingHelper tmp;
    if (t == NT_STRING) {
-      const QoreStringNode *str = reinterpret_cast<const QoreStringNode*>(data);
+      const QoreStringNode *str = data.get<const QoreStringNode>();
       tmp.set(str, c->getEncoding(), xsink);
       if (*xsink)
 	 return 0;
@@ -319,7 +319,7 @@ nothing SSH2Channel::write(data data, softint stream_id = 0, timeout timeout = -
       buflen = tmp->strlen();
    }
    else {
-      const BinaryNode *b = reinterpret_cast<const BinaryNode*>(data);
+      const BinaryNode *b = data.get<const BinaryNode>();
       buf = b->getPtr();
       buflen = b->size();
    }

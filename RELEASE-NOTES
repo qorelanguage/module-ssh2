@@ -6,10 +6,25 @@ version 1.0
 * added the SftpPoller user module
 * force socket disconnect in case of a timeout error when trying to close a
   file descriptor
-* socket performance instrumentation supported in the SFTPClient class when
-   compiled with Qore 0.8.10+
-* user modules moved to top-level qore module directory from version-specific                                                                                         
-  module directory since they are valid for multiple versions of qore 
+* socket performance instrumentation supported in the SFTPClient class
+* user modules moved to top-level qore module directory from version-specific
+  module directory since they are valid for multiple versions of qore
+* fixed a bug where a crash would result when attempting a connection and
+  libssh2 would not return any user authentication methods
+* implemented an automatic disconnection when timeouts occur to avoid dead
+  connections
+* fixed crashing bugs in the SFTPClient class handling disconnect events when
+  an sftp handle was open; the handle must be closed before the socket
+  connection is closed or a crash will result
+* implemented the SFTPClient::retrieveFile() and SFTPClient::transferFile()
+  methods
+* ported the SFTPClient class tests to QUnit and added tests for the new
+  methods
+* ported test/sftp-poller.q to QUnit
+* requires Qore 0.8.12+ to build (uses the new QoreValue API)
+* fixed a bug in socket handling related to asyncronous socket event
+  polling and select(2) and lack of socket descriptor bounds checking
+  (https://github.com/qorelanguage/qore/issues/714)
 
 
 *************
@@ -38,7 +53,7 @@ version 0.9.8
 * send the file mode when opening files read-only in case broken servers will
   erroneously set the remote file's mode to 0 and then the file will not be
   readable
-    
+
 
 *************
 version 0.9.7
