@@ -564,7 +564,7 @@ AC_HEADER_TIME
 AC_STRUCT_TM
 AC_C_VOLATILE
 
-AC_CHECK_HEADERS([stdint.h])
+AC_CHECK_HEADERS([stdint.h sys/select.h poll.h])
 
 # turn on optimizations if we know how
 if test "$enable_optimization" = "yes"; then

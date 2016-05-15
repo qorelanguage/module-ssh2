@@ -45,6 +45,15 @@
 #include <set>
 #include <string>
 
+#ifdef HAVE_POLL_H
+#include <poll.h>
+#else
+// we assume we have select even if sys/select.h is not available (ex: windows)
+#ifdef HAVE_SYS_SELECT_H
+#include <sys/select.h>
+#endif
+#endif
+
 #define DEFAULT_TIMEOUT 2000
 
 DLLLOCAL QoreClass *initSSH2ClientClass(QoreNamespace& ns);
@@ -72,7 +81,7 @@ private:
    typedef std::set<SSH2Channel *> channel_set_t;
 
    // connection host
-   std::string sshhost, 
+   std::string sshhost,
       // authentication
       sshuser,
       sshpass,
@@ -174,34 +183,74 @@ protected:
    }
 
    DLLLOCAL int waitsocket_unlocked(int timeout_ms = DEFAULT_TIMEOUT_MS) {
-      return waitsocket_select_unlocked(libssh2_session_block_directions(ssh_session), timeout_ms);
+      return waitsocket_unlocked(libssh2_session_block_directions(ssh_session), timeout_ms);
    }
 
-   DLLLOCAL int waitsocket_select_unlocked(int dir, int timeout_ms = DEFAULT_TIMEOUT_MS) {
+   DLLLOCAL int waitsocket_unlocked(int dir, int timeout_ms) {
       assert(ssh_session);
 
+#ifdef HAVE_POLL_H
+
+      int rc;
+      short arg = 0;
+      if (dir & LIBSSH2_SESSION_BLOCK_INBOUND)
+         arg |= POLLIN;
+      if (dir & LIBSSH2_SESSION_BLOCK_OUTBOUND)
+         arg |= POLLOUT;
+      pollfd fds = {socket.getSocket(), arg, 0};
+      while (true) {
+         rc = poll(&fds, 1, timeout_ms);
+         if (rc == -1 && errno == EINTR)
+            continue;
+         break;
+      }
+      if (!rc && ((fds.revents & POLLHUP) || (fds.revents & (POLLERR|POLLNVAL))))
+         rc = -1;
+
+#else // do select
+
+#if ! defined _MSC_VER && ((!defined _WIN32 && ! defined __WIN32__) || defined __CYGWIN__)
+      // windows does not use FD_SETSIZE to limit the value of the highest socket descriptor in the set
+      // instead it has a maximum of 64 sockets in the set; we only need one anyway.
+      // select on other platforms is inherently unsuitable for the use case in this module,
+      // since it can only handle descriptors < FD_SETSIZE, which is 1024 on Linux for example
+      assert(socket.getSocket() < FD_SETSIZE);
+#endif
+
       struct timeval timeout;
-      fd_set fd;
-      fd_set* writefd = 0;
-      fd_set* readfd = 0;
- 
-      if (timeout_ms >= 0) {
-	 timeout.tv_sec = timeout_ms / 1000;
-	 timeout.tv_usec = (timeout_ms % 1000) * 1000;
+      int rc;
+
+      while (true) {
+         fd_set fd;
+         fd_set* writefd = 0;
+         fd_set* readfd = 0;
+
+         if (timeout_ms >= 0) {
+            timeout.tv_sec = timeout_ms / 1000;
+            timeout.tv_usec = (timeout_ms % 1000) * 1000;
+         }
+
+         FD_ZERO(&fd);
+
+         FD_SET(socket.getSocket(), &fd);
+
+         if (dir & LIBSSH2_SESSION_BLOCK_INBOUND)
+            readfd = &fd;
+
+         if (dir & LIBSSH2_SESSION_BLOCK_OUTBOUND)
+            writefd = &fd;
+
+         //printd(5, "waitsocket_unlocked() sock=%d readfd=%p writefd=%p timeout_ms=%d\n", socket.getSocket() + 1, readfd, writefd, timeout_ms);
+         rc = select(socket.getSocket() + 1, readfd, writefd, 0, timeout_ms >= 0 ? &timeout : 0);
+
+#if ! defined _MSC_VER && ((!defined _WIN32 && ! defined __WIN32__) || defined __CYGWIN__)
+         if (rc != -1 || errno != EINTR)
+#endif
+	    break;
       }
 
-      FD_ZERO(&fd);
- 
-      FD_SET(socket.getSocket(), &fd);
- 
-      if (dir & LIBSSH2_SESSION_BLOCK_INBOUND)
-	 readfd = &fd;
- 
-      if (dir & LIBSSH2_SESSION_BLOCK_OUTBOUND)
-	 writefd = &fd;
- 
-      //printd(5, "waitsocket_unlocked() sock=%d readfd=%p writefd=%p timeout_ms=%d\n", socket.getSocket() + 1, readfd, writefd, timeout_ms);
-      return select(socket.getSocket() + 1, readfd, writefd, 0, timeout_ms >= 0 ? &timeout : 0);
+#endif
+      return rc;
    }
 
    DLLLOCAL QoreObject *register_channel_unlocked(LIBSSH2_CHANNEL *channel);
@@ -221,7 +270,7 @@ public:
    DLLLOCAL virtual int connect(int timeout_ms, ExceptionSink *xsink) {
       return ssh_connect(timeout_ms, xsink);
    }
-   
+
    DLLLOCAL virtual int disconnect(bool force = false, int timeout_ms = DEFAULT_TIMEOUT, ExceptionSink *xsink = 0) {
       return ssh_disconnect(force, timeout_ms, xsink);
    }
@@ -261,4 +310,3 @@ public:
 };
 
 #endif // _QORE_SSH2CLIENT_H
-

@@ -154,7 +154,7 @@ SFTPClient::~SFTPClient() {
 void SFTPClient::do_shutdown(int timeout_ms, ExceptionSink* xsink) {
    if (sftp_session) {
       BlockingHelper bh(this);
-         
+
       int rc;
       while ((rc = libssh2_sftp_shutdown(sftp_session)) == LIBSSH2_ERROR_EAGAIN) {
          if (waitsocket_unlocked(xsink, SFTPCLIENT_TIMEOUT, "SFTPCLIENT-DISCONNECT", "SFTPClient::disconnect", timeout_ms))
@@ -420,7 +420,7 @@ int SFTPClient::sftp_chmod(const char* file, const int mode, int timeout_ms, Exc
       qh.err("libssh2_sftp_stat(%s) returned an error", pstr.c_str());
       return rc;
    }
-      
+
    // overwrite permissions
    if (!(attrs.flags & LIBSSH2_SFTP_ATTR_PERMISSIONS)) {
       qh.err("permissions not supported by sftp server");
@@ -622,7 +622,7 @@ int SFTPClient::sftp_unlink(const char* file, int timeout_ms, ExceptionSink* xsi
 
    if (rc < 0)
       qh.err("libssh2_sftp_unlink(%s) returned an error", fstr.c_str());
-   
+
    return rc;
 }
 
@@ -735,7 +735,7 @@ int SFTPClient::sftp_connect_unlocked(int timeout_ms, ExceptionSink* xsink) {
       do {
          // init sftp session
          sftp_session = libssh2_sftp_init(ssh_session);
-         
+
          if (!sftp_session) {
             if (libssh2_session_last_errno(ssh_session) == LIBSSH2_ERROR_EAGAIN) {
                if (qh.waitSocket())
@@ -903,7 +903,7 @@ QoreStringNode *SFTPClient::sftp_getTextFile(const char* file, int timeout_ms, c
       return 0;
    }
    size_t fsize = attrs.filesize;
-   
+
    {
 #ifdef _QORE_HAS_SOCKET_PERF_API
       QoreSocketTimeoutHelper th(socket, "getTextFile (open)");
@@ -935,7 +935,7 @@ QoreStringNode *SFTPClient::sftp_getTextFile(const char* file, int timeout_ms, c
 #ifdef _QORE_HAS_SOCKET_PERF_API
    QoreSocketThroughputHelper th(socket, false);
 #endif
-   
+
    size_t tot = 0;
    while (true) {
       while ((rc = libssh2_sftp_read(*qh, (char*)str->getBuffer() + tot, fsize - tot)) == LIBSSH2_ERROR_EAGAIN) {
@@ -1008,7 +1008,7 @@ qore_size_t SFTPClient::sftp_putFile(const char* outb, qore_size_t towrite, cons
             return -1;
          }
       }
-      if (rc < 0) { 
+      if (rc < 0) {
          qh.err("libssh2_sftp_open_ex(%ld) failed while writing '%s', total written: %ld, total to write: %ld", towrite - size, file.c_str(), size, towrite);
          return -1;
       }
@@ -1028,7 +1028,7 @@ qore_size_t SFTPClient::sftp_putFile(const char* outb, qore_size_t towrite, cons
    return size; // the bytes actually written
 }
 
-//LIBSSH2_SFTP_ATTRIBUTES 
+//LIBSSH2_SFTP_ATTRIBUTES
 // return:
 //  0   ok
 // -1   generic error on libssh2 call
@@ -1054,7 +1054,7 @@ int SFTPClient::sftp_getAttributes(const char* fname, LIBSSH2_SFTP_ATTRIBUTES *a
    std::string file = absolute_filename(this, fname);
 
    BlockingHelper bh(this);
- 
+
    // stat the file
    int rc;
    {
@@ -1100,7 +1100,7 @@ void SFTPClient::do_session_err_unlocked(ExceptionSink* xsink, QoreStringNode* d
    xsink->raiseException(SSH2_ERROR, desc);
 
    // check if we're still connected: if there is data to be read, we assume it's the EOF marker and close the session
-   int rc = waitsocket_select_unlocked(LIBSSH2_SESSION_BLOCK_INBOUND, 0);
+   int rc = waitsocket_unlocked(LIBSSH2_SESSION_BLOCK_INBOUND, 0);
 
    if (rc > 0) {
       printd(5, "do_session_err_unlocked() session %p: detected disconnected session, marking as closed\n", ssh_session);
