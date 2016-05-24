@@ -143,6 +143,8 @@ public namespace SftpPoller {
                 "reopts": 0,
                 "timeout": 30s,
                 "binary": False,
+                "writable": False,
+                "check_file": "qore-sftp-check-file",
                 );
 
             #! optional constructor hash keys
@@ -248,6 +250,12 @@ public namespace SftpPoller {
 
             #! binary transfer flag (for singleFileEvent())
             bool binary;
+
+            #! chech if path is writable for others in constructor
+            bool writable;
+
+            #! name of check writable file
+            string check_file;
         }
 
         #! creates the SftpPoller object from the @ref Qore::SSH2::SFTPClient "SFTPClient" argument and configuration hash argument passed
@@ -267,6 +275,8 @@ public namespace SftpPoller {
             - \c log_debug: a @ref closure "closure" or @ref call_reference "call reference" for logging verbose debgugging information; must accept a single string giving the log message
             - \c start_thread: (required when imported into a context where @ref Qore::PO_NO_THREAD_CONTROL is set) a @ref closure "closure" or @ref call_reference "call reference" for starting threads; must return the integer thread ID (if not set then @ref background will be used)
             - \c sleep: (required when imported into a context where @ref Qore::PO_NO_PROCESS_CONTROL is set) a @ref closure "closure" or @ref call_reference "call reference" to use instead of @ref Qore::sleep() (if not set then @ref Qore::sleep() will be used)
+            - \c writable: check if path(s) is/are writable  (default: False see also the \c "check_file" option)
+            - \c check_file: name of a check file. The file will be created and deleted in the path to test if path is writable. If the file alrady exists, it will be deleted. (default: \c "qore-sftp-check-file")
 
             @throw SFTPPOLLER-CONSTRUCTOR-ERROR missing required key, invalid port or poll_interval given
             @throw SFTPCLIENT-PARAMETER-ERROR empty hostname passed
@@ -329,6 +339,8 @@ public namespace SftpPoller {
             }
             else
                 logInfo("%s: connected", url);
+
+            map checkRemotePath($1, writable), path;
         }
 
         #! creates the SftpPoller object from the configuration hash argument passed
@@ -351,6 +363,8 @@ public namespace SftpPoller {
             - \c log_debug: a @ref closure "closure" or @ref call_reference "call reference" for logging verbose debgugging information; must accept a single string giving the log message
             - \c start_thread: (required when imported into a context where @ref Qore::PO_NO_THREAD_CONTROL is set) a @ref closure "closure" or @ref call_reference "call reference" for starting threads; must return the integer thread ID (if not set then @ref background will be used)
             - \c sleep: (required when imported into a context where @ref Qore::PO_NO_PROCESS_CONTROL is set) a @ref closure "closure" or @ref call_reference "call reference" to use instead of @ref Qore::sleep() (if not set then @ref Qore::sleep() will be used)
+            - \c writable: check if path(s) is/are writable  (default: False see also the \c "check_file" option)
+            - \c check_file: name of a check file. The file will be created and deleted in the path to test if path is writable. If the file alrady exists, it will be deleted. (default: \c "qore-sftp-check-file")
 
             @throw SFTPPOLLER-CONSTRUCTOR-ERROR missing required key, invalid port or poll_interval given
             @throw SFTPCLIENT-PARAMETER-ERROR empty hostname passed
@@ -417,6 +431,8 @@ public namespace SftpPoller {
             }
             else
                 logInfo("%s: connected", url);
+
+            map checkRemotePath($1, writable), path;
         }
 
         #! stops the polling operation if in progress and destroys the object
@@ -497,6 +513,36 @@ public namespace SftpPoller {
         #! returns information about a remote file (see @ref Qore::SSH2::SFTPClient::stat() for a description of the return format)
         *hash stat(string path, *timeout n_timeout) {
             return sftp.stat(path, n_timeout ?? timeout);
+        }
+
+        #! check if a remote path is writable
+        /**
+            @throw "REMOTE-DIR-ERROR" this exception is thrown if the remote path does not exist, is not a directory, or is not not writable
+        */
+        checkRemotePath(string path, bool write = False, *timeout n_timeout) {
+            hash h = stat(path, n_timeout);
+            string apath = rootSftpPath + "/" + path;
+            if (!h)
+                throw "REMOTE-DIR-ERROR", sprintf("%y: path does not exist", apath);
+            string perms = h.permissions;
+            if (perms[0] != "d")
+                throw "REMOTE-DIR-ERROR", sprintf("%y: path is not a directory", apath);
+
+            # don't check if the path is writable
+            if (!write)
+                return;
+
+            try {
+                string f = path + "/" + check_file;
+                if (!stat(f, n_timeout)) {
+                    string content = "This is a qore test file for checking whether the sftp path is writable. This file can be deleted with no worries.";
+                    sftp.putFile(content, f, 0644, n_timeout);
+                }
+                sftp.removeFile(f, n_timeout);
+            }
+            catch (hash ex) {
+                throw "REMOTE-DIR-ERROR", sprintf("%y: path is not writable. %s: %s", apath, ex.err, ex.desc);
+            }
         }
 
         #! returns a list of regular file hashes matching any file name mask set for the object
@@ -671,7 +717,7 @@ public namespace SftpPoller {
 
                             # make sure any errors after this point cause the polling operation to stop
                             get_files = False;
-                            fh.filepath = subdir == "." ? fh.name : (subdir + DirSep + fh.name);
+                            fh.filepath = subdir == "." ? fh.name : (subdir + "/" + fh.name);
                             singleFileEvent(fh);
 
                             try {

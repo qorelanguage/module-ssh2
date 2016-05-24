@@ -137,8 +137,9 @@ class SftpPollerMultiDirsTest inherits QUnit::Test {
             "log_info": info,
             "log_detail": detail,
             "log_debug": debug,
-            "mask" : "*.php",
-            "path" : ("A/B/C", "B/", "A/B", ".")
+            "mask": "*.php",
+            "writable": True,
+            "path": ("A/B/C", "B/", "A/B", ".")
             );
 
         # setup directory
