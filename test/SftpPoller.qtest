@@ -129,6 +129,7 @@ class SftpPollerTest inherits QUnit::Test {
             "log_detail": detail,
             "log_debug": debug,
             "mask": "*.txt",
+            "writable": True,
             );
 
         # setup directory
