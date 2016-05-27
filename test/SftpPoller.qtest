@@ -84,6 +84,7 @@ class SftpPollerTest inherits QUnit::Test {
 
     constructor() : Test("SftpPollerTest", "1.0", \ARGV, MyOpts) {
         addTestCase("SftpPollerTests", \sftpPollerTests());
+        addTestCase("SftpPolerRemotePathNegTest", \sftpPollerRemotePathNegTest());
 
         string uri = shift ARGV ?? sprintf("%s@localhost", getusername());
 
@@ -150,5 +151,45 @@ class SftpPollerTest inherits QUnit::Test {
         # sort by file name
         fl = map $1.(Result[0].keys()), sort(fl, int sub (hash l, hash r) { return l.name <=> r.name; });
         assertEq(fl, Result);
+    }
+
+    sftpPollerRemotePathNegTest() {
+        code info = sub (string msg) {
+            if (m_options.verbose)
+                printf("INFO: %s\n", msg);
+        };
+        code detail = sub (string msg) {
+            if (m_options.verbose > 1)
+                printf("DETAIL: %s\n", msg);
+        };
+        code debug = sub (string msg) {
+            if (m_options.verbose > 2)
+                printf("DEBUG: %s\n", msg);
+        };
+
+        hash opts = (
+            "log_info": info,
+            "log_detail": detail,
+            "log_debug": debug,
+            "mask": "*.txt",
+            "writable": True,
+            );
+
+        # setup directory
+        string nd = sprintf("%s/%s/", tmp_location(), get_random_string());
+        sc.mkdir(nd);
+        map sc.putFile($1.value, nd + $1.key), Files.pairIterator();
+        on_exit {
+            map sc.removeFile(nd + $1), Files.keyIterator();
+            sc.rmdir(nd);
+        }
+
+        opts.path = nd;
+
+        {
+            sc.chmod(nd, 0555);
+            on_exit sc.chmod(nd, 0777);
+            assertThrows("REMOTE-DIR-ERROR", sub () {MySftpPoller poller(sc, opts, m_options.verbose > 2);});
+        }
     }
 }
