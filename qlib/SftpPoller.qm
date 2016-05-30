@@ -520,20 +520,20 @@ public namespace SftpPoller {
             @throw "REMOTE-DIR-ERROR" this exception is thrown if the remote path does not exist, is not a directory, or is not not writable
         */
         checkRemotePath(string path, bool write = False, *timeout n_timeout) {
-            hash h = stat(path, n_timeout);
             string apath = rootSftpPath + "/" + path;
+            *hash h = stat(apath, n_timeout);
             if (!h)
-                throw "REMOTE-DIR-ERROR", sprintf("%y: path does not exist", apath);
+                throw "REMOTE-DIR-ERROR", sprintf("%s: path does not exist", apath);
             string perms = h.permissions;
             if (perms[0] != "d")
-                throw "REMOTE-DIR-ERROR", sprintf("%y: path is not a directory", apath);
+                throw "REMOTE-DIR-ERROR", sprintf("%s: path is not a directory", apath);
 
             # don't check if the path is writable
             if (!write)
                 return;
 
             try {
-                string f = path + "/" + check_file;
+                string f = apath + "/" + check_file;
                 if (!stat(f, n_timeout)) {
                     string content = "This is a qore test file for checking whether the sftp path is writable. This file can be deleted with no worries.";
                     sftp.putFile(content, f, 0644, n_timeout);

@@ -134,11 +134,12 @@ class SftpPollerTest inherits QUnit::Test {
             );
 
         # setup directory
-        string nd = sprintf("%s/%s/", tmp_location(), get_random_string());
+        string nd = sprintf("%s/", get_random_string());
         sc.mkdir(nd);
         map sc.putFile($1.value, nd + $1.key), Files.pairIterator();
         on_exit {
-            map sc.removeFile(nd + $1), Files.keyIterator();
+            map sc.removeFile($1), Files.keyIterator();
+            sc.chdir("..");
             sc.rmdir(nd);
         }
 
