@@ -85,7 +85,7 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root,-)
 %{module_dir}
 %{user_module_dir}
-%doc COPYING.LGPL COPYING.MIT README RELEASE-NOTES ChangeLog AUTHORS
+%doc COPYING.LGPL COPYING.MIT README RELEASE-NOTES AUTHORS
 
 %package doc
 Summary: SSH2 module for Qore
@@ -99,10 +99,10 @@ This RPM provides API documentation, test and example programs
 
 %files doc
 %defattr(-,root,root,-)
-%doc docs/ssh2/html test/ 
+%doc docs/ssh2/ docs/SftpPoller/ test/
 
 %changelog
-* Sun Dec 7 2013 David Nichols <david@qore.org> - 1.0
+* Sat Dec 7 2013 David Nichols <david@qore.org> - 1.0
 - updated to version 1.0
 
 * Fri Aug 16 2013 David Nichols <david@qore.org> - 0.9.9
@@ -111,7 +111,7 @@ This RPM provides API documentation, test and example programs
 * Mon Aug 5 2013 David Nichols <david@qore.org> - 0.9.8.1
 - updated to version 0.9.8.1
 
-* Mon Mar 12 2013 David Nichols <david@qore.org> - 0.9.8
+* Tue Mar 12 2013 David Nichols <david@qore.org> - 0.9.8
 - updated to version 0.9.8
 
 * Fri Jun 8 2012 David Nichols <david@qore.org> - 0.9.7
