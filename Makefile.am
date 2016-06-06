@@ -13,13 +13,16 @@ noinst_HEADERS = src/ssh2-module.h \
 
 USER_MODULES = qlib/SftpPoller.qm
 
-EXTRA_DIST = COPYING.LGPL COPYING.MIT ChangeLog AUTHORS README \
+EXTRA_DIST = COPYING.LGPL COPYING.MIT AUTHORS README \
 	RELEASE-NOTES \
 	src/QC_SSH2Base.qpp \
 	src/QC_SSH2Client.qpp \
 	src/QC_SSH2Channel.qpp \
 	src/QC_SFTPClient.qpp \
 	test/ssh2-test.q \
+	test/SFTPClient.qtest \
+	test/SftpPollerMultiDirs.qtest \
+	test/SftpPoller.qtest \
         $(USER_MODULES) \
 	qore-ssh2-module.spec
 
