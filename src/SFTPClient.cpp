@@ -743,9 +743,9 @@ int SFTPClient::sftpConnectUnlocked(int timeout_ms, ExceptionSink* xsink) {
                   return -1;
             }
             else {
-               disconnectUnlocked(true); // force shutdown
                if (xsink)
                   qh.err("Unable to initialize SFTP session");
+               disconnectUnlocked(true); // force shutdown
                return -1;
             }
          }
@@ -1284,20 +1284,22 @@ int SFTPClient::sftpGetAttributes(const char* fname, LIBSSH2_SFTP_ATTRIBUTES *at
 }
 
 void SFTPClient::doSessionErrUnlocked(ExceptionSink* xsink, QoreStringNode* desc) {
-   int err = libssh2_session_last_errno(ssh_session);
-   if (err == LIBSSH2_ERROR_SFTP_PROTOCOL) {
-      unsigned long serr = libssh2_sftp_last_error(sftp_session);
+   if (ssh_session) {
+      int err = libssh2_session_last_errno(ssh_session);
+      if (err == LIBSSH2_ERROR_SFTP_PROTOCOL) {
+         unsigned long serr = libssh2_sftp_last_error(sftp_session);
 
-      desc->sprintf(": sftp error code %lu", serr);
+         desc->sprintf(": sftp error code %lu", serr);
 
-      edmap_t::const_iterator i = sftp_emap.find((int)serr);
-      if (i != sftp_emap.end())
-         desc->sprintf(" (%s): %s", i->second.err, i->second.desc);
+         edmap_t::const_iterator i = sftp_emap.find((int)serr);
+         if (i != sftp_emap.end())
+            desc->sprintf(" (%s): %s", i->second.err, i->second.desc);
+         else
+            desc->concat(": unknown sftp error code");
+      }
       else
-         desc->concat(": unknown sftp error code");
+         desc->sprintf(": ssh2 error %d: %s", err, getSessionErrUnlocked());
    }
-   else
-      desc->sprintf(": ssh2 error %d: %s", err, getSessionErrUnlocked());
 
    xsink->raiseException(SSH2_ERROR, desc);
 
