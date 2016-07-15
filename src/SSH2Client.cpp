@@ -237,9 +237,13 @@ int SSH2Client::sshConnected() {
 }
 
 QoreObject *SSH2Client::registerChannelUnlocked(LIBSSH2_CHANNEL *channel) {
+   return new QoreObject(QC_SSH2CHANNEL, getProgram(), registerChannelUnlockedRaw(channel));
+}
+
+SSH2Channel *SSH2Client::registerChannelUnlockedRaw(LIBSSH2_CHANNEL *channel) {
    SSH2Channel *chan = new SSH2Channel(channel, this);
    channel_set.insert(chan);
-   return new QoreObject(QC_SSH2CHANNEL, getProgram(), chan);
+   return chan;
 }
 
 const char *SSH2Client::getHost() {
@@ -710,7 +714,7 @@ QoreObject *SSH2Client::openDirectTcpipChannel(ExceptionSink *xsink, const char 
    return registerChannelUnlocked(channel);
 }
 
-QoreObject *SSH2Client::scpGet(ExceptionSink *xsink, const char *path, int timeout_ms, QoreHashNode *statinfo) {
+LIBSSH2_CHANNEL *SSH2Client::scpGetRaw(ExceptionSink *xsink, const char *path, int timeout_ms, QoreHashNode *statinfo) {
    static const char *SSH2CLIENT_SCPGET_ERROR = "SSH2CLIENT-SCPGET-ERROR";
 
    AutoLocker al(m);
@@ -727,13 +731,13 @@ QoreObject *SSH2Client::scpGet(ExceptionSink *xsink, const char *path, int timeo
    while (true) {
       channel = libssh2_scp_recv(ssh_session, path, &sb);
       if (!channel) {
-	 if (libssh2_session_last_error(ssh_session, 0, 0, 0) == LIBSSH2_ERROR_EAGAIN) {
-	    if (waitSocketUnlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2CLIENT_SCPGET_ERROR, "SSH2Client::scpGet", timeout_ms))
-	       return 0;
-	    continue;
-	 }
-	 doSessionErrUnlocked(xsink);
-	 return 0;
+         if (libssh2_session_last_error(ssh_session, 0, 0, 0) == LIBSSH2_ERROR_EAGAIN) {
+            if (waitSocketUnlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2CLIENT_SCPGET_ERROR, "SSH2Client::scpGet", timeout_ms))
+               return 0;
+            continue;
+         }
+         doSessionErrUnlocked(xsink);
+         return 0;
       }
       break;
    }
@@ -742,71 +746,34 @@ QoreObject *SSH2Client::scpGet(ExceptionSink *xsink, const char *path, int timeo
    if (statinfo)
       map_ssh2_sbuf_to_hash(statinfo, &sb);
 
-   return registerChannelUnlocked(channel);
+   return channel;
+}
+
+QoreObject *SSH2Client::scpGet(ExceptionSink *xsink, const char *path, int timeout_ms, QoreHashNode *statinfo) {
+   return registerChannelUnlocked(scpGetRaw(xsink, path, timeout_ms, statinfo));
 }
 
 void SSH2Client::scpGet(ExceptionSink *xsink, const char *path, OutputStream *os, int timeout_ms) {
-   static const char *SSH2CLIENT_SCPGET_ERROR = "SSH2CLIENT-SCPGET-ERROR";
-
-   AutoLocker al(m);
-
-   if (!sshConnectedUnlocked()) {
-      xsink->raiseException(SSH2CLIENT_NOT_CONNECTED, "cannot call SSH2Client::scpGet() while client is not connected");
-      return;
-   }
-
-   BlockingHelper bh(this);
-
-   struct stat sb;
-   LIBSSH2_CHANNEL *channel;
-   while (true) {
-      channel = libssh2_scp_recv(ssh_session, path, &sb);
-      if (!channel) {
-         if (libssh2_session_last_error(ssh_session, 0, 0, 0) == LIBSSH2_ERROR_EAGAIN) {
-            if (waitSocketUnlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2CLIENT_SCPGET_ERROR, "SSH2Client::scpGet", timeout_ms))
-               return;
-            continue;
-         }
-         doSessionErrUnlocked(xsink);
-         return;
-      }
-      break;
-   }
-
-   libssh2_channel_send_eof(channel);
-
-   qore_offset_t rc;
-   char buffer[4096];
-   while (libssh2_channel_eof(channel) != 1) {
-      rc = libssh2_channel_read(channel, buffer, sizeof(buffer));
-
-      if (rc > 0) {
-         {
-            AutoUnlocker unlocker(m);
+   SSH2Channel *c = registerChannelUnlockedRaw(scpGetRaw(xsink, path, timeout_ms, 0));
+   if (!c->sendEof(xsink, timeout_ms)) {
+      qore_offset_t rc;
+      char buffer[4096];
+      while (!c->eof(xsink)) {
+         rc = c->read(xsink, buffer, sizeof(buffer), 0, timeout_ms);
+         if (rc > 0) {
             os->write(buffer, rc, xsink);
-            if (*xsink) {
-               break;
-            }
          }
-         continue;
-      }
-
-      if (!rc || rc == LIBSSH2_ERROR_EAGAIN) {
-         rc = waitSocketUnlocked(timeout_ms);
-         if (!rc) {
-            xsink->raiseException(SSH2CLIENT_TIMEOUT, "read timeout after %dms", timeout_ms);
-            break;
-         }
-         if (rc < 0) {
-            xsink->raiseException(SSH2CLIENT_SCPGET_ERROR, strerror(errno));
+         if (*xsink) {
             break;
          }
       }
    }
-   libssh2_channel_free(channel);
+   c->waitClosed(xsink, timeout_ms);
+   c->destructor();
+   delete c;
 }
 
-QoreObject *SSH2Client::scpPut(ExceptionSink *xsink, const char *path, size_t size, int mode, long mtime, long atime, int timeout_ms) {
+LIBSSH2_CHANNEL *SSH2Client::scpPutRaw(ExceptionSink *xsink, const char *path, size_t size, int mode, long mtime, long atime, int timeout_ms) {
    static const char *SSH2CLIENT_SCPPUT_ERROR = "SSH2CLIENT-SCPPUT-ERROR";
 
    AutoLocker al(m);
@@ -822,18 +789,53 @@ QoreObject *SSH2Client::scpPut(ExceptionSink *xsink, const char *path, size_t si
    while (true) {
       channel = libssh2_scp_send_ex(ssh_session, path, mode, size, mtime, atime);
       if (!channel) {
-	 if (libssh2_session_last_error(ssh_session, 0, 0, 0) == LIBSSH2_ERROR_EAGAIN) {
-	    if (waitSocketUnlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2CLIENT_SCPPUT_ERROR, "SSH2Client::scpPut", timeout_ms))
-	       return 0;
-	    continue;
-	 }
-	 doSessionErrUnlocked(xsink);
-	 return 0;
+         if (libssh2_session_last_error(ssh_session, 0, 0, 0) == LIBSSH2_ERROR_EAGAIN) {
+            if (waitSocketUnlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2CLIENT_SCPPUT_ERROR, "SSH2Client::scpPut", timeout_ms))
+               return 0;
+            continue;
+         }
+         doSessionErrUnlocked(xsink);
+         return 0;
       }
       break;
    }
+   return channel;
+}
 
-   return registerChannelUnlocked(channel);
+QoreObject *SSH2Client::scpPut(ExceptionSink *xsink, const char *path, size_t size, int mode, long mtime, long atime, int timeout_ms) {
+   return registerChannelUnlocked(scpPutRaw(xsink, path, size, mode, mtime, atime, timeout_ms));
+}
+
+void SSH2Client::scpPut(ExceptionSink *xsink, const char *path, InputStream *is, size_t size, int mode, long mtime, long atime, int timeout_ms) {
+   static const char *SSH2CLIENT_SCPPUT_ERROR = "SSH2CLIENT-SCPPUT-ERROR";
+
+   SSH2Channel *c = registerChannelUnlockedRaw(scpPutRaw(xsink, path, size, mode, mtime, atime, timeout_ms));
+
+   char buffer[4096];
+   while (size > 0) {
+      int64 r = is->read(buffer, QORE_MIN(sizeof(buffer), size), xsink);
+      if (*xsink) {
+         break;
+      }
+      if (r == 0) {
+         xsink->raiseException(SSH2CLIENT_SCPPUT_ERROR, "Unexpected end of stream");
+         break;
+      }
+      c->write(xsink, buffer, r, 0, timeout_ms);
+      if (*xsink) {
+         break;
+      }
+      size -= r;
+   }
+
+   if (!c->sendEof(xsink, timeout_ms)) {
+      if (!c->waitEof(xsink, timeout_ms)) {
+         c->waitClosed(xsink, timeout_ms);
+      }
+   }
+
+   c->destructor();
+   delete c;
 }
 
 #ifdef _QORE_HAS_SOCKET_PERF_API
