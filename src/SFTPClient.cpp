@@ -1203,7 +1203,7 @@ size_t SFTPClient::sftpPutFile(const char* outb, size_t towrite, const char* fna
    size_t size = 0;
    while (size < towrite) {
       ssize_t rc;
-      while ((rc = libssh2_sftp_write(*qh, outb, towrite - size)) == LIBSSH2_ERROR_EAGAIN) {
+      while ((rc = libssh2_sftp_write(*qh, outb + size, towrite - size)) == LIBSSH2_ERROR_EAGAIN) {
          if (qh.waitSocket()) {
             // note: memory leak here! we cannot close the handle due to the timeout
             return -1;
