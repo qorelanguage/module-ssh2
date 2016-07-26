@@ -34,6 +34,15 @@ check_include_file_cxx(sys/socket.h HAVE_SYS_SOCKET_H)
 check_include_file_cxx(sys/time.h HAVE_SYS_TIME_H)
 check_include_file_cxx(unistd.h HAVE_UNISTD_H)
 
+# Check for C++11.
+include(CheckCXXCompilerFlag)
+CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
+if(COMPILER_SUPPORTS_CXX11)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+else()
+    message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
+endif()
+
 set(CMAKE_REQUIRED_INCLUDES ${LIBSSH2_INCLUDE_DIRS})
 set(CMAKE_REQUIRED_LIBRARIES ${LIBSSH2_LDFLAGS})
 check_cxx_symbol_exists(libssh2_session_handshake libssh2.h HAVE_LIBSSH2_SESSION_HANDSHAKE)

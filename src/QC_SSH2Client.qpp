@@ -206,7 +206,7 @@ SSH2Channel SSH2Client::scpPut(string remote_path, softint size, softint mode = 
    static const char *SSH2CLIENT_SCPPUT_ERR = "SSH2CLIENT-SCPPUT-ERROR";
 
    if (size <= 0) {
-      xsink->raiseException(SSH2CLIENT_SCPPUT_ERR, "invalid file size as second argument to SSH2Client::scpPut() (got invalid size "QLLD")", size);
+      xsink->raiseException(SSH2CLIENT_SCPPUT_ERR, "invalid file size as second argument to SSH2Client::scpPut() (got invalid size " QLLD ")", size);
       return 0;
    }
 
@@ -236,7 +236,7 @@ nothing SSH2Client::scpPut(string remote_path, Qore::InputStream[InputStream] is
    static const char *SSH2CLIENT_SCPPUT_ERR = "SSH2CLIENT-SCPPUT-ERROR";
 
    if (size <= 0) {
-      xsink->raiseException(SSH2CLIENT_SCPPUT_ERR, "invalid file size as third argument to SSH2Client::scpPut() (got invalid size "QLLD")", size);
+      xsink->raiseException(SSH2CLIENT_SCPPUT_ERR, "invalid file size as third argument to SSH2Client::scpPut() (got invalid size " QLLD ")", size);
       return 0;
    }
 
