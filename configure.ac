@@ -680,6 +680,10 @@ else
       if test "$libdir" != "$qlibdir"; then
          AC_MSG_WARN([warning, installed qore's module dir is $qlibdir, this module will be installed in $libdir])
       fi
+      if test -z "${datarootdir}"; then
+         datarootdir="$prefix/share";
+         AC_SUBST([datarootdir])
+      fi
       if test -n "echo ${datarootdir}|grep \$"; then
          userlibdir="`eval echo ${datarootdir}`/qore-modules"
       else
