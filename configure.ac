@@ -473,6 +473,10 @@ else
       if test "$windows" = yes; then
          userlibdir="${qlibdir}"
       else
+         if test -z "${datarootdir}"; then
+             datarootdir="$prefix/share";
+             AC_SUBST([datarootdir])
+         fi
          if test -n "echo ${datarootdir}|grep \$"; then
             userlibdir="`eval echo ${datarootdir}`/qore-modules"
          else
