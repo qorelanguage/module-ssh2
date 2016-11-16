@@ -1,4 +1,12 @@
 ***********
+version 1.1
+***********
+
+* fixed a bug that could cause a crash when an error occurs in the SFTPClient class
+  (https://github.com/qorelanguage/qore/issues/1040)
+
+
+***********
 version 1.0
 ***********
 

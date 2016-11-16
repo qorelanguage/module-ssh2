@@ -154,7 +154,11 @@ public:
    // returns the number of bytes transferred or -1 if an error occurred
    DLLLOCAL int64 sftpRetrieveFile(const char* remote_file, const char* local_file, int timeout_ms, int mode, ExceptionSink* xsink);
    // returns the number of bytes transferred or -1 if an error occurred
+   DLLLOCAL int64 sftpGet(const char* remote_file, OutputStream *os, int timeout_ms, ExceptionSink* xsink);
+   // returns the number of bytes transferred or -1 if an error occurred
    DLLLOCAL int64 sftpTransferFile(const char* local_path, const char* remote_path, int mode, int timeout_ms, ExceptionSink* xsink);
+   // returns the number of bytes transferred or -1 if an error occurred
+   DLLLOCAL int64 sftpPut(InputStream *is, const char* remote_path, int mode, int timeout_ms, ExceptionSink* xsink);
 
    DLLLOCAL int sftpGetAttributes(const char* fname, LIBSSH2_SFTP_ATTRIBUTES *attrs, int timeout_ms, ExceptionSink* xsink);
 
