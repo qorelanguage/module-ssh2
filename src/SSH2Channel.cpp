@@ -386,6 +386,39 @@ BinaryNode *SSH2Channel::readBinary(qore_size_t size, int stream_id, int timeout
    return bin.release();
 }
 
+qore_size_t SSH2Channel::read(ExceptionSink *xsink, void *buffer, qore_size_t size, int stream_id, int timeout_ms) {
+   AutoLocker al(parent->m);
+   if (check_open(xsink))
+      return 0;
+
+   BlockingHelper bh(parent);
+
+   while (true) {
+      qore_offset_t rc = libssh2_channel_read_ex(channel, stream_id, static_cast<char *>(buffer), size);
+
+      if (rc < 0 && rc != LIBSSH2_ERROR_EAGAIN) {
+         parent->doSessionErrUnlocked(xsink);
+         return 0;
+      }
+
+      if (rc > 0) {
+         return rc;
+      }
+
+      if (!rc || rc == LIBSSH2_ERROR_EAGAIN) {
+         rc = parent->waitSocketUnlocked(timeout_ms);
+         if (!rc) {
+            xsink->raiseException(SSH2CHANNEL_TIMEOUT, "read timeout after %dms", timeout_ms);
+            return 0;
+         }
+         if (rc < 0) {
+            xsink->raiseException(SSH2CHANNEL_TIMEOUT, strerror(errno));
+            return 0;
+         }
+      }
+   }
+}
+
 qore_size_t SSH2Channel::write(ExceptionSink *xsink, const void *buf, qore_size_t buflen, int stream_id, int timeout_ms) {
    assert(buflen);
 
@@ -394,7 +427,7 @@ qore_size_t SSH2Channel::write(ExceptionSink *xsink, const void *buf, qore_size_
       return -1;
 
    BlockingHelper bh(parent);
-   
+
    qore_size_t b_sent = 0;
    while (true) {
       qore_offset_t rc;
@@ -421,7 +454,7 @@ qore_size_t SSH2Channel::write(ExceptionSink *xsink, const void *buf, qore_size_
 
       b_sent += rc;
       if (b_sent >= buflen)
-	 break;	 
+	 break;
    }
 
    return b_sent;
@@ -489,7 +522,7 @@ int SSH2Channel::requestX11Forwarding(ExceptionSink *xsink, int screen_number, b
    BlockingHelper bh(parent);
 
    //printd(5, "SSH2Channel::requestX11Forwarding() screen_no=%d, single=%s, ap=%s, ac=%s\n", screen_number, single_connection ? "true" : "false", auth_proto ? auth_proto : "n/a", auth_cookie ? auth_cookie : "n/a");
-   int rc; 
+   int rc;
    while (true) {
       rc = libssh2_channel_x11_req_ex(channel, (int)single_connection, auth_proto, auth_cookie, screen_number);
       if (rc == LIBSSH2_ERROR_EAGAIN) {
@@ -511,7 +544,7 @@ int SSH2Channel::extendedDataNormal(ExceptionSink *xsink, int timeout_ms) {
 
    int rc;
    while (true) {
-      rc = libssh2_channel_handle_extended_data2(channel, LIBSSH2_CHANNEL_EXTENDED_DATA_NORMAL); 
+      rc = libssh2_channel_handle_extended_data2(channel, LIBSSH2_CHANNEL_EXTENDED_DATA_NORMAL);
       if (rc == LIBSSH2_ERROR_EAGAIN) {
 	 if ((rc = parent->waitSocketUnlocked(xsink, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-EXTENDEDDATANORMAL-ERROR", "SSH2Channel::extendedDataNormal", timeout_ms)))
 	    break;
@@ -531,7 +564,7 @@ int SSH2Channel::extendedDataMerge(ExceptionSink *xsink, int timeout_ms) {
 
    int rc;
    while (true) {
-      rc = libssh2_channel_handle_extended_data2(channel, LIBSSH2_CHANNEL_EXTENDED_DATA_MERGE); 
+      rc = libssh2_channel_handle_extended_data2(channel, LIBSSH2_CHANNEL_EXTENDED_DATA_MERGE);
       if (rc == LIBSSH2_ERROR_EAGAIN) {
 	 if ((rc = parent->waitSocketUnlocked(xsink, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-EXTENDEDDATAMERGE-ERROR", "SSH2Channel::extendedDataMerge", timeout_ms)))
 	    break;
@@ -551,7 +584,7 @@ int SSH2Channel::extendedDataIgnore(ExceptionSink *xsink, int timeout_ms) {
 
    int rc;
    while (true) {
-      rc = libssh2_channel_handle_extended_data2(channel, LIBSSH2_CHANNEL_EXTENDED_DATA_IGNORE); 
+      rc = libssh2_channel_handle_extended_data2(channel, LIBSSH2_CHANNEL_EXTENDED_DATA_IGNORE);
       if (rc == LIBSSH2_ERROR_EAGAIN) {
 	 if ((rc = parent->waitSocketUnlocked(xsink, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-EXTENDEDDATAIGNORE-ERROR", "SSH2Channel::extendedDataIgnore", timeout_ms)))
 	    break;
