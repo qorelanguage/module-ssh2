@@ -1,7 +1,13 @@
 MNAME=ssh2
 
+if COND_MINGW
+QPP=qpp_native
+else
+QPP=qpp
+endif
+
 .qpp.cpp:
-	qpp -V $<
+	$(QPP) -V $<
 
 GENERATED_SRC = QC_SSH2Base.cpp QC_SSH2Client.cpp QC_SSH2Channel.cpp QC_SFTPClient.cpp
 CLEANFILES = $(GENERATED_SRC)
