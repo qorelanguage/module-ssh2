@@ -91,7 +91,7 @@ class Ssh2ConnectionsTest inherits QUnit::Test {
 
     private usageIntern() {
         TestReporter::usageIntern(ColumnOffset);
-	printOption("-k,--private-key=ARG", "set private key to use for authentication", ColumnOffset);
+        printOption("-k,--private-key=ARG", "set private key to use for authentication", ColumnOffset);
         printOption("-T,--timeout=ARG", sprintf("set timeout in seconds (def: %ds)", timeout / 1000), ColumnOffset);
     }
 }
