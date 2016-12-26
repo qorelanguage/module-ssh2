@@ -73,7 +73,10 @@ set(CPP_SRC
     src/ssh2-module.cpp
 )
 
-set(QMOD qlib/SftpPoller.qm)
+set(QMOD
+    qlib/SftpPoller.qm
+    qlib/Ssh2Connections.qm
+)
 
 qore_wrap_qpp_value(QPP_SOURCES ${QPP_SRC})
 
