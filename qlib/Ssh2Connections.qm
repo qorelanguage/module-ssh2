@@ -78,7 +78,7 @@ module Ssh2Connections {
 public namespace Ssh2Connections {
     #! abstract base class for \c ssh module connections
     /** supports the following option:
-        - \c "keyfile": a path to a private key file in PEM format to use for key-based authentication (environment variables can be prefixed with \c "$" in the path (or optionally enclosed in curly brackets as in \c "${var}") and will be substituted with the value of the environment variable)
+        - \c "keyfile": a path to a private key file in PEM format to use for key-based authentication
     */
     public class AbstractSsh2Connection inherits ConnectionProvider::AbstractConnection {
         #! creates the SftpConnection object
@@ -90,8 +90,6 @@ public namespace Ssh2Connections {
             @param urlh broken down URL hash (as returned by @ref Qore::parse_url())
         */
         constructor(string name, string desc, string url, bool monitor, *hash opts, hash urlh) : AbstractConnection(name, desc, url, monitor, opts, urlh) {
-            # do environment variable substitution in keyfile option
-            doEnvOptions("keyfile");
         }
 
         #! returns valid options
