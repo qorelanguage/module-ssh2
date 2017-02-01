@@ -157,6 +157,7 @@ public namespace SftpPoller {
 %ifndef PO_NO_THREAD_CONTROL
                 "start_thread",
 %endif
+                "skip_file_content_retrieval",
                 );
 
             #! all keys
@@ -256,6 +257,9 @@ public namespace SftpPoller {
 
             #! name of check writable file
             string check_file;
+
+            #! whether or not to skip the file content retrieval in runOnce()
+            *bool skip_file_content_retrieval;
         }
 
         #! creates the SftpPoller object from the @ref Qore::SSH2::SFTPClient "SFTPClient" argument and configuration hash argument passed
@@ -365,6 +369,7 @@ public namespace SftpPoller {
             - \c sleep: (required when imported into a context where @ref Qore::PO_NO_PROCESS_CONTROL is set) a @ref closure "closure" or @ref call_reference "call reference" to use instead of @ref Qore::sleep() (if not set then @ref Qore::sleep() will be used)
             - \c writable: check if path(s) is/are writable  (default: False see also the \c "check_file" option)
             - \c check_file: name of a check file. The file will be created and deleted in the path to test if path is writable. If the file alrady exists, it will be deleted. (default: \c "qore-sftp-check-file")
+            - \c skip_file_content_retrieval: if True then @ref SftpPoller::SftpPoller::singleFileEvent and @ref SftpPoller::SftpPoller::postSingleFileEvent methods won't get 'data' member of the input hash, i.e. the file content won't be read by the SftpPoller class, opening a space for child classes to implement their own file retrieval in @ref SftpPoller::SftpPoller::singleFileEvent or @ref SftpPoller::SftpPoller::postSingleFileEvent (default: False)
 
             @throw SFTPPOLLER-CONSTRUCTOR-ERROR missing required key, invalid port or poll_interval given
             @throw SFTPCLIENT-PARAMETER-ERROR empty hostname passed
@@ -707,13 +712,18 @@ public namespace SftpPoller {
 
                     if (fileEvent(files)) {
                         foreach hash fh in (files) {
-                            # transfer file from server
-                            logInfo("%y: retrieving %s file data", fh.name, binary ? "binary" : "text");
-                            date t1 = now_us();
+                            if (skip_file_content_retrieval) {
+                                logInfo("%y: skipping retrieval of file data based on the poller configuration", fh.name);
+                            }
+                            else {
+                                # transfer file from server
+                                logInfo("%y: retrieving %s file data", fh.name, binary ? "binary" : "text");
+                                date t1 = now_us();
 
-                            get_files = True;
-                            fh.data = binary ? getFile(fh.name) : getTextFile(fh.name);
-                            logInfo("%y: retrieved %d bytes in %y", fh.name, fh.data.size(), now_us() - t1);
+                                get_files = True;
+                                fh.data = binary ? getFile(fh.name) : getTextFile(fh.name);
+                                logInfo("%y: retrieved %d bytes in %y", fh.name, fh.data.size(), now_us() - t1);
+                            }
 
                             # make sure any errors after this point cause the polling operation to stop
                             get_files = False;
@@ -787,7 +797,7 @@ public namespace SftpPoller {
             - \c mtime: the last modified date/time of the file
             - \c type: the type of file; one of: \c "REGULAR", \c "DIRECTORY", \c "SYMBOLIC-LINK", \c "BLOCK-DEVICE", \c "CHARACTER-DEVICE", \c "FIFO", \c "SYMBOLIC-LINK", \c "SOCKET", or \c "UNKNOWN"
             - \c perm: a string giving UNIX-style permissions for the file (ex: "-rwxr-xr-x")
-            - \c data: the file's data; this will be a string unless the \a "binary" option is set to @ref Qore::True "True", in which case this key is assigned to the files binary data
+            - \c data: the file's data; this will be a string unless the \a "binary" option is set to @ref Qore::True "True", in which case this key is assigned to the files binary data; this hash key is only present if \c skip_file_content_retrieval was @ref Qore::False "False" in the @ref SftpPoller::SftpPoller::constructor options
             - \c filepath: the remote filepath relative to SFTP root directory
         */
         abstract singleFileEvent(hash fih);
@@ -807,7 +817,7 @@ public namespace SftpPoller {
             - \c mtime: the last modified date/time of the file
             - \c type: the type of file; one of: \c "REGULAR", \c "DIRECTORY", \c "SYMBOLIC-LINK", \c "BLOCK-DEVICE", \c "CHARACTER-DEVICE", \c "FIFO", \c "SYMBOLIC-LINK", \c "SOCKET", or \c "UNKNOWN"
             - \c perm: a string giving UNIX-style permissions for the file (ex: "-rwxr-xr-x")
-            - \c data: the file's data; this will be a string unless the \a "binary" option is set to @ref Qore::True "True", in which case this key is assigned to the files binary data
+            - \c data: the file's data; this will be a string unless the \a "binary" option is set to @ref Qore::True "True", in which case this key is assigned to the files binary data; this hash key is only present if \c skip_file_content_retrieval was @ref Qore::False "False" in the @ref SftpPoller::SftpPoller::constructor options
             - \c filepath: the remote filepath relative to SFTP root directory
         */
         abstract postSingleFileEvent(hash fih);
