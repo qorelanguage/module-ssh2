@@ -7,7 +7,7 @@
 %enable-all-warnings
 
 %requires ../qlib/Ssh2Connections.qm
-%requires ssh2
+%requires ssh2 >= 1.2
 
 %requires Util
 %requires QUnit

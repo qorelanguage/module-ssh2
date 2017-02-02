@@ -6,7 +6,7 @@
 %strict-args
 %enable-all-warnings
 
-%requires ssh2 >= 1.0
+%requires ssh2 >= 1.2
 %requires ../qlib/SftpPoller.qm
 %requires QUnit
 %requires Util
