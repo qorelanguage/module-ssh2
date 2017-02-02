@@ -1,4 +1,4 @@
-%define mod_ver 1.0
+%define mod_ver 1.1
 
 %{?_datarootdir: %global mydatarootdir %_datarootdir}
 %{!?_datarootdir: %global mydatarootdir /usr/share}
@@ -102,6 +102,9 @@ This RPM provides API documentation, test and example programs
 %doc docs/ssh2/ docs/SftpPoller/ test/
 
 %changelog
+* Thu Feb 2 2017 Pavel Kvetons <pavel.kveton@qoretechnologies.org> - 1.1
+- updated to version 1.1
+
 * Sat Dec 7 2013 David Nichols <david@qore.org> - 1.0
 - updated to version 1.0
 

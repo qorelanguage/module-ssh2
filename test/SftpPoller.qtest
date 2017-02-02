@@ -6,7 +6,7 @@
 %strict-args
 %enable-all-warnings
 
-%requires ssh2 >= 1.0
+%requires ssh2 >= 1.1
 %requires ../qlib/SftpPoller.qm
 %requires QUnit
 %requires Util
@@ -93,7 +93,7 @@ class SftpPollerTest inherits QUnit::Test {
             );
     }
 
-    constructor() : Test("SftpPollerTest", "1.0", \ARGV, MyOpts) {
+    constructor() : Test("SftpPollerTest", "1.1", \ARGV, MyOpts) {
         addTestCase("SftpPollerTests", \sftpPollerTests());
         addTestCase("SftpPolerRemotePathNegTest", \sftpPollerRemotePathNegTest());
 

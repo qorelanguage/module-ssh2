@@ -32,7 +32,7 @@
 %new-style
 
 module SftpPoller {
-    version = "1.0";
+    version = "1.1";
     desc = "SftpPoller module";
     author = "David Nichols <david@qore.org>";
     url = "http://qore.org";
@@ -40,6 +40,7 @@ module SftpPoller {
 }
 
 /*  Version History
+    * 2017-02-02 v1.1: Pavel Kveton <pavel.kveton@qoretechnologies.org>
     * 2014-03-01 v1.0: David Nichols <david@qore.org>: initial version
 */
 
@@ -369,7 +370,7 @@ public namespace SftpPoller {
             - \c sleep: (required when imported into a context where @ref Qore::PO_NO_PROCESS_CONTROL is set) a @ref closure "closure" or @ref call_reference "call reference" to use instead of @ref Qore::sleep() (if not set then @ref Qore::sleep() will be used)
             - \c writable: check if path(s) is/are writable  (default: False see also the \c "check_file" option)
             - \c check_file: name of a check file. The file will be created and deleted in the path to test if path is writable. If the file alrady exists, it will be deleted. (default: \c "qore-sftp-check-file")
-            - \c skip_file_content_retrieval: if True then @ref SftpPoller::SftpPoller::singleFileEvent and @ref SftpPoller::SftpPoller::postSingleFileEvent methods won't get 'data' member of the input hash, i.e. the file content won't be read by the SftpPoller class, opening a space for child classes to implement their own file retrieval in @ref SftpPoller::SftpPoller::singleFileEvent or @ref SftpPoller::SftpPoller::postSingleFileEvent (default: False)
+            - \c skip_file_content_retrieval: if True then @ref SftpPoller::SftpPoller::singleFileEvent and @ref SftpPoller::SftpPoller::postSingleFileEvent methods won't get 'data' member of the input hash, i.e. the file content won't be read by the SftpPoller class, opening a space for child classes to implement their own file retrieval in @ref SftpPoller::SftpPoller::singleFileEvent or @ref SftpPoller::SftpPoller::postSingleFileEvent (default: False); (since ssh2 1.1)
 
             @throw SFTPPOLLER-CONSTRUCTOR-ERROR missing required key, invalid port or poll_interval given
             @throw SFTPCLIENT-PARAMETER-ERROR empty hostname passed
