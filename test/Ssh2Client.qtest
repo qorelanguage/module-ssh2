@@ -3,7 +3,7 @@
 
 %require-our
 %requires qore >= 0.8.12
-%requires ssh2 >= 1.0
+%requires ssh2 >= 1.2
 
 %requires Util
 %requires QUnit
