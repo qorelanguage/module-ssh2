@@ -6,7 +6,7 @@
 %strict-args
 %enable-all-warnings
 
-%requires ssh2 >= 1.0
+%requires ssh2 >= 1.1
 %requires ../qlib/SftpPoller.qm
 %requires QUnit
 %requires Util
@@ -33,7 +33,7 @@ class MySftpPoller inherits SftpPoller {
     }
 
     nothing postSingleFileEvent(hash fh) {
-        l += fh + ("data": sftp.getTextFile(fh.name));
+        l += fh;
     }
 
     list getFileList() {
@@ -80,9 +80,20 @@ class SftpPollerTest inherits QUnit::Test {
              "data": "cde",
             ),
             );
+
+        const NoRetrievalFiles = (
+            "x.txt": "abc",
+            );
+
+        const NoRetrievalResult = (
+            ("name": "x.txt",
+             "size": 3,
+             "type": "REGULAR",
+            ),
+            );
     }
 
-    constructor() : Test("SftpPollerTest", "1.0", \ARGV, MyOpts) {
+    constructor() : Test("SftpPollerTest", "1.1", \ARGV, MyOpts) {
         addTestCase("SftpPollerTests", \sftpPollerTests());
         addTestCase("SftpPolerRemotePathNegTest", \sftpPollerRemotePathNegTest());
 
@@ -152,6 +163,28 @@ class SftpPollerTest inherits QUnit::Test {
         # sort by file name
         fl = map $1.(Result[0].keys()), sort(fl, int sub (hash l, hash r) { return l.name <=> r.name; });
         assertEq(fl, Result);
+
+        # testing the data retrieval skipping (one file is enough)
+        string nd2 = sprintf("%s/", get_random_string());
+        sc.mkdir(nd2);
+        map sc.putFile($1.value, nd2 + $1.key), NoRetrievalFiles.pairIterator();
+        on_exit {
+            map sc.removeFile($1), NoRetrievalFiles.keyIterator();
+            sc.chdir("..");
+            sc.rmdir(nd2);
+        }
+
+        opts.path = nd2;
+        opts.skip_file_content_retrieval = True;
+
+        MySftpPoller poller2(sc, opts, m_options.verbose > 2);
+        poller2.start();
+        poller2.waitStop();
+        fl = poller2.getFileList();
+        map assertEq(False, exists $1.data), fl;
+        # sort by file name
+        fl = map $1.(NoRetrievalResult[0].keys()), sort(fl, int sub (hash l, hash r) { return l.name <=> r.name; });
+        assertEq(fl, NoRetrievalResult);
     }
 
     sftpPollerRemotePathNegTest() {
