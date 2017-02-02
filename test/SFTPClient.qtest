@@ -36,6 +36,8 @@ class SFTPClientTest inherits QUnit::Test {
     }
 
     constructor() : Test("SFTPClientTest", "1.1", \ARGV, MyOpts) {
+        if (m_options.timeout)
+            timeout = m_options.timeout * 1000;
         string uri = shift ARGV ?? sprintf("%s@localhost", getusername());
 
         sc = new SFTPClient(uri);
@@ -148,6 +150,6 @@ class SFTPClientTest inherits QUnit::Test {
     private usageIntern() {
         TestReporter::usageIntern(ColumnOffset);
 	printOption("-k,--private-key=ARG", "set private key to use for authentication", ColumnOffset);
-        printOption("-T,--timeout=ARG", sprintf("set timeout in seconds (def: %ds)", timeout), ColumnOffset);
+        printOption("-T,--timeout=ARG", sprintf("set timeout in seconds (def: %ds)", timeout / 1000), ColumnOffset);
     }
 }

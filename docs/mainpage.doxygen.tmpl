@@ -23,6 +23,7 @@
     |Qore::SSH2::SSH2Channel|allows Qore programs to send and receive data through an ssh2 channel
 
     Also included with the binary ssh2 module:
+    - <a href="../../Ssh2Connections/html/index.html">Ssh2Connections user module</a>
     - <a href="../../SftpPoller/html/index.html">SftpPoller user module</a>
 
     When connecting the module will try to:
@@ -108,8 +109,9 @@ stdout.printf("exit status: %d\n", $chan.getExitStatus());@endcode
     - SftpPoller::run() cannot be synchronized (<a href="https://github.com/qorelanguage/qore/issues/798">issue 798</a>)
     - compile fixes for Solaris 10 g++ (<a href="https://github.com/qorelanguage/qore/issues/861">issue 861</a>)
     - add contructor option to SftpPoller for checking if polled directories are writable (<a href="https://github.com/qorelanguage/qore/issues/888">issue 888</a>)
-    - crash in SFTPClient (<a href="https://github.com/qorelanguage/qore/issues/1040">issue 1040</a>)
     - streaming from SFTP server impossible without user re-implementing SftpPoller methods (<a href="https://github.com/qorelanguage/qore/issues/1557">issue 1557</a>)
+    - fixed a bug that could cause a crash when an error occurs in the @ref Qore::SSH2::SFTPClient "SFTPClient" class (<a href="https://github.com/qorelanguage/qore/issues/1040">issue 1040</a>)
+    - added the <a href="../../Ssh2Connections/html/index.html">Ssh2Connections</a> user module
 
     @subsection ssh2v10 Version 1.0
     - fixed crashing bugs handling errors and handle scope in the @ref Qore::SSH2::SFTPClient "SFTPClient" class

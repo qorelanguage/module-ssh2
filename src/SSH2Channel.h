@@ -57,7 +57,7 @@ protected:
       xsink->raiseException("SSH2-CHANNEL-ERROR", "The SSH2 channel has already been closed");
       return -1;
    }
-   
+
 public:
    // channel is already registered with parent when it's created
    DLLLOCAL SSH2Channel(LIBSSH2_CHANNEL *n_channel, SSH2Client *n_parent) : channel(n_channel), parent(n_parent), enc(QCS_DEFAULT) {
@@ -74,8 +74,8 @@ public:
       return enc;
    }
    DLLLOCAL int setenv(const char *name, const char *value, int timeout_ms, ExceptionSink *xsink);
-   DLLLOCAL int requestPty(ExceptionSink *xsink, const QoreString &term, const QoreString &modes, int width = LIBSSH2_TERM_WIDTH, 
-			   int height = LIBSSH2_TERM_HEIGHT, int width_px = LIBSSH2_TERM_WIDTH_PX, 
+   DLLLOCAL int requestPty(ExceptionSink *xsink, const QoreString &term, const QoreString &modes, int width = LIBSSH2_TERM_WIDTH,
+			   int height = LIBSSH2_TERM_HEIGHT, int width_px = LIBSSH2_TERM_WIDTH_PX,
 			   int height_px = LIBSSH2_TERM_HEIGHT_PX, int timeout_ms = -1);
    DLLLOCAL int shell(ExceptionSink *xsink, int timeout_ms = -1);
    DLLLOCAL bool eof(ExceptionSink *xsink);
@@ -89,6 +89,7 @@ public:
    DLLLOCAL BinaryNode *readBinary(ExceptionSink *xsink, int stream_id, int timeout_ms = DEFAULT_TIMEOUT_MS);
    // read a block of a particular size, timeout_ms mandatory
    DLLLOCAL BinaryNode *readBinary(qore_size_t size, int stream_id, int timeout_ms, ExceptionSink *xsink);
+   DLLLOCAL qore_size_t read(ExceptionSink *xsink, void *buf, qore_size_t size, int stream_id = 0, int timeout_ms = -1);
    DLLLOCAL qore_size_t write(ExceptionSink *xsink, const void *buf, qore_size_t buflen, int stream_id = 0, int timeout_ms = -1);
    DLLLOCAL int close(ExceptionSink *xsink, int timeout_ms = -1);
    DLLLOCAL int waitClosed(ExceptionSink *xsink, int timeout_ms = -1);

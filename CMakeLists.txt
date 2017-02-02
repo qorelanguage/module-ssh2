@@ -3,7 +3,7 @@
 
 cmake_minimum_required(VERSION 3.0.0)
 
-project(qore-ssh2-module VERSION 1.0.0)
+project(qore-ssh2-module VERSION 1.1.0)
 
 include(CheckCXXCompilerFlag)
 include(CheckCXXSymbolExists)
@@ -33,6 +33,15 @@ check_include_file_cxx(stdint.h HAVE_STDINT_H)
 check_include_file_cxx(sys/socket.h HAVE_SYS_SOCKET_H)
 check_include_file_cxx(sys/time.h HAVE_SYS_TIME_H)
 check_include_file_cxx(unistd.h HAVE_UNISTD_H)
+
+# Check for C++11.
+include(CheckCXXCompilerFlag)
+CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
+if(COMPILER_SUPPORTS_CXX11)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+else()
+    message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
+endif()
 
 set(CMAKE_REQUIRED_INCLUDES ${LIBSSH2_INCLUDE_DIRS})
 set(CMAKE_REQUIRED_LIBRARIES ${LIBSSH2_LDFLAGS})
@@ -64,7 +73,10 @@ set(CPP_SRC
     src/ssh2-module.cpp
 )
 
-set(QMOD qlib/SftpPoller.qm)
+set(QMOD
+    qlib/SftpPoller.qm
+    qlib/Ssh2Connections.qm
+)
 
 qore_wrap_qpp_value(QPP_SOURCES ${QPP_SRC})
 
