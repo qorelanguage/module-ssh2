@@ -68,6 +68,7 @@ edmap_t sftp_emap;
 static QoreStringNode *ssh2_module_init() {
    qore_libssh2_version = libssh2_version(LIBSSH2_VERSION_NUM);
    if (!qore_libssh2_version) {
+      // unconditionally get the libssh2 version: https://www.libssh2.org/libssh2_version.html
       QoreStringNode *err = new QoreStringNodeMaker("the runtime version of the library is too old; got '%s', expecting minimum version '", libssh2_version(0));
       err->concat(LIBSSH2_VERSION);
       err->concat('\'');
