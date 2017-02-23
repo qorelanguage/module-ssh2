@@ -113,7 +113,8 @@ stdout.printf("exit status: %d\n", $chan.getExitStatus());@endcode
     - compile fixes for Solaris 10 g++ (<a href="https://github.com/qorelanguage/qore/issues/861">issue 861</a>)
     - add constructor option to <a href="../../SftpPoller/html/index.html">SftpPoller</a> for checking if polled directories are writable (<a href="https://github.com/qorelanguage/qore/issues/888">issue 888</a>)
     - fixed a bug that could cause a crash when an error occurs in the @ref Qore::SSH2::SFTPClient "SFTPClient" class (<a href="https://github.com/qorelanguage/qore/issues/1040">issue 1040</a>)
-   - streaming from SFTP server impossible without user re-implementing <a href="../../SftpPoller/html/index.html">SftpPoller</a> methods (<a href="https://github.com/qorelanguage/qore/issues/1557">issue 1557</a>)
+    - streaming from SFTP server impossible without user re-implementing <a href="../../SftpPoller/html/index.html">SftpPoller</a> methods (<a href="https://github.com/qorelanguage/qore/issues/1557">issue 1557</a>)
+    - fixed a bug in libssh2 library initialization error reporting (<a href="https://github.com/qorelanguage/qore/issues/1696">issue 1696</a>)
 
     @subsection ssh2v10 Version 1.0
     - fixed crashing bugs handling errors and handle scope in the @ref Qore::SSH2::SFTPClient "SFTPClient" class
