@@ -287,6 +287,22 @@ fi
 CXXFLAGS="$CXXFLAGS $PTHREAD_CFLAGS"
 #LDFLAGS="$LDFLAGS $PTHREAD_LIBS"
 
+# see if the libssh2 library is compiled with support for wincng
+AC_ARG_WITH([wincng],
+  [AS_HELP_STRING([--with-wincng],
+                  [if libssh2 is compiled with wincng instead of openssl])],
+  [],
+  [with_wincng="$LIBSSH2_WINCNG"])
+
+if test "$with_wincng" = "yes" -o "$with_wincng" = "true" -o "$with_wincng" = "on" -o "$with_wincng" = "1"; then
+  disable_openssl=1
+
+  case "${host_os}" in
+     *mingw32*) LDFLAGS="$LDFLAGS -lbcrypt -lcrypt32"
+     ;;
+  esac
+fi
+
 # allow the user to set a generic search prefix for libraries, includes, etc
 AC_ARG_WITH([lib-prefix],
   [AS_HELP_STRING([--with-lib-prefix@<:@=DIR@:>@],
@@ -375,23 +391,30 @@ find_openssl() {
     AC_SUBST(OPENSSL_CPPFLAGS)
 }
 
-# see if we can figure out where the openssl library is
-AC_ARG_WITH([openssl-dir],
-  [AS_HELP_STRING([--with-openssl-dir@<:@=DIR@:>@],
-                  [openssl directory])],
-  [if test ! -d "${with_openssl_dir}"; then AC_MSG_ERROR(bad value ${with_openssl_dir} for --with-openssl-dir); unset with_openssl_dir; fi],
-  [with_openssl_dir="$OPENSSL_DIR"])
+if test -z "$disable_openssl"; then
+  # see if we can figure out where the openssl library is
+  AC_ARG_WITH([openssl],
+    [AS_HELP_STRING([--with-openssl@<:@=DIR@:>@],
+                    [openssl directory])],
+    [if test "${with_openssl}" != "no" -a ! -d "${with_openssl}"; then AC_MSG_ERROR(bad value ${with_openssl} for --with-openssl); unset with_openssl; fi],
+    [with_openssl="$OPENSSL_DIR"])
 
-AC_MSG_CHECKING([for openssl libraries and header files])
-for dir in "${with_openssl_dir}" "${with_lib_prefix}" "${find_prefix}" /usr / /usr/local /opt/gnu /opt/openssl /usr/local/openssl /opt/local /sw /usr/sfw /opt/sfw; do
+  if test "$with_openssl" = "no"; then
+    disable_openssl=yes
+  fi
+fi
+
+if test -z "$disable_openssl"; then
+  AC_MSG_CHECKING([for openssl libraries and header files])
+  for dir in "${with_openssl}" "${with_lib_prefix}" "${find_prefix}" /usr / /usr/local /opt/gnu /opt/openssl /usr/local/openssl /opt/local /sw /usr/sfw /opt/sfw; do
     find_openssl $dir
     if test -n "$OPENSSL_LDFLAGS"; then
-        break
+      break
     fi
-done
-if test -z "$OPENSSL_LDFLAGS"; then
+  done
+  if test -z "$OPENSSL_LDFLAGS"; then
     AC_MSG_ERROR([no openssl library found])
-else
+  else
     # check for openssl const correctness (later versions have it)
     SAVE_CPPFLAGS="$CPPFLAGS"
     SAVE_LDFLAGS="$LDFLAGS"
@@ -410,11 +433,12 @@ d2i_ASN1_type_bytes(0, &p, 0, 0);
     LDFLAGS="$SAVE_LDFLAGS"
 
     if test "${openssl_const_ok}" = "yes"; then
-       AC_MSG_RESULT([ok])
-       AC_DEFINE(HAVE_OPENSSL_CONST, 1, Define if openssl headers correctly use const)
+      AC_MSG_RESULT([ok])
+      AC_DEFINE(HAVE_OPENSSL_CONST, 1, Define if openssl headers correctly use const)
     else
-       AC_MSG_RESULT([old style, not const correct])
+      AC_MSG_RESULT([old style, not const correct])
     fi
+  fi
 fi
 
 AC_ARG_WITH([doxygen],
