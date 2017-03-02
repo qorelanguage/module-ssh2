@@ -387,14 +387,20 @@ find_openssl() {
 
 if test -z "$disable_openssl"; then
   # see if we can figure out where the openssl library is
-  AC_ARG_WITH([openssl-dir],
-    [AS_HELP_STRING([--with-openssl-dir@<:@=DIR@:>@],
+  AC_ARG_WITH([openssl],
+    [AS_HELP_STRING([--with-openssl@<:@=DIR@:>@],
                     [openssl directory])],
-    [if test ! -d "${with_openssl_dir}"; then AC_MSG_ERROR(bad value ${with_openssl_dir} for --with-openssl-dir); unset with_openssl_dir; fi],
-    [with_openssl_dir="$OPENSSL_DIR"])
+    [if test "${with_openssl}" != "no" -a ! -d "${with_openssl}"; then AC_MSG_ERROR(bad value ${with_openssl} for --with-openssl); unset with_openssl; fi],
+    [with_openssl="$OPENSSL_DIR"])
 
+  if test "$with_openssl" = "no"; then
+    disable_openssl=yes
+  fi
+fi
+
+if test -z "$disable_openssl"; then
   AC_MSG_CHECKING([for openssl libraries and header files])
-  for dir in "${with_openssl_dir}" "${with_lib_prefix}" "${find_prefix}" /usr / /usr/local /opt/gnu /opt/openssl /usr/local/openssl /opt/local /sw /usr/sfw /opt/sfw; do
+  for dir in "${with_openssl}" "${with_lib_prefix}" "${find_prefix}" /usr / /usr/local /opt/gnu /opt/openssl /usr/local/openssl /opt/local /sw /usr/sfw /opt/sfw; do
     find_openssl $dir
     if test -n "$OPENSSL_LDFLAGS"; then
       break
