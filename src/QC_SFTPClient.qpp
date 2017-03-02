@@ -325,6 +325,32 @@ int SFTPClient::retrieveFile(string remote_path, string local_path, timeout time
    return myself->sftpRetrieveFile(remote_path->getBuffer(), local_path->getBuffer(), (int)timeout, mode, xsink);
 }
 
+//! Retrieves a remote file and writes its content to an OutputStream; throws an exception if any errors occur
+/** @par Example:
+    @code sftpclient.get("file.bin", outputStream); @endcode
+
+    If a connection has not yet been established, it is implicitly attempted here before executing the method.
+
+    @param remote_path the remote pathname of the file to retrieve
+    @param os the output stream to write to
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
+
+    @return the number of bytes transferred
+
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
+    @throw SFTPCLIENT-TIMEOUT timeout in network operation
+
+    @see
+    - SFTPClient::getFile()
+    - SFTPClient::getTextFile()
+
+    @since ssh2 1.1
+*/
+int SFTPClient::get(string remote_path, Qore::OutputStream[OutputStream] os, timeout timeout = 60s) {
+   SimpleRefHolder<OutputStream> osHolder(os);
+   return myself->sftpGet(remote_path->getBuffer(), os, (int) timeout, xsink);
+}
+
 //! Saves a file on the remote server from a binary argument and returns the number of bytes sent; throws an exception if any errors occur
 /** @par Example:
     @code my int $size = $sftpclient.putFile($bin, "file.bin", 0600); @endcode
@@ -404,6 +430,33 @@ int SFTPClient::putFile(string data, string path, int mode = 0644, timeout timeo
 int SFTPClient::transferFile(string local_path, string remote_path, timeout timeout = 60s, *int mode) [dom=FILESYSTEM] {
    // transfer the file
    return myself->sftpTransferFile(local_path->getBuffer(), remote_path->getBuffer(), (int)mode, (int)timeout, xsink);
+}
+
+//! Saves a file on the remote server from an InputStream and returns the number of bytes sent; throws an exception if any errors occur
+/** @par Example:
+    @code int size = sftpclient.put(inputStream, "file.bin"); @endcode
+
+    If a connection has not yet been established, it is implicitly attempted here before executing the method.
+
+    @param is the input stream to upload to the server
+    @param remote_path the remote path name on the server
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
+    @param mode the mode of the file on the server
+
+    @return the number of bytes actually sent
+
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
+    @throw SFTPCLIENT-TIMEOUT timeout in network operation
+
+    @see
+    - SFTPClient::putFile()
+    - SFTPClient::retrieveFile()
+
+    @since ssh2 1.1
+*/
+int SFTPClient::put(Qore::InputStream[InputStream] is, string remote_path, timeout timeout = 60s, int mode = 0644) {
+   SimpleRefHolder<InputStream> isHolder(is);
+   return myself->sftpPut(is, remote_path->getBuffer(), (int) mode, (int) timeout, xsink);
 }
 
 //! Makes a directory on the remote server; throws an exception if any errors occur

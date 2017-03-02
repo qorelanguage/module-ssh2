@@ -209,7 +209,7 @@ nothing SSH2Channel::subsystem(string command, timeout timeout = -1) {
  */
 string SSH2Channel::read(softint stream_id = 0, timeout timeout = 10000) {
    if (stream_id < 0) {
-      xsink->raiseException("SSH2CHANNEL-READ-ERROR", "expecting non-negative integer for stream id as optional first argument to SSH2Channel::read([streamid], [timeout_ms]), got "QLLD" instead; use 0 for stdin, 1 for stderr", stream_id);
+      xsink->raiseException("SSH2CHANNEL-READ-ERROR", "expecting non-negative integer for stream id as optional first argument to SSH2Channel::read([streamid], [timeout_ms]), got " QLLD " instead; use 0 for stdin, 1 for stderr", stream_id);
       return 0;
    }
    return c->read(xsink, stream_id, timeout);
@@ -228,7 +228,7 @@ string SSH2Channel::read(softint stream_id = 0, timeout timeout = 10000) {
  */
 binary SSH2Channel::readBinary(softint stream_id = 0, timeout timeout = 10000) {
    if (stream_id < 0) {
-      xsink->raiseException("SSH2CHANNEL-READBINARY-ERROR", "expecting non-negative integer for stream id as optional first argument to SSH2Channel::readBinary([streamid], [timeout_ms]), got "QLLD" instead; use 0 for stdin, 1 for stderr", stream_id);
+      xsink->raiseException("SSH2CHANNEL-READBINARY-ERROR", "expecting non-negative integer for stream id as optional first argument to SSH2Channel::readBinary([streamid], [timeout_ms]), got " QLLD " instead; use 0 for stdin, 1 for stderr", stream_id);
       return 0;
    }
    return c->readBinary(xsink, stream_id, timeout);
@@ -251,11 +251,11 @@ binary SSH2Channel::readBinary(softint stream_id = 0, timeout timeout = 10000) {
 string SSH2Channel::readBlock(softint size, softint stream_id = 0, timeout timeout = -1) {
    static const char *SSH2CHANNEL_READBLOCK_ERROR = "SSH2CHANNEL-READBLOCK-ERROR";
    if (size <= 0) {
-      xsink->raiseException(SSH2CHANNEL_READBLOCK_ERROR, "expecting a positive size for the block size to read, got "QLLD" instead; use SSH2Channel::read() to read available data without a block size", size);
+      xsink->raiseException(SSH2CHANNEL_READBLOCK_ERROR, "expecting a positive size for the block size to read, got " QLLD " instead; use SSH2Channel::read() to read available data without a block size", size);
       return 0;
    }
    if (stream_id < 0) {
-      xsink->raiseException(SSH2CHANNEL_READBLOCK_ERROR, "expecting non-negative integer for stream id as optional second argument to SSH2Channel::readBlock(blocksize, [streamid], [timeout_ms]), got "QLLD" instead; use 0 for stdin, 1 for stderr", stream_id);
+      xsink->raiseException(SSH2CHANNEL_READBLOCK_ERROR, "expecting non-negative integer for stream id as optional second argument to SSH2Channel::readBlock(blocksize, [streamid], [timeout_ms]), got " QLLD " instead; use 0 for stdin, 1 for stderr", stream_id);
       return 0;
    }
 
@@ -279,11 +279,11 @@ string SSH2Channel::readBlock(softint size, softint stream_id = 0, timeout timeo
 binary SSH2Channel::readBinaryBlock(softint size, softint stream_id = 0, timeout timeout = -1) {
    static const char *SSH2CHANNEL_READBINARYBLOCK_ERROR = "SSH2CHANNEL-READBINARYBLOCK-ERROR";
    if (size <= 0) {
-      xsink->raiseException(SSH2CHANNEL_READBINARYBLOCK_ERROR, "expecting a positive size for the block size to read, got "QLLD" instead; use SSH2Channel::readBinary() to read available data without a block size", size);
+      xsink->raiseException(SSH2CHANNEL_READBINARYBLOCK_ERROR, "expecting a positive size for the block size to read, got " QLLD " instead; use SSH2Channel::readBinary() to read available data without a block size", size);
       return 0;
    }
    if (stream_id < 0) {
-      xsink->raiseException(SSH2CHANNEL_READBINARYBLOCK_ERROR, "expecting non-negative integer for stream id as optional second argument to SSH2Channel::readBinaryBlock(blocksize, [streamid], [timeout_ms]), got "QLLD" instead; use 0 for stdin, 1 for stderr", stream_id);
+      xsink->raiseException(SSH2CHANNEL_READBINARYBLOCK_ERROR, "expecting non-negative integer for stream id as optional second argument to SSH2Channel::readBinaryBlock(blocksize, [streamid], [timeout_ms]), got " QLLD " instead; use 0 for stdin, 1 for stderr", stream_id);
       return 0;
    }
    return c->readBinary(size, stream_id, timeout, xsink);
@@ -329,7 +329,7 @@ nothing SSH2Channel::write(data data, softint stream_id = 0, timeout timeout = -
       return 0;
 
    if (stream_id < 0) {
-      xsink->raiseException(SSH2CHANNEL_WRITE_ERROR, "expecting non-negative integer for stream id as optional second argument to SSH2Channel::write(data $data, softint $streamid, $timeout), got "QLLD" instead; use 0 for stdin, 1 for stderr", stream_id);
+      xsink->raiseException(SSH2CHANNEL_WRITE_ERROR, "expecting non-negative integer for stream id as optional second argument to SSH2Channel::write(data $data, softint $streamid, $timeout), got " QLLD " instead; use 0 for stdin, 1 for stderr", stream_id);
       return 0;
    }
 
