@@ -6,7 +6,7 @@
   libssh2 SFTP client integration into qore
 
   Copyright 2009 Wolfgang Ritzinger
-  Copyright 2010 - 2016 Qore Technologies, sro
+  Copyright 2010 - 2017 Qore Technologies, s.r.o.
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -53,13 +53,13 @@ static QoreHashNode *attr2hash(const LIBSSH2_SFTP_ATTRIBUTES &attr) {
 qclass SFTPClient [arg=SFTPClient* myself; ns=Qore::SSH2; dom=NETWORK; vparent=SSH2Base];
 
 //! Creates the object with the given URL
-/** @param url the remote host to connect to - can also be a url like \c "sftp://user:pass@hostname:port"; if any scheme is given in the URL, then it must be \c "sftp" or an \c SFTPCLIENT-PARAMETER-ERROR exception will be thrown
+/** @par Example:
+    @code{.py} SFTPClient sftpclient("sftp://user:pass@host:4022"); @endcode
+
+    @param url the remote host to connect to - can also be a url like \c "sftp://user:pass@hostname:port"; if any scheme is given in the URL, then it must be \c "sftp" or an \c SFTPCLIENT-PARAMETER-ERROR exception will be thrown
     @param port the port number on the remote host to connect to; if the port is 0, then the port given in the url argument is used; if none is given there, then the default port is used (22)
 
     @throw SFTPCLIENT-PARAMETER-ERROR unknown protocol passed in URL; no hostname in URL
-
-    @par Example:
-    @code my SFTPClient $sftpclient("sftp://user:pass@host:4022"); @endcode
  */
 SFTPClient::constructor(string url, softint port = 0) {
    QoreURL qurl(url);
@@ -86,7 +86,10 @@ SFTPClient::copy() {
 }
 
 //! Returns a hash with information about the current connection status
-/** this method is safe to call when not connected
+/** @par Example:
+    @code{.py} hash h = sftpclient.info(); @endcode
+
+    this method is safe to call when not connected
 
     @return a hash with the following keys:
     - \c ssh2host: (string) the host name of the remote server
@@ -99,26 +102,26 @@ SFTPClient::copy() {
     - \c connected: (bool) tells if the connection is currently active or not
     - \c methods: (hash) a hash of strings giving the crytographic methods used for the connection
     - \c path: (*string) a string giving the path name set in the object or \c NOTHING if no path is set
-
-    @par Example:
-    @code my hash $h = $sftpclient.info(); @endcode
 */
 hash SFTPClient::info() [flags=CONSTANT] {
    return myself->sftpInfo();
 }
 
 //! Returns the current path as a string or \c NOTHING if no path is set
-/** @return the current path as a string or \c NOTHING if no path is set
+/** @par Example:
+    @code{.py} *string path = sftpclient.path(); @endcode
 
-    @par Example:
-    @code my *string $path = $sftpclient.path(); @endcode
+    @return the current path as a string or \c NOTHING if no path is set
 */
 *string SFTPClient::path() [flags=CONSTANT] {
    return myself->sftpPath();
 }
 
 //! Returns a hash of directory information; throws an exception if any errors occur
-/** If a connection has not yet been established, it is implicitly attempted here before executing the method.
+/** @par Example:
+    @code{.py} hash h = sftpclient.list(path); @endcode
+
+    If a connection has not yet been established, it is implicitly attempted here before executing the method.
 
     @param path The pathname of the directory to list; if no path is given, then information about the current directory is returned
     @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
@@ -131,9 +134,7 @@ hash SFTPClient::info() [flags=CONSTANT] {
 
     @throw SFTPCLIENT-LIST-ERROR failed to list directory
     @throw SFTPCLIENT-TIMEOUT timeout in network operation
-
-    @par Example:
-    @code my hash $h = $sftpclient.list($path); @endcode
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
 
     @see SFTPClient::listFull()
 */
@@ -142,7 +143,10 @@ hash SFTPClient::list(*string path, timeout timeout = 60s) [flags=RET_VALUE_ONLY
 }
 
 //! Returns a list of directory information with detailed information for files, links, and directories; throws an exception if any errors occur
-/** If a connection has not yet been established, it is implicitly attempted here before executing the method.
+/** @par Example:
+    @code{.py} list l = sftpclient.listFull(path); @endcode
+
+    If a connection has not yet been established, it is implicitly attempted here before executing the method.
 
     @param path The pathname of the directory to list; if no path is given, then information about the current directory is returned
     @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
@@ -160,9 +164,7 @@ hash SFTPClient::list(*string path, timeout timeout = 60s) [flags=RET_VALUE_ONLY
 
     @throw SFTPCLIENT-LIST-ERROR failed to list directory
     @throw SFTPCLIENT-TIMEOUT timeout in network operation
-
-    @par Example:
-    @code my list $l = $sftpclient.listFull($path); @endcode
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
 
     @see SFTPClient::list()
 
@@ -173,7 +175,10 @@ list SFTPClient::listFull(*string path, timeout timeout = 60s) [flags=RET_VALUE_
 }
 
 //! Returns a hash of information about a file or \c NOTHING if the file cannot be found
-/** If a connection has not yet been established, it is implicitly attempted here before executing the method.
+/** @par Example:
+    @code{.py} *hash h = sftpclient.stat(path); @endcode
+
+    If a connection has not yet been established, it is implicitly attempted here before executing the method.
 
     @param path the pathname of the file to stat
     @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
@@ -188,11 +193,8 @@ list SFTPClient::listFull(*string path, timeout timeout = 60s) [flags=RET_VALUE_
     - \c type: the type of file; one of: \c "REGULAR", \c "DIRECTORY", \c "SYMBOLIC-LINK", \c "BLOCK-DEVICE", \c "CHARACTER-DEVICE", \c "FIFO", \c "SYMBOLIC-LINK", \c "SOCKET", or \c "UNKNOWN"
     - \c permissions: (string) a string giving the symbolic mode of the file
 
-    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
     @throw SFTPCLIENT-TIMEOUT timeout in network operation
-
-    @par Example:
-    @code my *hash $h = $sftpclient.stat($path); @endcode
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
 */
 *hash SFTPClient::stat(string path, timeout timeout = 60s) [flags=RET_VALUE_ONLY] {
    LIBSSH2_SFTP_ATTRIBUTES attr;
@@ -201,52 +203,52 @@ list SFTPClient::listFull(*string path, timeout timeout = 60s) [flags=RET_VALUE_
 }
 
 //! Deletes a file on the server side; throws an exception if any errors occur
-/** If a connection has not yet been established, it is implicitly attempted here before executing the method.
+/** @par Example:
+    @code{.py} sftpclient.removeFile(path); @endcode
+
+    If a connection has not yet been established, it is implicitly attempted here before executing the method.
 
     @param path the pathname of the file to delete
     @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
 
-    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
     @throw SFTPCLIENT-TIMEOUT timeout in network operation
-
-    @par Example:
-    @code $sftpclient.removeFile($path); @endcode
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
 */
 nothing SFTPClient::removeFile(string path, timeout timeout = 60s) {
    myself->sftpUnlink(path->getBuffer(), (int)timeout, xsink);
 }
 
 //! Renames or moves a remote file; throws an exception if any errors occur
-/** If a connection has not yet been established, it is implicitly attempted here before executing the method.
+/** @par Example:
+    @code{.py} sftpclient.name("file.txt", "file.txt.orig"); @endcode
+
+    If a connection has not yet been established, it is implicitly attempted here before executing the method.
     Note that this command is executed with the \c LIBSSH2_SFTP_RENAME_OVERWRITE option set to \c True, but that this option is commonly ignored by sshd servers, in which case if the target file already exists, an \c SSH2-ERROR exception will be raised
 
     @param old_name the old pathname of the file
     @param new_name the new pathname of the file
     @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
 
-    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message; file exists and server does not allow overwriting
     @throw SFTPCLIENT-TIMEOUT timeout in network operation
-
-    @par Example:
-    @code $sftpclient.name("file.txt", "file.txt.orig"); @endcode
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message; file exists and server does not allow overwriting
 */
 nothing SFTPClient::rename(string old_name, string new_name, timeout timeout = 60s) {
    myself->sftpRename(old_name->getBuffer(), new_name->getBuffer(), (int)timeout, xsink);
 }
 
 //! Changes the mode of a remote file or directory; sticky bits may not be set; throws an exception if any errors occur
-/** If a connection has not yet been established, it is implicitly attempted here before executing the method.
+/** @par Example:
+    @code{.py} sftpclient.chmod("file.txt", 0600); @endcode
+
+    If a connection has not yet been established, it is implicitly attempted here before executing the method.
 
     @param path the pathname of the file or directory to update
     @param mode the new mode to se
     @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
 
     @throw SFTPCLIENT-PARAMETER-ERROR mode setting is only possible for user, group and other (no sticky bits)
-    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
     @throw SFTPCLIENT-TIMEOUT timeout in network operation
-
-    @par Example:
-    @code $sftpclient.chmod("file.txt", 0600); @endcode
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message; file exists and server does not allow overwriting
 */
 nothing SFTPClient::chmod(string path, int mode, timeout timeout = 60s) {
    // check if mode is in range
@@ -260,15 +262,15 @@ nothing SFTPClient::chmod(string path, int mode, timeout timeout = 60s) {
 
 //! Retrieves a remote file and returns it as a binary object; throws an exception if any errors occur
 /** @par Example:
-    @code my binary $b = $sftpclient.getFile("file.bin"); @endcode
+    @code{.py} binary b = sftpclient.getFile("file.bin"); @endcode
 
     If a connection has not yet been established, it is implicitly attempted here before executing the method.
 
     @param path the pathname of the file to retrieve
     @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
 
-    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
     @throw SFTPCLIENT-TIMEOUT timeout in network operation
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
 
     @see
     - SFTPClient::getTextFile()
@@ -280,7 +282,7 @@ binary SFTPClient::getFile(string path, timeout timeout = 60s) {
 
 //! Retrieves a remote file and returns it as a string; throws an exception if any errors occur
 /** @par Example:
-    @code my string $str = $sftpclient.getTextFile("file.txt"); @endcode
+    @code{.py} string str = sftpclient.getTextFile("file.txt"); @endcode
 
     If a connection has not yet been established, it is implicitly attempted here before executing the method.
 
@@ -288,8 +290,8 @@ binary SFTPClient::getFile(string path, timeout timeout = 60s) {
     @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
     @param encoding an optional file encoding/character set. Qore default encoding is used if not set.
 
-    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
     @throw SFTPCLIENT-TIMEOUT timeout in network operation
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
 
     @see
     - SFTPClient::getFile()
@@ -302,7 +304,7 @@ string SFTPClient::getTextFile(string path, timeout timeout = 60s, *string encod
 
 //! Retrieves a remote file and saves it on the local filesystem; throws an exception if any errors occur
 /** @par Example:
-    @code $sftpclient.retrieveFile("file.bin", "/tmp/file.bin"); @endcode
+    @code{.py} sftpclient.retrieveFile("file.bin", "/tmp/file.bin"); @endcode
 
     If a connection has not yet been established, it is implicitly attempted here before executing the method.
 
@@ -312,8 +314,8 @@ string SFTPClient::getTextFile(string path, timeout timeout = 60s, *string encod
 
     @return the number of bytes transferred
 
-    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
     @throw SFTPCLIENT-TIMEOUT timeout in network operation
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
 
     @see
     - SFTPClient::getFile()
@@ -327,7 +329,7 @@ int SFTPClient::retrieveFile(string remote_path, string local_path, timeout time
 
 //! Saves a file on the remote server from a binary argument and returns the number of bytes sent; throws an exception if any errors occur
 /** @par Example:
-    @code my int $size = $sftpclient.putFile($bin, "file.bin", 0600); @endcode
+    @code{.py} int $size = sftpclient.putFile(bin, "file.bin", 0600); @endcode
 
     If a connection has not yet been established, it is implicitly attempted here before executing the method.
 
@@ -338,8 +340,8 @@ int SFTPClient::retrieveFile(string remote_path, string local_path, timeout time
 
     @return the number of bytes actually sent
 
-    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
     @throw SFTPCLIENT-TIMEOUT timeout in network operation
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
 
     @see
     - SFTPClient::getFile()
@@ -354,7 +356,7 @@ int SFTPClient::putFile(binary bin, string path, int mode = 0644, timeout timeou
 
 //! Saves a file on the remote server from a string argument and returns the number of bytes sent; throws an exception if any errors occur
 /** @par Example:
-    @code my int $size = $sftpclient.putFile($str, "file.bin", 0600); @endcode
+    @code{.py} int size = sftpclient.putFile(str, "file.bin", 0600); @endcode
 
     If a connection has not yet been established, it is implicitly attempted here before executing the method.
 
@@ -365,8 +367,8 @@ int SFTPClient::putFile(binary bin, string path, int mode = 0644, timeout timeou
 
     @return the number of bytes actually sent
 
-    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
     @throw SFTPCLIENT-TIMEOUT timeout in network operation
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
 
     @see
     - SFTPClient::getFile()
@@ -381,7 +383,7 @@ int SFTPClient::putFile(string data, string path, int mode = 0644, timeout timeo
 
 //! Transfers a local file to the remote server and returns the number of bytes sent; throws an exception if any errors occur
 /** @par Example:
-    @code my int $size = $sftpclient.putFile($str, "file.bin", 0600); @endcode
+    @code{.py} int size = sftpclient.putFile(str, "file.bin", 0600); @endcode
 
     If a connection has not yet been established, it is implicitly attempted here before executing the method.
 
@@ -392,8 +394,8 @@ int SFTPClient::putFile(string data, string path, int mode = 0644, timeout timeo
 
     @return the number of bytes actually sent
 
-    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
     @throw SFTPCLIENT-TIMEOUT timeout in network operation
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
 
     @see
     - SFTPClient::putFile()
@@ -407,51 +409,51 @@ int SFTPClient::transferFile(string local_path, string remote_path, timeout time
 }
 
 //! Makes a directory on the remote server; throws an exception if any errors occur
-/** If a connection has not yet been established, it is implicitly attempted here before executing the method.
+/** @par Example:
+    @code{.py} sftpclient.mkdir(path, 0700); @endcode
+
+    If a connection has not yet been established, it is implicitly attempted here before executing the method.
 
     @param path The pathname of the new directory
     @param mode the mode of the new directory
     @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
 
     @throw SFTPCLIENT-MKDIR-ERROR directory name is an empty string
-    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
     @throw SFTPCLIENT-TIMEOUT timeout in network operation
-
-    @par Example:
-    @code $sftpclient.mkdir($path, 0700); @endcode
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
 */
 nothing SFTPClient::mkdir(string path, int mode = 0755, timeout timeout = 60s) {
    myself->sftpMkdir(path->getBuffer(), (int)mode, (int)timeout, xsink);
 }
 
 //! Removes a directory on the remote server; throws an exception if any errors occur
-/** If a connection has not yet been established, it is implicitly attempted here before executing the method.
+/** @par Example:
+    @code{.py} sftpclient.rmdir(path); @endcode
+
+    If a connection has not yet been established, it is implicitly attempted here before executing the method.
 
     @param path The pathname of the directory to remove
     @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
 
     @throw SFTPCLIENT-RMDIR-ERROR directory name is an empty string
-    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
     @throw SFTPCLIENT-TIMEOUT timeout in network operation
-
-    @par Example:
-    @code $sftpclient.rmdir($path); @endcode
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
 */
 nothing SFTPClient::rmdir(string path, timeout timeout = 60s) {
    myself->sftpRmdir(path->getBuffer(), (int)timeout, xsink);
 }
 
 //! Changes the directory on the remote server and returns the new directory; throws an exception if any errors occur
-/** If a connection has not yet been established, it is implicitly attempted here before executing the method.
+/** @par Example:
+    @code{.py} sftpclient.chdir(path); @endcode
+
+    If a connection has not yet been established, it is implicitly attempted here before executing the method.
 
     @param path The pathname of the directory to change to
     @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
 
-    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
     @throw SFTPCLIENT-TIMEOUT timeout in network operation
-
-    @par Example:
-    @code $sftpclient.chdir($path); @endcode
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
 */
 string SFTPClient::chdir(string path, timeout timeout = 60s) {
    return myself->sftpChdir(path->getBuffer(), (int)timeout, xsink);
