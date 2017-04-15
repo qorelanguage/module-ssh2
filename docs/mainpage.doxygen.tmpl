@@ -39,32 +39,32 @@
 
     Example of a basic sftp connection:
 
-    @code
+    @code{.py}
 # create object
-my SFTPClient $sftp("sftp://user:pass@host.com:22");
+SFTPClient sftp("sftp://user:pass@host.com:22");
 # connect to sftp server
-$sftp.connect();@endcode
+sftp.connect();@endcode
 
     Example of logging in via ssh2 and executing a command and retrieving the output:
 
-    @code
+    @code{.py}
 # set URL
-my string $url = "sftp://user:pass@host.com:22";
+string url = "sftp://user:pass@host.com:22";
 # create object
-my SSH2Client $ssh2($url);
+SSH2Client ssh2(url);
 # connect to remote sshd daemon
-$ssh2.connect();
+ssh2.connect();
 # get a session channel
-my SSH2Channel $chan = $sc.openSessionChannel();
+SSH2Channel chan = sc.openSessionChannel();
 # execute a command on the channel
-$chan.exec("ls -l");
+chan.exec("ls -l");
 # retrieve the output and print it out
-stdout.printf("%s", $chan.read());
+stdout.printf("%s", chan.read());
 # close channel
-$chan.sendEof();
-$chan.close();
+chan.sendEof();
+chan.close();
 # print out the exit status after the channel is closed
-stdout.printf("exit status: %d\n", $chan.getExitStatus());@endcode
+stdout.printf("exit status: %d\n", chan.getExitStatus());@endcode
 
     @section codetags Function and Method Tags
 
