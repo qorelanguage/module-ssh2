@@ -6,7 +6,7 @@
   libssh2 ssh2 client integration into qore
 
   Copyright 2009 Wolfgang Ritzinger
-  Copyright 2010 - 2013 Qore Technologies, sro
+  Copyright 2010 - 2017 Qore Technologies, s.r.o.
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -29,18 +29,19 @@ extern QoreClass* QC_SSH2BASE;
 extern QoreClass* QC_SSH2CHANNEL;
 
 //! allows Qore programs to establish an ssh2 connection to a remote server
-/** 
+/**
  */
 qclass SSH2Client [arg=SSH2Client* c; ns=Qore::SSH2; dom=NETWORK; vparent=SSH2Base];
 
 //! creates the object with the given hostname and port number
-/** @param url the remote host to connect to - can also be a url like \c "ssh://user:pass@hostname:port"
+/** @par Example:
+    @code{.py} ssh2client SSH2Client("host", 4022); @endcode
+
+    @param url the remote host to connect to - can also be a url like \c "ssh://user:pass@hostname:port"
     @param port the port number on the remote host to connect to; if the port is 0, then the port given in the url argument is used; if none is given there, then the default port is used (22)
 
     @throw SSH2CLIENT-PARAMETER-ERROR empty url passed
-
-    @par Example:
-    @code my $ssh2client SSH2Client("host", 4022); @endcode
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
 SSH2Client::constructor(string url, softint port = 0) {
    QoreURL qurl(url);
@@ -68,7 +69,10 @@ SSH2Client::copy() {
 }
 
 //! returns a hash with information about the current connection status
-/** this method is safe to call when not connected
+/** @par Example:
+    @code{.py} hash h = ssh2client.info(); @endcode
+
+    this method is safe to call when not connected
 
     @return a hash with the following keys:
     - \c ssh2host: (string) the host name of the remote server
@@ -80,30 +84,30 @@ SSH2Client::copy() {
     - \c authenticated: (*string) a string giving the authentication mechanism used: \c "publickey", \c "password", \c "keyboard-interactive" or \c NOTHING if not connected
     - \c connected: (bool) tells if the connection is currently active or not
     - \c methods: (hash) a hash of strings giving the crytographic methods used for the connection
-
-    @par Example:
-    @code my hash $h = $ssh2client.info(); @endcode
  */
 hash SSH2Client::info() [flags=CONSTANT] {
    return c->sshInfo();
 }
 
 //! Opens a login session and returns a SSH2Channel object for the session
-/** @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
+/** @par Example:
+    @code{.py} SSH2Channel chan = ssh2client.openSessionChannel(30s); @endcode
+
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
 
     @throw SSH2CLIENT-NOT-CONNECTED client is not connected
     @throw SSH2CLIENT-TIMEOUT timeout opening channel
     @throw SSH2-ERROR error opening channel
-
-    @par Example:
-    @code my SSH2Channel $chan = $ssh2client.openSessionChannel(30s); @endcode
  */
 SSH2Channel SSH2Client::openSessionChannel(timeout timeout = 60s) {
    return c->openSessionChannel(xsink, timeout);
 }
 
 //! Opens a port forwarding channel and returns the corresponding SSH2Channel object for the new forwarded connection
-/** @param host the remote host to connect to
+/** @par Example:
+    @code{.py} SS2Channel chan = ssh2client.("host", 4022, NOTHING, NOTHING, 30s); @endcode
+
+    @param host the remote host to connect to
     @param port the port number on the remote host to connect to
     @param source_host the host name to report as the source of the connection
     @param source_port the port number to report as the source of the connection
@@ -113,13 +117,10 @@ SSH2Channel SSH2Client::openSessionChannel(timeout timeout = 60s) {
     @throw SSH2CLIENT-NOT-CONNECTED client is not connected
     @throw SSH2CLIENT-TIMEOUT timeout opening channel
     @throw SSH2-ERROR error opening channel
-
-    @par Example:
-    @code my SS2Channel $chan = $ssh2client.("host", 4022, NOTHING, NOTHING, 30s); @endcode
  */
 SSH2Channel SSH2Client::openDirectTcpipChannel(string host, softint port, string source_host = "127.0.0.1", softint source_port = 22, timeout timeout = 60s) {
    static const char *SSH2CLIENT_OPENDIRECTTCPIPCHANNEL_ERR = "SSH2CLIENT-OPENDIRECTTCPIPCHANNEL-ERROR";
-   
+
    if (!port) {
       xsink->raiseException(SSH2CLIENT_OPENDIRECTTCPIPCHANNEL_ERR, "port number for forwarded channel as second argument to SSH2Client::openDirectTcpipChannel() cannot be zero");
       return 0;
@@ -134,7 +135,10 @@ SSH2Channel SSH2Client::openDirectTcpipChannel(string host, softint port, string
 }
 
 //! opens a channel for retrieving a remote file with an optional timeout value and an optional reference for returning file status information
-/** an SSH2Channel object is returned to use to retrieve the file's data
+/** @par Example:
+    @code{.py}
+hash info;
+SS2Channel chan = ssh2client.scpGet("/tmp/file.txt", 30s, \info); @endcode
 
     @param path the path of the remote file to get
     @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
@@ -145,14 +149,11 @@ SSH2Channel SSH2Client::openDirectTcpipChannel(string host, softint port, string
     - \c "atime": the last access time of the file
     - \c "mtime": the last modified time of the file
 
+    @return an SSH2Channel object is returned to use to retrieve the file's data
+
     @throw SSH2CLIENT-NOT-CONNECTED client is not connected
     @throw SSH2CLIENT-TIMEOUT timeout opening channel
     @throw SSH2-ERROR error opening channel
-
-    @par Example:
-    @code
-my hash $info;
-my SS2Channel $chan = $ssh2client.scpGet("/tmp/file.txt", 30s, \$info); @endcode
  */
 SSH2Channel SSH2Client::scpGet(string path, timeout timeout = 60s, *reference statinfo) {
    ReferenceHolder<QoreHashNode> ref(statinfo ? new QoreHashNode : 0, xsink);
@@ -168,23 +169,25 @@ SSH2Channel SSH2Client::scpGet(string path, timeout timeout = 60s, *reference st
 }
 
 //! Opens a channel for sending a file to the remote server; an SSH2Channel object is returned to use to send the file's data
-/** @param remote_path the path of the file to save on the remote server
+/** @par Example:
+    @code{.py} SS2Channel chan = ssh2client.scpPut("/tmp/file.txt", size, 0644, 2010-12-25, 2010-12-25, 30s); @endcode
+
+    @param remote_path the path of the file to save on the remote server
     @param size the size of the file to send; this parameter is required
     @param mode the file's mode on the remote machine
     @param mtime the file's last modified time to create on the remote machine
     @param atime the file's last access time to create on the remote machine
     @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
 
+    @return an SSH2Channel object is returned to use to send the file's data
+
     @throw SSH2CLIENT-NOT-CONNECTED client is not connected
     @throw SSH2CLIENT-TIMEOUT timeout opening channel
     @throw SSH2-ERROR error opening channel
-
-    @par Example:
-    @code my SS2Channel $chan = $ssh2client.scpPut("/tmp/file.txt", $size, 0644, 2010-12-25, 2010-12-25, 30s); @endcode
  */
 SSH2Channel SSH2Client::scpPut(string remote_path, softint size, softint mode = 0644, *date mtime, *date atime, timeout timeout = 60s) {
    static const char *SSH2CLIENT_SCPPUT_ERR = "SSH2CLIENT-SCPPUT-ERROR";
-   
+
    if (size <= 0) {
       xsink->raiseException(SSH2CLIENT_SCPPUT_ERR, "invalid file size as second argument to SSH2Client::scpPut() (got invalid size "QLLD")", size);
       return 0;
