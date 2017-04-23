@@ -7,7 +7,7 @@
   Qore Programming Language
 
   Copyright 2009 Wolfgang Ritzinger
-  Copyright (C) 2010 - 2016 Qore Technologies, sro
+  Copyright (C) 2010 - 2017 Qore Technologies, s.r.o.
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -44,6 +44,9 @@
 
 #include <set>
 #include <string>
+
+// for maximum SSH2 performance, a 32K buffer is needed
+#define QSSH2_BUFSIZE 32768
 
 DLLLOCAL QoreClass *initSSH2ClientClass(QoreNamespace& ns);
 DLLLOCAL extern qore_classid_t CID_SSH2CLIENT;

@@ -6,7 +6,7 @@
   Qore Programming Language
 
   Copyright 2010 Wolfgang Ritzinger
-  Copyright 2010 - 2013 Qore Technologies, sro
+  Copyright 2010 - 2017 Qore Technologies, s.r.o.
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -209,8 +209,6 @@ int SSH2Channel::subsystem(const char *command, int timeout_ms, ExceptionSink *x
 
    return rc;
 }
-
-#define QSSH2_BUFSIZE 4096
 
 QoreStringNode *SSH2Channel::read(ExceptionSink *xsink, int stream_id, int timeout_ms) {
    AutoLocker al(parent->m);

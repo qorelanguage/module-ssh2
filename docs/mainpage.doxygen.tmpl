@@ -104,9 +104,12 @@ stdout.printf("exit status: %d\n", chan.getExitStatus());@endcode
 
     @subsection ssh2v12 Version 1.2
     - added the <a href="../../Ssh2Connections/html/index.html">Ssh2Connections</a> user module
+    - added the following @ref Qore::SSH2::SFTPClient "SFTPClient" methods supporting streams:
+      - @ref Qore::SSH2::SFTPClient::get() "SFTPClient::get()"
+      - @ref Qore::SSH2::SFTPClient::put() "SFTPClient::put()"
 
     @subsection ssh2v11 Version 1.1
-    - argument error in SFTPClient disconnection with socket errors causes a crash (<a href="https://github.com/qorelanguage/qore/issues/714">issue 765</a>)
+    - argument error in @ref Qore::SSH2::SFTPClient "SFTPClient" disconnection with socket errors causes a crash (<a href="https://github.com/qorelanguage/qore/issues/714">issue 765</a>)
     - infinite loop in <a href="../../SftpPoller/html/index.html">SftpPoller</a> polling when PO_NO_PROCESS_CONTROL is not set and no sleep option is given (<a href="https://github.com/qorelanguage/qore/issues/773">issue 773</a>)
     - implement support for additional directories in <a href="../../SftpPoller/html/index.html">SftpPoller</a> (<a href="https://github.com/qorelanguage/qore/issues/753">issue 753</a>)
     - SftpPoller::run() cannot be synchronized (<a href="https://github.com/qorelanguage/qore/issues/798">issue 798</a>)
