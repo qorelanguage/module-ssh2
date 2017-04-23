@@ -36,6 +36,8 @@
 #include <assert.h>
 #include <unistd.h>
 
+#include <memory>
+
 static const char* SFTPCLIENT_CONNECT_ERROR = "SFTPCLIENT-CONNECT-ERROR";
 static const char* SFTPCLIENT_TIMEOUT = "SFTPCLIENT-TIMEOUT";
 
@@ -971,12 +973,7 @@ int64 SFTPClient::sftpRetrieveFile(const char* remote_file, const char* local_fi
       return -1;
 
    // allocate a buffer for reading
-   char* buf = (char*)malloc(sizeof(char) * QSSH2_BUFSIZE);
-   if (!buf) {
-      xsink->outOfMemory();
-      return -1;
-   }
-   ON_BLOCK_EXIT(free, buf);
+   std::unique_ptr<char[]> buf(new char[QSSH2_BUFSIZE]);
 
    QoreSocketThroughputHelper th(socket, false);
 
@@ -987,7 +984,7 @@ int64 SFTPClient::sftpRetrieveFile(const char* remote_file, const char* local_fi
       if (bs > QSSH2_BUFSIZE)
          bs = QSSH2_BUFSIZE;
 
-      while ((rc = libssh2_sftp_read(*qh, buf, bs)) == LIBSSH2_ERROR_EAGAIN) {
+      while ((rc = libssh2_sftp_read(*qh, buf.get(), bs)) == LIBSSH2_ERROR_EAGAIN) {
          if (qh.waitSocket()) {
             assert(*xsink);
             return -1;
@@ -1000,7 +997,7 @@ int64 SFTPClient::sftpRetrieveFile(const char* remote_file, const char* local_fi
       }
       if (rc) {
          tot += rc;
-         if (f.write(buf, rc, xsink) < 0) {
+         if (f.write(buf.get(), rc, xsink) < 0) {
             assert(*xsink);
             return -1;
          }
@@ -1064,12 +1061,7 @@ int64 SFTPClient::sftpGet(const char* remote_file, OutputStream *os, int timeout
    }
 
    // allocate a buffer for reading
-   char* buf = (char*)malloc(sizeof(char) * QSSH2_BUFSIZE);
-   if (!buf) {
-      xsink->outOfMemory();
-      return -1;
-   }
-   ON_BLOCK_EXIT(free, buf);
+   std::unique_ptr<char[]> buf(new char[QSSH2_BUFSIZE]);
 
    QoreSocketThroughputHelper th(socket, false);
 
@@ -1080,7 +1072,7 @@ int64 SFTPClient::sftpGet(const char* remote_file, OutputStream *os, int timeout
       if (bs > QSSH2_BUFSIZE)
          bs = QSSH2_BUFSIZE;
 
-      while ((rc = libssh2_sftp_read(*qh, buf, bs)) == LIBSSH2_ERROR_EAGAIN) {
+      while ((rc = libssh2_sftp_read(*qh, buf.get(), bs)) == LIBSSH2_ERROR_EAGAIN) {
          if (qh.waitSocket()) {
             assert(*xsink);
             return -1;
@@ -1095,7 +1087,7 @@ int64 SFTPClient::sftpGet(const char* remote_file, OutputStream *os, int timeout
          tot += rc;
          {
             AutoUnlocker unlock(m);
-            os->write(buf, rc, xsink);
+            os->write(buf.get(), rc, xsink);
             if (*xsink) {
                return 0;
             }
@@ -1303,18 +1295,13 @@ int64 SFTPClient::sftpPut(InputStream *is, const char* remote_path, int mode, in
    size_t size = 0;
 
    // allocate a buffer for reading
-   char* buf = (char*)malloc(sizeof(char) * QSSH2_BUFSIZE);
-   if (!buf) {
-      xsink->outOfMemory();
-      return -1;
-   }
-   ON_BLOCK_EXIT(free, buf);
+   std::unique_ptr<char[]> buf(new char[QSSH2_BUFSIZE]);
 
    while (true) {
       int64 r;
       {
          AutoUnlocker unlocker(m);
-         r = is->read(buf, QSSH2_BUFSIZE, xsink);
+         r = is->read(buf.get(), QSSH2_BUFSIZE, xsink);
          if (*xsink) {
             return -1;
          }
@@ -1325,7 +1312,7 @@ int64 SFTPClient::sftpPut(InputStream *is, const char* remote_path, int mode, in
 
       while (r) {
          ssize_t rc;
-         while ((rc = libssh2_sftp_write(*qh, buf, r)) == LIBSSH2_ERROR_EAGAIN) {
+         while ((rc = libssh2_sftp_write(*qh, buf.get(), r)) == LIBSSH2_ERROR_EAGAIN) {
             if (qh.waitSocket()) {
                // note: memory leak here! we cannot close the handle due to the timeout
                return -1;
