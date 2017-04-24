@@ -88,11 +88,33 @@ class SFTPClientTest inherits QUnit::Test {
 
         # retrieve the file as a binary object
         binary b = sc.getFile(basename(fn), timeout);
-        testAssertionValue("SFTPClient::getFile()", b, BinContents);
+        assertEq(BinContents, b);
+
+        # send and retrieve the file as a stream
+        {
+            BinaryInputStream is(BinContents);
+            sc.put(is, fn, NOTHING, timeout);
+
+            BinaryOutputStream os();
+            # read the file to an output stream
+            sc.get(basename(fn), os, timeout);
+            assertEq(BinContents, os.getData());
+        }
 
         # retrieve the file as a string
         string s = sc.getTextFile(fn, timeout);
-        testAssertionValue("SFTPClient::getTextFile()", s, FileContents);
+        assertEq(FileContents, s);
+
+        # send and retrieve the file as a stream
+        {
+            StringInputStream is(FileContents);
+            sc.put(is, fn, NOTHING, timeout);
+
+            StringOutputStream os();
+            # read the file to an output stream
+            sc.get(basename(fn), os, timeout);
+            assertEq(FileContents, os.getData());
+        }
 
         # test various encodings
         string sutf8 = sc.getTextFile(fn, timeout, "utf8");

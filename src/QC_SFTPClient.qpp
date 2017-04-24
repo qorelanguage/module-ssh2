@@ -220,7 +220,7 @@ nothing SFTPClient::removeFile(string path, timeout timeout = 60s) {
 
 //! Renames or moves a remote file; throws an exception if any errors occur
 /** @par Example:
-    @code{.py} sftpclient.name("file.txt", "file.txt.orig"); @endcode
+    @code{.py} sftpclient.rename("file.txt", "file.txt.orig"); @endcode
 
     If a connection has not yet been established, it is implicitly attempted here before executing the method.
     Note that this command is executed with the \c LIBSSH2_SFTP_RENAME_OVERWRITE option set to \c True, but that this option is commonly ignored by sshd servers, in which case if the target file already exists, an \c SSH2-ERROR exception will be raised
@@ -260,6 +260,33 @@ nothing SFTPClient::chmod(string path, int mode, timeout timeout = 60s) {
   myself->sftpChmod(path->getBuffer(), (int)mode, (int)timeout, xsink);
 }
 
+//! Retrieves a remote file and writes its content to an @ref Qore::OutputStream "OutputStream"; throws an exception if any errors occur
+/** @par Example:
+    @code{.py} sftpclient.get(filepath, outputStream); @endcode
+
+    If a connection has not yet been established, it is implicitly attempted here before executing the method.
+
+    @param remote_path the remote pathname of the file to retrieve
+    @param os the output stream to write to
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
+
+    @return the number of bytes transferred
+
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
+    @throw SFTPCLIENT-GET-ERROR error retrieving SFTP data
+    @throw SFTPCLIENT-TIMEOUT timeout in network operation
+
+    @see
+    - SFTPClient::getFile()
+    - SFTPClient::getTextFile()
+
+    @since ssh2 1.1
+*/
+int SFTPClient::get(string remote_path, Qore::OutputStream[OutputStream] os, timeout timeout = 60s) {
+   SimpleRefHolder<OutputStream> osHolder(os);
+   return myself->sftpGet(remote_path->getBuffer(), os, (int) timeout, xsink);
+}
+
 //! Retrieves a remote file and returns it as a binary object; throws an exception if any errors occur
 /** @par Example:
     @code{.py} binary b = sftpclient.getFile("file.bin"); @endcode
@@ -269,12 +296,17 @@ nothing SFTPClient::chmod(string path, int mode, timeout timeout = 60s) {
     @param path the pathname of the file to retrieve
     @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
 
+    @throw SFTPCLIENT-GETFILE-ERROR error retrieving SFTP data
     @throw SFTPCLIENT-TIMEOUT timeout in network operation
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
 
     @see
+    - SFTPClient::get()
     - SFTPClient::getTextFile()
+    - SFTPClient::put()
+    - SFTPClient::putFile()
     - SFTPClient::retrieveFile()
+    - SFTPClient::transferFile()
 */
 binary SFTPClient::getFile(string path, timeout timeout = 60s) {
    return myself->sftpGetFile(path->getBuffer(), (int)timeout, xsink);
@@ -290,12 +322,17 @@ binary SFTPClient::getFile(string path, timeout timeout = 60s) {
     @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
     @param encoding an optional file encoding/character set. Qore default encoding is used if not set.
 
+    @throw SFTPCLIENT-GETTEXTFILE-ERROR error retrieving SFTP data
     @throw SFTPCLIENT-TIMEOUT timeout in network operation
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
 
     @see
+    - SFTPClient::get()
     - SFTPClient::getFile()
+    - SFTPClient::put()
+    - SFTPClient::putFile()
     - SFTPClient::retrieveFile()
+    - SFTPClient::transferFile()
 */
 string SFTPClient::getTextFile(string path, timeout timeout = 60s, *string encoding) {
    const QoreEncoding *qe = encoding ? QEM.findCreate(encoding) : QCS_DEFAULT;
@@ -314,43 +351,22 @@ string SFTPClient::getTextFile(string path, timeout timeout = 60s, *string encod
 
     @return the number of bytes transferred
 
+    @throw SFTPCLIENT-RETRIEVEFILE-ERROR error retrieving SFTP data
     @throw SFTPCLIENT-TIMEOUT timeout in network operation
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
 
     @see
+    - SFTPClient::get()
     - SFTPClient::getFile()
     - SFTPClient::getTextFile()
+    - SFTPClient::put()
+    - SFTPClient::putFile()
+    - SFTPClient::transferFile()
 
     @since ssh2 1.0
 */
 int SFTPClient::retrieveFile(string remote_path, string local_path, timeout timeout = 60s, int mode = 0644) [dom=FILESYSTEM] {
    return myself->sftpRetrieveFile(remote_path->getBuffer(), local_path->getBuffer(), (int)timeout, mode, xsink);
-}
-
-//! Retrieves a remote file and writes its content to an OutputStream; throws an exception if any errors occur
-/** @par Example:
-    @code{.py} sftpclient.get("file.bin", outputStream); @endcode
-
-    If a connection has not yet been established, it is implicitly attempted here before executing the method.
-
-    @param remote_path the remote pathname of the file to retrieve
-    @param os the output stream to write to
-    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
-
-    @return the number of bytes transferred
-
-    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
-    @throw SFTPCLIENT-TIMEOUT timeout in network operation
-
-    @see
-    - SFTPClient::getFile()
-    - SFTPClient::getTextFile()
-
-    @since ssh2 1.1
-*/
-int SFTPClient::get(string remote_path, Qore::OutputStream[OutputStream] os, timeout timeout = 60s) {
-   SimpleRefHolder<OutputStream> osHolder(os);
-   return myself->sftpGet(remote_path->getBuffer(), os, (int) timeout, xsink);
 }
 
 //! Saves a file on the remote server from a binary argument and returns the number of bytes sent; throws an exception if any errors occur
@@ -366,12 +382,15 @@ int SFTPClient::get(string remote_path, Qore::OutputStream[OutputStream] os, tim
 
     @return the number of bytes actually sent
 
+    @throw SFTPCLIENT-PUTFILE-ERROR error sending SFTP data
     @throw SFTPCLIENT-TIMEOUT timeout in network operation
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
 
     @see
+    - SFTPClient::get()
     - SFTPClient::getFile()
     - SFTPClient::getTextFile()
+    - SFTPClient::put()
     - SFTPClient::retrieveFile()
     - SFTPClient::transferFile()
 */
@@ -382,7 +401,7 @@ int SFTPClient::putFile(binary bin, string path, int mode = 0644, timeout timeou
 
 //! Saves a file on the remote server from a string argument and returns the number of bytes sent; throws an exception if any errors occur
 /** @par Example:
-    @code{.py} int size = sftpclient.putFile(str, "file.bin", 0600); @endcode
+    @code{.py} int size = sftpclient.putFile(str, filepath, 0600); @endcode
 
     If a connection has not yet been established, it is implicitly attempted here before executing the method.
 
@@ -393,12 +412,15 @@ int SFTPClient::putFile(binary bin, string path, int mode = 0644, timeout timeou
 
     @return the number of bytes actually sent
 
+    @throw SFTPCLIENT-PUTFILE-ERROR error sending SFTP data
     @throw SFTPCLIENT-TIMEOUT timeout in network operation
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
 
     @see
+    - SFTPClient::get()
     - SFTPClient::getFile()
     - SFTPClient::getTextFile()
+    - SFTPClient::put()
     - SFTPClient::retrieveFile()
     - SFTPClient::transferFile()
 */
@@ -409,7 +431,7 @@ int SFTPClient::putFile(string data, string path, int mode = 0644, timeout timeo
 
 //! Transfers a local file to the remote server and returns the number of bytes sent; throws an exception if any errors occur
 /** @par Example:
-    @code{.py} int size = sftpclient.putFile(str, "file.bin", 0600); @endcode
+    @code{.py} int size = sftpclient.transferFile(local_filepath, remote_filepath, 0600); @endcode
 
     If a connection has not yet been established, it is implicitly attempted here before executing the method.
 
@@ -424,6 +446,10 @@ int SFTPClient::putFile(string data, string path, int mode = 0644, timeout timeo
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
 
     @see
+    - SFTPClient::get()
+    - SFTPClient::getFile()
+    - SFTPClient::getTextFile()
+    - SFTPClient::put()
     - SFTPClient::putFile()
     - SFTPClient::retrieveFile()
 
@@ -451,8 +477,12 @@ int SFTPClient::transferFile(string local_path, string remote_path, timeout time
     @throw SFTPCLIENT-TIMEOUT timeout in network operation
 
     @see
+    - SFTPClient::get()
+    - SFTPClient::getFile()
+    - SFTPClient::getTextFile()
     - SFTPClient::putFile()
     - SFTPClient::retrieveFile()
+    - SFTPClient::transferFile()
 
     @since ssh2 1.1
 */
