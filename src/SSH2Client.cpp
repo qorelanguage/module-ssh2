@@ -475,15 +475,17 @@ int SSH2Client::ssh_connect_unlocked(int timeout_ms, ExceptionSink *xsink = 0) {
 
    assert(!sshauthenticatedwith);
 
-   printd(5, "userauthlist: %s\n", userauthlist);
+   printd(5, "userauthlist: %s\n", userauthlist ? userauthlist : "n/a");
 
    // set flags for use with authentification
-   if (strstr(userauthlist, "publickey"))
-      auth_pw |= QAUTH_PUBLICKEY;
-   if (strstr(userauthlist, "password"))
-      auth_pw |= QAUTH_PASSWORD;
-   if (strstr(userauthlist, "keyboard-interactive"))
-      auth_pw |= QAUTH_KEYBOARD_INTERACTIVE;
+   if (userauthlist) {
+      if (strstr(userauthlist, "publickey"))
+         auth_pw |= QAUTH_PUBLICKEY;
+      if (strstr(userauthlist, "password"))
+         auth_pw |= QAUTH_PASSWORD;
+      if (strstr(userauthlist, "keyboard-interactive"))
+         auth_pw |= QAUTH_KEYBOARD_INTERACTIVE;
+   }
       
    // try auth 
    // try publickey if available
