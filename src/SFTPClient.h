@@ -7,7 +7,7 @@
   Qore Programming Language
 
   Copyright (C) 2009 Wolfgang Ritzinger
-  Copyright (C) 2010 - 2015 Qore Technologies, sro
+  Copyright (C) 2010 - 2016 Qore Technologies, sro
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -45,9 +45,12 @@ DLLLOCAL extern qore_classid_t CID_SFTP_CLIENT;
 // the mask for user/group/other permissions
 #define SFTP_UGOMASK ((unsigned long)(LIBSSH2_SFTP_S_IRWXU | LIBSSH2_SFTP_S_IRWXG | LIBSSH2_SFTP_S_IRWXO))
 
+// SFTP blocksize
+#define SFTP_BLOCK 16384
+
 class SFTPClient;
 
-class QSftpHelper {
+class QSftpHelper : public AbstractDisconnectionHelper {
 private:
    LIBSSH2_SFTP_HANDLE* sftp_handle;
    SFTPClient* client;
@@ -86,12 +89,17 @@ public:
       if (sftp_handle)
          closeIntern();
    }
-   
+
    DLLLOCAL int close() {
       return closeIntern();
    }
 
    DLLLOCAL void err(const char* fmt, ...);
+
+   DLLLOCAL virtual void preDisconnect() {
+      if (sftp_handle)
+         closeIntern();
+   }
 };
 
 class SFTPClient : public SSH2Client {
@@ -102,13 +110,14 @@ protected:
    DLLLOCAL virtual ~SFTPClient();
    DLLLOCAL virtual void deref(ExceptionSink*);
 
-   DLLLOCAL int sftp_connected_unlocked();
-   DLLLOCAL QoreStringNode *sftp_path_unlocked();
-   DLLLOCAL int sftp_connect_unlocked(int timeout_ms, ExceptionSink* xsink);
-   DLLLOCAL int sftp_disconnect_unlocked(bool force, int timeout_ms = DEFAULT_TIMEOUT, ExceptionSink* xsink = 0);
+   DLLLOCAL int sftpConnectedUnlocked();
+   DLLLOCAL QoreStringNode *sftpPathUnlocked();
+   DLLLOCAL int sftpConnectUnlocked(int timeout_ms, ExceptionSink* xsink);
 
-   DLLLOCAL void do_session_err_unlocked(ExceptionSink* xsink, QoreStringNode* desc);
-   DLLLOCAL void do_shutdown(int timeout_ms = DEFAULT_TIMEOUT, ExceptionSink* xsink = 0);
+   DLLLOCAL void doSessionErrUnlocked(ExceptionSink* xsink, QoreStringNode* desc);
+   DLLLOCAL void doShutdown(int timeout_ms = DEFAULT_TIMEOUT_MS, ExceptionSink* xsink = 0);
+
+   DLLLOCAL virtual int disconnectUnlocked(bool force, int timeout_ms = DEFAULT_TIMEOUT_MS, AbstractDisconnectionHelper* adh = 0, ExceptionSink* xsink = 0);
 
 public:
    // session props
@@ -120,36 +129,36 @@ public:
    DLLLOCAL SFTPClient(QoreURL& url, const uint32_t = 0);
 
    DLLLOCAL virtual int connect(int timeout_ms, ExceptionSink* xsink) {
-      return sftp_connect(timeout_ms, xsink);
-   }
-   
-   DLLLOCAL virtual int disconnect(bool force = false, int timeout_ms = DEFAULT_TIMEOUT, ExceptionSink* xsink = 0) {
-      return sftp_disconnect(force, timeout_ms, xsink);
+      return sftpConnect(timeout_ms, xsink);
    }
 
-   DLLLOCAL int sftp_disconnect(bool force = false, int timeout_ms = DEFAULT_TIMEOUT, ExceptionSink* xsink = 0);
-   DLLLOCAL int sftp_connect(int timeout_ms, ExceptionSink* xsink = 0);
+   DLLLOCAL int sftpConnect(int timeout_ms, ExceptionSink* xsink = 0);
 
-   DLLLOCAL int sftp_connected();
+   DLLLOCAL int sftpConnected();
 
-   //DLLLOCAL QoreStringNode *sftp_path(ExceptionSink* xsink);
-   DLLLOCAL QoreStringNode *sftp_path();
-   DLLLOCAL QoreStringNode *sftp_chdir(const char* nwd, int timeout_ms, ExceptionSink* xsink);
-   DLLLOCAL QoreHashNode *sftp_list(const char* path, int timeout_ms, ExceptionSink* xsink);
-   DLLLOCAL QoreListNode *sftp_list_full(const char* path, int timeout_ms, ExceptionSink* xsink);
-   DLLLOCAL int sftp_mkdir(const char* dir, const int mode, int timeout_ms, ExceptionSink* xsink);
-   DLLLOCAL int sftp_rmdir(const char* dir, int timeout_ms, ExceptionSink* xsink);
-   DLLLOCAL int sftp_rename(const char* from, const char* to, int timeout_ms, ExceptionSink* xsink);
-   DLLLOCAL int sftp_unlink(const char* file, int timeout_ms, ExceptionSink* xsink);
-   DLLLOCAL int sftp_chmod(const char* file, const int mode, int timeout_ms, ExceptionSink* xsink);
+   //DLLLOCAL QoreStringNode *sftpPath(ExceptionSink* xsink);
+   DLLLOCAL QoreStringNode *sftpPath();
+   DLLLOCAL QoreStringNode *sftpChdir(const char* nwd, int timeout_ms, ExceptionSink* xsink);
+   DLLLOCAL QoreHashNode *sftpList(const char* path, int timeout_ms, ExceptionSink* xsink);
+   DLLLOCAL QoreListNode *sftpListFull(const char* path, int timeout_ms, ExceptionSink* xsink);
+   DLLLOCAL int sftpMkdir(const char* dir, const int mode, int timeout_ms, ExceptionSink* xsink);
+   DLLLOCAL int sftpRmdir(const char* dir, int timeout_ms, ExceptionSink* xsink);
+   DLLLOCAL int sftpRename(const char* from, const char* to, int timeout_ms, ExceptionSink* xsink);
+   DLLLOCAL int sftpUnlink(const char* file, int timeout_ms, ExceptionSink* xsink);
+   DLLLOCAL int sftpChmod(const char* file, const int mode, int timeout_ms, ExceptionSink* xsink);
 
-   DLLLOCAL BinaryNode *sftp_getFile(const char* file, int timeout_ms, ExceptionSink* xsink);
-   DLLLOCAL QoreStringNode *sftp_getTextFile(const char* file, int timeout_ms, const QoreEncoding *encoding, ExceptionSink* xsink);
-   DLLLOCAL qore_size_t sftp_putFile(const char* data, qore_size_t len, const char* fname, int mode, int timeout_ms, ExceptionSink* xsink);
+   DLLLOCAL BinaryNode *sftpGetFile(const char* file, int timeout_ms, ExceptionSink* xsink);
+   DLLLOCAL QoreStringNode *sftpGetTextFile(const char* file, int timeout_ms, const QoreEncoding *encoding, ExceptionSink* xsink);
+   DLLLOCAL size_t sftpPutFile(const char* data, size_t len, const char* fname, int mode, int timeout_ms, ExceptionSink* xsink);
 
-   DLLLOCAL int sftp_getAttributes(const char* fname, LIBSSH2_SFTP_ATTRIBUTES *attrs, int timeout_ms, ExceptionSink* xsink);
+   // returns the number of bytes transferred or -1 if an error occurred
+   DLLLOCAL int64 sftpRetrieveFile(const char* remote_file, const char* local_file, int timeout_ms, int mode, ExceptionSink* xsink);
+   // returns the number of bytes transferred or -1 if an error occurred
+   DLLLOCAL int64 sftpTransferFile(const char* local_path, const char* remote_path, int mode, int timeout_ms, ExceptionSink* xsink);
 
-   DLLLOCAL QoreHashNode *sftp_info();
+   DLLLOCAL int sftpGetAttributes(const char* fname, LIBSSH2_SFTP_ATTRIBUTES *attrs, int timeout_ms, ExceptionSink* xsink);
+
+   DLLLOCAL QoreHashNode *sftpInfo();
 };
 
 // maybe this should go to ssh2-module.h?
@@ -170,4 +179,3 @@ static inline std::string absolute_filename(const SFTPClient* me, const char* f)
 }
 
 #endif // _QORE_SFTPCLIENT_H
-

@@ -29,12 +29,19 @@ src/*.dox.h
 src/qc_*.cpp
 src/ql_*.cpp
 src/QC_*.cpp
+build/
 
-# temp doxygen files
+# Eclipse files
+.cproject
+.project
+.settings/
+
+# ignore temp doxygen files
 docs/*.tag
+docs/ssh2/
 docs/SftpPoller/
 docs/doxyfile
-docs/mainpage.doxygen
+docs/*.doxygen
 docs/qlib/Doxyfile.*
-docs/qlib/*.dox.h
-docs/ssh2/
+*.dox.h
+docs/*.tag

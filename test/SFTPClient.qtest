@@ -1,0 +1,153 @@
+#!/usr/bin/env qore
+# -*- mode: qore; indent-tabs-mode: nil -*-
+
+%new-style
+%require-types
+%strict-args
+%enable-all-warnings
+
+%requires ssh2 >= 1.1
+
+%requires Util
+%requires QUnit
+
+%exec-class SFTPClientTest
+
+class SFTPClientTest inherits QUnit::Test {
+    public {}
+
+    private {
+        timeout timeout = 10s;
+        SFTPClient sc;
+
+        const FileContents = "hi there ýčšěáýžšěčéářčě";
+        const BinContents = binary(FileContents);
+        const FileLen = FileContents.size();
+        const FileMode = 0755;
+
+        const FileNameLen = 40;
+
+        const MyOpts = Opts + (
+            "privkey": "k,private-key=s",
+            "timeout": "T,timeout=i",
+            );
+
+        const ColumnOffset = 25;
+    }
+
+    constructor() : Test("SFTPClientTest", "1.1", \ARGV, MyOpts) {
+        string uri = shift ARGV ?? sprintf("%s@localhost", getusername());
+
+        sc = new SFTPClient(uri);
+        if (m_options.privkey) {
+            sc.setKeys(m_options.privkey);
+        }
+        else {
+            if (PlatformOS == "Windows")
+                exit(0);
+
+            string sshdir = `echo -n ~/.ssh`;
+            if (is_file(sshdir + "/id_rsa"))
+                sc.setKeys(sshdir + "/id_rsa");
+            else if (is_file(sshdir + "/id_dsa"))
+                sc.setKeys(sshdir + "/id_dsa");
+        }
+
+        addTestCase("SFTPClientTests", \sftpTests());
+
+        set_return_value(main());
+    }
+
+    sftpTests() {
+        string file = get_random_string();
+        string fn = "/tmp/" + file;
+
+        sc.connect();
+        hash info = sc.info();
+
+        if (m_options.verbose)
+            stdout.printf("SFTP %s@%s:%d auth: %y, hostkey: %y, crypt_cs: %y, tmp: %s\n", info.ssh2user, info.ssh2host, info.ssh2port, info.authenticated, info.methods.HOSTKEY, info.methods.CRYPT_CS, fn);
+
+        testAssertionValue("SFTPClient::info()", info.connected, True);
+        testAssertionValue("SFTPClient::list()", sc.list(NOTHING, timeout).type(), Type::Hash);
+        testAssertionValue("SFTPClient::listFull()", sc.listFull(NOTHING, timeout).type(), Type::List);
+
+        # create a file: seems that sshd ignores the mode when creating a file
+        int rc = sc.putFile(FileContents, fn, NOTHING, timeout);
+        testAssertionValue("SFTPClient::putFile()", rc, FileContents.size());
+
+        sc.chmod(fn, FileMode, timeout);
+        info = sc.stat(fn, timeout);
+        testAssertionValue("SFTPClient::stat() size", info.size, FileContents.size());
+        testAssertionValue("SFTPClient::stat() mode", info.mode & 0777, FileMode);
+        testAssertionValue("SFTPClient::stat() permissions", info.permissions, "-rwxr-xr-x");
+
+        testAssertionValue("(before getFile()) SFTPClient::chdir()", realpath("/tmp"), sc.chdir("/tmp"));
+
+        # retrieve the file as a binary object
+        binary b = sc.getFile(basename(fn), timeout);
+        testAssertionValue("SFTPClient::getFile()", b, BinContents);
+
+        # retrieve the file as a string
+        string s = sc.getTextFile(fn, timeout);
+        testAssertionValue("SFTPClient::getTextFile()", s, FileContents);
+
+        # test various encodings
+        string sutf8 = sc.getTextFile(fn, timeout, "utf8");
+        testAssertionValue("SFTPClient::getTextFile(utf8)", sutf8.encoding(), "UTF-8");
+        string siso88592 = sc.getTextFile(fn, timeout, "iso-8859-2");
+        testAssertionValue("SFTPClient::getTextFile(iso-8859-2)", siso88592.encoding(), "ISO-8859-2");
+
+        {
+            string rfn = sprintf("/%s/%s", tmp_location(), get_random_string());
+            rc = sc.transferFile(fn, rfn, timeout);
+            testAssertionValue("SFTPClient::transferFile()", rc, FileContents.size());
+
+            string lfn = sprintf("%s/%s", tmp_location(), get_random_string());
+            # retrieve the file to the fs
+            int len = sc.retrieveFile(rfn, lfn);
+            on_exit unlink(lfn);
+            testAssertionValue("SFTPClient::retrieveFile()", ReadOnlyFile::readTextFile(lfn), FileContents);
+            assertEq(FileContents.size(), len);
+
+            # delete file
+            sc.removeFile(rfn, timeout);
+            testAssertionValue("SFTPClient::removeFile() 1", sc.stat(rfn, timeout));
+        }
+
+        # make new file name
+        string nfn = fn + ".new";
+
+        # move (rename) file
+        sc.rename(fn, nfn, timeout);
+        info = sc.stat(nfn, timeout);
+        testAssertionValue("SFTPClient::rename() and SFTPClient::stat() size", info.size, FileContents.size());
+        testAssertionValue("SFTPClient::stat() on non-existent file", sc.stat(fn, timeout));
+
+        # delete file
+        sc.removeFile(nfn, timeout);
+        testAssertionValue("SFTPClient::removeFile() 2", sc.stat(nfn, timeout));
+
+        sc.mkdir(fn, NOTHING, timeout);
+        info = sc.stat(fn, timeout);
+
+        # move (rename) directory
+        sc.rename(fn, nfn, timeout);
+        info = sc.stat(nfn, timeout);
+        testAssertionValue("SFTPClient::rename() and SFTPClient::stat() on dir", info.atime.type(), Type::Date);
+        testAssertionValue("SFTPClient::stat() on non-existent file", sc.stat(fn, timeout));
+
+        string np = sc.chdir("/tmp", timeout);
+        testAssertionValue("SFTPClient::chdir()", realpath("/tmp"), np);
+
+        # remove directory
+        sc.rmdir(file + ".new", timeout);
+        testAssertionValue("SFTPClient::rmdir()", sc.stat(nfn, timeout));
+    }
+
+    private usageIntern() {
+        TestReporter::usageIntern(ColumnOffset);
+	printOption("-k,--private-key=ARG", "set private key to use for authentication", ColumnOffset);
+        printOption("-T,--timeout=ARG", sprintf("set timeout in seconds (def: %ds)", timeout), ColumnOffset);
+    }
+}

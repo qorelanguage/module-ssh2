@@ -6,6 +6,7 @@
   libssh2 ssh2 channel integration into qore
 
   Copyright 2010 Wolfgang Ritzinger
+  Copyright 2010 - 2017 Qore Technologies, s.r.o.
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -25,7 +26,7 @@
 #include "SSH2Channel.h"
 
 //! allows Qore programs to send and receive data through an ssh2 channel
-/** 
+/**
  */
 qclass SSH2Channel [arg=SSH2Channel* c; ns=Qore::SSH2; dom=NETWORK];
 
@@ -53,16 +54,17 @@ SSH2Channel::destructor() {
 }
 
 //! Sets an environment variable on the channel
-/** @param var the environment variable to set
+/** @par Example:
+    @code{.py} chan.setenv("", "", 30s); @endcode
+
+    @param var the environment variable to set
     @param value the value to set
     @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
 
     @throw SSH2CHANNEL-SETENV-ERROR libssh2 reported an error on the channel
     @throw SSH2CHANNEL-ERROR the channel has been closed
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
-
-    @par Example:
-    @code $chan.setenv("", "", 30s); @endcode
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
 nothing SSH2Channel::setenv(string var, string value, timeout timeout = -1) {
    c->setenv(var->getBuffer(), value->getBuffer(), timeout, xsink);
@@ -70,7 +72,10 @@ nothing SSH2Channel::setenv(string var, string value, timeout timeout = -1) {
 }
 
 //! Requests a terminal to be allocated to the channel
-/** @param term terminal emulation requested
+/** @par Example:
+    @code{.py} chan.requestPty("vt100"); @endcode
+
+    @param term terminal emulation requested
     @param modes terminal mode modifier values
     @param width width of the pty in characters
     @param height height of the pty in characters
@@ -81,9 +86,7 @@ nothing SSH2Channel::setenv(string var, string value, timeout timeout = -1) {
     @throw SSH2CHANNEL-REQUESTPTY-ERROR negative terminal or pixel width, height passed
     @throw SSH2CHANNEL-ERROR the channel has been closed
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
-
-    @par Example:
-    @code $chan.requestPty("vt100"); @endcode
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
 nothing SSH2Channel::requestPty(string term = "vanilla", string modes = "", softint width = LIBSSH2_TERM_WIDTH, softint height = LIBSSH2_TERM_HEIGHT, softint width_px = LIBSSH2_TERM_WIDTH_PX, softint height_px = LIBSSH2_TERM_HEIGHT_PX, timeout timeout = -1) {
    static const char *SSH2CHANNEL_REQUESTPTY_ERR = "SSH2CHANNEL-REQUESTPTY-ERROR";
@@ -110,26 +113,27 @@ nothing SSH2Channel::requestPty(string term = "vanilla", string modes = "", soft
 }
 
 //! Request a login shell to be started for the channel
-/** @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
+/** @par Example:
+    @code{.py} chan.shell(30s); @endcode
+
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
 
     @throw SSH2CHANNEL-SHELL-ERROR server returned an error while waiting for a response
     @throw SSH2CHANNEL-ERROR the channel has been closed
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
-
-    @par Example:
-    @code $chan.shell(30s); @endcode
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
 nothing SSH2Channel::shell(timeout timeout = -1) {
    c->shell(xsink, timeout);
 }
 
 //! returns \c True if an end of file condition is flagged on an open channel
-/** @return \c True if an end of file condition is flagged on an open channel, \c False if not
+/** @par Example:
+    @code{.py} bool b = chan.eof(); @endcode
+
+    @return \c True if an end of file condition is flagged on an open channel, \c False if not
 
     @throw SSH2CHANNEL-ERROR the channel has been closed
-
-    @par Example:
-    @code my bool $b = $chan.eof(); @endcode
  */
 bool SSH2Channel::eof() {
    bool b = c->eof(xsink);
@@ -137,75 +141,81 @@ bool SSH2Channel::eof() {
 }
 
 //! Informs the remote end that we are closing the connection
-/** @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
+/** @par Example:
+    @code{.py} chan.sendEof(30s); @endcode
+
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
 
     @throw SSH2CHANNEL-SENDEOF-ERROR server returned an error while waiting for a response
     @throw SSH2CHANNEL-ERROR the channel has been closed
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
-
-    @par Example:
-    @code $chan.sendEof(30s); @endcode
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
 nothing SSH2Channel::sendEof(timeout timeout = -1) {
    c->sendEof(xsink, timeout);
 }
 
 //! Wait for the remote end to acknowledge an EOF request
-/** @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
+/** @par Example:
+    @code{.py} chan.waitEof(30s); @endcode
+
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
 
     @throw SSH2CHANNEL-WAITEOF-ERROR server returned an error while waiting for a response
     @throw SSH2CHANNEL-ERROR the channel has been closed
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
-
-    @par Example:
-    @code $chan.waitEof(30s); @endcode
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
 nothing SSH2Channel::waitEof(timeout timeout = -1) {
    c->waitEof(xsink, timeout);
 }
 
 //! Executes a command on the channel
-/** use SSH2Channel::read() to read the output
+/** @par Example:
+    @code{.py} chan.exec("ls -l", 30s); @endcode
+
+    use SSH2Channel::read() to read the output
+
     @param command the command to run
     @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
 
     @throw SSH2CHANNEL-EXEC-ERROR libssh2 reported an error on the channel while waiting for confirmation from the server
     @throw SSH2CHANNEL-ERROR the channel has been closed
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
-
-    @par Example:
-    @code $chan.exec("ls -l", 30s); @endcode
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
 nothing SSH2Channel::exec(string command, timeout timeout = -1) {
    c->exec(command->getBuffer(), timeout, xsink);
 }
 
 //! Executes a command on the channel as a subsystem
-/** use SSH2Channel::read() to read the output
+/** @par Example:
+    @code{.py} chan.subsystem("ls -l", 30s); @endcode
+
+    use SSH2Channel::read() to read the output
     @param command the command to run as a subsystem
     @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
 
     @throw SSH2CHANNEL-SUBSYSTEM-ERROR libssh2 reported an error on the channel while waiting for confirmation from the server
     @throw SSH2CHANNEL-ERROR the channel has been closed
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
-
-    @par Example:
-    @code $chan.subsystem("ls -l", 30s); @endcode
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
 nothing SSH2Channel::subsystem(string command, timeout timeout = -1) {
    c->subsystem(command->getBuffer(), timeout, xsink);
 }
 
 //! Reads data on the given stream and returns it as a string
-/** @param stream_id the stream ID to read (0 is the default, meaning \c stdin, 1 is for \c stderr
+/** @par Example:
+    @code{.py} string str = chan.read(0, 30s); @endcode
+
+    @param stream_id the stream ID to read (0 is the default, meaning \c stdin, 1 is for \c stderr
     @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
 
     @throw SSH2CHANNEL-READ-ERROR expecting non-negative integer for stream id as optional first argument to SSH2Channel::read(); use 0 for stdin, 1 for stderr; libssh2 reported an error on the channel while waiting for data from the server
     @throw SSH2CHANNEL-ERROR the channel has been closed
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
-
-    @par Example:
-    @code my string $str = $chan.read(0, 30s); @endcode
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
 string SSH2Channel::read(softint stream_id = 0, timeout timeout = 10000) {
    if (stream_id < 0) {
@@ -216,15 +226,16 @@ string SSH2Channel::read(softint stream_id = 0, timeout timeout = 10000) {
 }
 
 //! Reads data on the given stream and returns it as a binary object
-/** @param stream_id the stream ID to read (0 is the default, meaning \c stdin, 1 is for \c stderr
+/** @par Example:
+    @code{.py} string str = chan.read(0, 30s); @endcode
+
+    @param stream_id the stream ID to read (0 is the default, meaning \c stdin, 1 is for \c stderr
     @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
 
     @throw SSH2CHANNEL-READBINARY-ERROR expecting non-negative integer for stream id as optional first argument to SSH2Channel::read(); use 0 for stdin, 1 for stderr; libssh2 reported an error on the channel while waiting for data from the server
     @throw SSH2CHANNEL-ERROR the channel has been closed
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
-
-    @par Example:
-    @code my string $str = $chan.read(0, 30s); @endcode
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
 binary SSH2Channel::readBinary(softint stream_id = 0, timeout timeout = 10000) {
    if (stream_id < 0) {
@@ -235,18 +246,19 @@ binary SSH2Channel::readBinary(softint stream_id = 0, timeout timeout = 10000) {
 }
 
 //! Reads a block of data of a given size on the given stream and returns it as a string
-/** @param size the maximum size of the block of data to read in bytes
+/** @par Example:
+    @code{.py} string str = chan.readBlock(4096, 0, 30s); @endcode
+
+    @param size the maximum size of the block of data to read in bytes
     @param stream_id the stream ID to read (0 is the default, meaning \c stdin, 1 is for \c stderr
     @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
 
     @return a string representing the block read; note that if a multibyte character encoding is being read and the end of the block lands in the middle of a character, then the string returned (or the next string read) could have invalid bytes if an attempt is made to use the string as-is
 
     @throw SSH2CHANNEL-READBLOCK-ERROR zero or negative value passed for block size; negative value passed for stream id; libssh2 reported an error on the channel while waiting for data from the server
-    @throw SSH2CHANNEL-ERROR the channel has been closed; 
+    @throw SSH2CHANNEL-ERROR the channel has been closed;
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
-
-    @par Example:
-    @code my string $str = $chan.readBlock(4096, 0, 30s); @endcode
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
 string SSH2Channel::readBlock(softint size, softint stream_id = 0, timeout timeout = -1) {
    static const char *SSH2CHANNEL_READBLOCK_ERROR = "SSH2CHANNEL-READBLOCK-ERROR";
@@ -263,7 +275,10 @@ string SSH2Channel::readBlock(softint size, softint stream_id = 0, timeout timeo
 }
 
 //! Reads a block of data of a given size on the given stream and returns it as a binary object
-/** @param size the maximum size of the block of data to read in bytes
+/** @par Example:
+    @code{.py} binary b = chan.readBinaryBlock(4096, 0, 30s); @endcode
+
+    @param size the maximum size of the block of data to read in bytes
     @param stream_id the stream ID to read (0 is the default, meaning \c stdin, 1 is for \c stderr
     @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
 
@@ -272,9 +287,7 @@ string SSH2Channel::readBlock(softint size, softint stream_id = 0, timeout timeo
     @throw SSH2CHANNEL-READBLOCK-ERROR zero or negative value passed for block size; negative value passed for stream id; libssh2 reported an error on the channel while waiting for data from the server
     @throw SSH2CHANNEL-ERROR the channel has been closed
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
-
-    @par Example:
-    @code my binary $b = $chan.readBinaryBlock(4096, 0, 30s); @endcode
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
 binary SSH2Channel::readBinaryBlock(softint size, softint stream_id = 0, timeout timeout = -1) {
    static const char *SSH2CHANNEL_READBINARYBLOCK_ERROR = "SSH2CHANNEL-READBINARYBLOCK-ERROR";
@@ -290,27 +303,28 @@ binary SSH2Channel::readBinaryBlock(softint size, softint stream_id = 0, timeout
 }
 
 //! Writes data to a stream
-/** @param data the data to write; must be either a string or binary
+/** @par Example:
+    @code{.py} chan.write(data, 0, 30s); @endcode
+
+    @param data the data to write; must be either a string or binary
     @param stream_id the stream ID to write (0 is the default, 1 is for \c stderr)
     @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
 
     @throw SSH2CHANNEL-WRITE-ERROR invalid stream ID; libssh2 reported an error on the channel while waiting for a response from the server
     @throw SSH2CHANNEL-ERROR the channel has been closed
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
-
-    @par Example:
-    @code $chan.write($data, 0, 30s); @endcode
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
-nothing SSH2Channel::write(data data, softint stream_id = 0, timeout timeout = -1) {
+nothing SSH2Channel::write(data data, softint stream_id = 0, timeout timeout_ms = -1) {
    static const char *SSH2CHANNEL_WRITE_ERROR = "SSH2CHANNEL-WRITE-ERROR";
    const void *buf = 0;
    qore_size_t buflen;
 
-   qore_type_t t = data->getType();
+   qore_type_t t = data.getType();
 
    TempEncodingHelper tmp;
    if (t == NT_STRING) {
-      const QoreStringNode *str = reinterpret_cast<const QoreStringNode*>(data);
+      const QoreStringNode *str = data.get<const QoreStringNode>();
       tmp.set(str, c->getEncoding(), xsink);
       if (*xsink)
 	 return 0;
@@ -319,7 +333,7 @@ nothing SSH2Channel::write(data data, softint stream_id = 0, timeout timeout = -
       buflen = tmp->strlen();
    }
    else {
-      const BinaryNode *b = reinterpret_cast<const BinaryNode*>(data);
+      const BinaryNode *b = data.get<const BinaryNode>();
       buf = b->getPtr();
       buflen = b->size();
    }
@@ -329,57 +343,62 @@ nothing SSH2Channel::write(data data, softint stream_id = 0, timeout timeout = -
       return 0;
 
    if (stream_id < 0) {
-      xsink->raiseException(SSH2CHANNEL_WRITE_ERROR, "expecting non-negative integer for stream id as optional second argument to SSH2Channel::write(data $data, softint $streamid, $timeout), got "QLLD" instead; use 0 for stdin, 1 for stderr", stream_id);
+      xsink->raiseException(SSH2CHANNEL_WRITE_ERROR, "expecting non-negative integer for stream id as optional second argument to SSH2Channel::write(data data, softint streamid, timeout timeout_ms), got "QLLD" instead; use 0 for stdin, 1 for stderr", stream_id);
       return 0;
    }
 
-   c->write(xsink, buf, buflen, stream_id, timeout);
+   c->write(xsink, buf, buflen, stream_id, timeout_ms);
 }
 
 //! Closes the channel
-/** @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
+/** @par Example:
+    @code{.py} chan.close(30s); @endcode
+
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
 
     @throw SSH2CHANNEL-CLOSE-ERROR server returned an error while waiting for a response
     @throw SSH2CHANNEL-ERROR the channel has been closed
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
-
-    @par Example:
-    @code $chan.close(30s); @endcode
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
 nothing SSH2Channel::close(timeout timeout = -1) {
    c->close(xsink, timeout);
 }
 
 //! Wait for the remote end to acknowledge the close request
-/** @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
+/** @par Example:
+    @code{.py} chan.waitClosed(30s); @endcode
+
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
 
     @throw SSH2CHANNEL-WAITCLOSED-ERROR server returned an error while waiting for a response
     @throw SSH2CHANNEL-ERROR the channel has been closed
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
-
-    @par Example:
-    @code $chan.waitClosed(30s); @endcode
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
 nothing SSH2Channel::waitClosed(timeout timeout = -1) {
    c->waitClosed(xsink, timeout);
 }
 
 //! Returns the exit code raised by the process running on the remote host at the other end of the named channel
-/** Note that the exit status may not be available if the remote end has not yet set its status to closed
+/** @par Example:
+    @code{.py} int rc = chan.getExitStatus(); @endcode
+
+    Note that the exit status may not be available if the remote end has not yet set its status to closed
 
     @return the exit code raised by the process running on the remote host at the other end of the named channel
 
     @throw SSH2CHANNEL-ERROR the channel has been closed
-
-    @par Example:
-    @code my int $rc = $chan.getExitStatus(); @endcode
  */
 int SSH2Channel::getExitStatus() {
    return c->getExitStatus(xsink);
 }
 
 //! Request X11 forwarding on the channel
-/** @param screen_no the X11 screen number to forward
+/** @par Example:
+    @code{.py} chan.requestX11Forwarding(NOTHING, NOTHING, NOTHING, NOTHING, 30s); @endcode
+
+    @param screen_no the X11 screen number to forward
     @param single_connection set to True to forward only a single connection on the channel
     @param auth_proto the authorization protocol to use
     @param auth_cookie the authorization cookie to use
@@ -388,71 +407,72 @@ int SSH2Channel::getExitStatus() {
     @throw SSH2CHANNEL-REQUESTX11FORWARDING-ERROR invalid stream ID; libssh2 reported an error on the channel while waiting for data from the server
     @throw SSH2CHANNEL-ERROR the channel has been closed
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
-
-    @par Example:
-    @code $chan.requestX11Forwarding(NOTHING, NOTHING, NOTHING, NOTHING, 30s); @endcode
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
 nothing SSH2Channel::requestX11Forwarding(softint screen_no = 0, bool single_connection = False, string auth_proto = "", string auth_cookie = "", timeout timeout = -1) {
    c->requestX11Forwarding(xsink, (int)screen_no, single_connection, auth_proto->strlen() ? auth_proto->getBuffer() : 0, auth_cookie->strlen() ? auth_cookie->getBuffer() : 0, timeout);
 }
 
 //! Sets the default string encoding for the channel; all string data read from the channel will be tagged with the encoding given
-/** @param encoding the string encoding to set for the channel
+/** @par Example:
+    @code{.py} chan.setEncoding("utf8"); @endcode
 
-    @par Example:
-    @code $chan.setEncoding("utf8"); @endcode
+    @param encoding the string encoding to set for the channel
  */
 nothing SSH2Channel::setEncoding(string encoding) {
    c->setEncoding(QEM.findCreate(encoding));
 }
 
 //! Returns the name of the default string encoding of the channel
-/** @return the name of the default string encoding of the channel
+/** @par Example:
+    @code{.py} string enc = chan.getEncoding(); @endcode
 
-    @par Example:
-    @code my string $enc = $chan.getEncoding(); @endcode
+    @return the name of the default string encoding of the channel
  */
 string SSH2Channel::getEncoding() [flags=CONSTANT] {
    return new QoreStringNode(c->getEncoding()->getCode());
 }
 
 //! Queue data in substreams (i.e. \c stderr, etc) for eventual reading
-/** @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
+/** @par Example:
+    @code{.py} chan.extendedDataNormal(30s); @endcode
+
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
 
     @throw SSH2CHANNEL-EXTENDEDDATANORMAL-ERROR server returned an error while waiting for a response
     @throw SSH2CHANNEL-ERROR the channel has been closed
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
-
-    @par Example:
-    @code $chan.extendedDataNormal(30s); @endcode
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
 nothing SSH2Channel::extendedDataNormal(timeout timeout = -1) {
    c->extendedDataNormal(xsink, timeout);
 }
 
 //! Merge substreams (i.e. \c stderr, etc) into stream 0 for reading
-/** @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
+/** @par Example:
+    @code{.py} chan.extendedDataMerge(30s); @endcode
+
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
 
     @throw SSH2CHANNEL-EXTENDEDDATAMERGE-ERROR server returned an error while waiting for a response
     @throw SSH2CHANNEL-ERROR the channel has been closed
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
-
-    @par Example:
-    @code $chan.extendedDataMerge(30s); @endcode
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
 nothing SSH2Channel::extendedDataMerge(timeout timeout = -1) {
    c->extendedDataMerge(xsink, timeout);
 }
 
 //! Discard all data in substreams (i.e. stderr, etc) immediately when it arrives
-/** @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
+/** @par Example:
+    @code{.py} chan.extendedDataIgnore(30s); @endcode
+
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
 
     @throw SSH2CHANNEL-EXTENDEDDATAIGNORE-ERROR server returned an error while waiting for a response
     @throw SSH2CHANNEL-ERROR the channel has been closed
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
-
-    @par Example:
-    @code $chan.extendedDataIgnore(30s); @endcode
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
 nothing SSH2Channel::extendedDataIgnore(timeout timeout = -1) {
    c->extendedDataIgnore(xsink, timeout);

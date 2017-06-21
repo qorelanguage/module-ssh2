@@ -1,4 +1,4 @@
-%define mod_ver 1.0
+%define mod_ver 1.1
 
 %{?_datarootdir: %global mydatarootdir %_datarootdir}
 %{!?_datarootdir: %global mydatarootdir /usr/share}
@@ -66,10 +66,7 @@ SSH2 module for the Qore Programming Language.
 
 %prep
 %setup -q
-%ifarch x86_64 ppc64 x390x
-c64=--enable-64bit
-%endif
-./configure RPM_OPT_FLAGS="$RPM_OPT_FLAGS" --prefix=/usr --disable-debug $c64
+./configure RPM_OPT_FLAGS="$RPM_OPT_FLAGS" --prefix=/usr --disable-debug
 
 %build
 %{__make}
@@ -88,7 +85,7 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root,-)
 %{module_dir}
 %{user_module_dir}
-%doc COPYING.LGPL COPYING.MIT README RELEASE-NOTES ChangeLog AUTHORS
+%doc COPYING.LGPL COPYING.MIT README RELEASE-NOTES AUTHORS
 
 %package doc
 Summary: SSH2 module for Qore
@@ -102,10 +99,13 @@ This RPM provides API documentation, test and example programs
 
 %files doc
 %defattr(-,root,root,-)
-%doc docs/ssh2/html test/ 
+%doc docs/ssh2/ docs/SftpPoller/ test/
 
 %changelog
-* Sun Dec 7 2013 David Nichols <david@qore.org> - 1.0
+* Thu Feb 2 2017 Pavel Kvetons <pavel.kveton@qoretechnologies.org> - 1.1
+- updated to version 1.1
+
+* Sat Dec 7 2013 David Nichols <david@qore.org> - 1.0
 - updated to version 1.0
 
 * Fri Aug 16 2013 David Nichols <david@qore.org> - 0.9.9
@@ -114,7 +114,7 @@ This RPM provides API documentation, test and example programs
 * Mon Aug 5 2013 David Nichols <david@qore.org> - 0.9.8.1
 - updated to version 0.9.8.1
 
-* Mon Mar 12 2013 David Nichols <david@qore.org> - 0.9.8
+* Tue Mar 12 2013 David Nichols <david@qore.org> - 0.9.8
 - updated to version 0.9.8
 
 * Fri Jun 8 2012 David Nichols <david@qore.org> - 0.9.7

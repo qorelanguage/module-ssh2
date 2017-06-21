@@ -24,7 +24,7 @@
 
 #define QORE_SSH2_H
 
-#include "../config.h"
+#include <config.h>
 #include <qore/Qore.h>
 
 #include <libssh2.h>

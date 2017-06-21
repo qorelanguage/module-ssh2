@@ -1,7 +1,13 @@
 MNAME=ssh2
 
+if COND_MINGW
+QPP=qpp_native
+else
+QPP=qpp
+endif
+
 .qpp.cpp:
-	qpp $<
+	$(QPP) -V $<
 
 GENERATED_SRC = QC_SSH2Base.cpp QC_SSH2Client.cpp QC_SSH2Channel.cpp QC_SFTPClient.cpp
 CLEANFILES = $(GENERATED_SRC)
@@ -18,7 +24,7 @@ lib_LTLIBRARIES = ssh2.la
 ssh2_la_SOURCES = $(SSH2_SOURCES)
 ssh2_la_LDFLAGS = -module -avoid-version $(QORE_LDFLAGS) $(LIBSSH2_LDFLAGS)
 
-AM_CPPFLAGS = $(LIBSSH2_CPPFLAGS) $(QORE_CPPFLAGS)
+AM_CPPFLAGS = $(LIBSSH2_CPPFLAGS) $(QORE_CPPFLAGS) $(OPENSSL_CPPFLAGS)
 
 if COND_PROFILE
 AM_CXXFLAGS = -g -pg
