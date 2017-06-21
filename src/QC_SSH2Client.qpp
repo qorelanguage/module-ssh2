@@ -168,6 +168,25 @@ SSH2Channel SSH2Client::scpGet(string path, timeout timeout = 60s, *reference st
    return o.release();
 }
 
+//! Retrieves a remote file and writes its content to an @ref OutputStream
+/** @par Example:
+    @code{.py} ssh2client.scpGet("file.txt", outputStream); @endcode
+
+    @param path the path of the remote file to get
+    @param os the output stream
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
+
+    @throw SSH2CLIENT-NOT-CONNECTED client is not connected
+    @throw SSH2CLIENT-TIMEOUT timeout opening channel
+    @throw SSH2-ERROR error opening channel
+
+    @since ssh2 1.1
+ */
+nothing SSH2Client::scpGet(string path, Qore::OutputStream[OutputStream] os, timeout timeout = 60s) {
+   SimpleRefHolder<OutputStream> osHolder(os);
+   c->scpGet(xsink, path->getBuffer(), os, timeout);
+}
+
 //! Opens a channel for sending a file to the remote server; an SSH2Channel object is returned to use to send the file's data
 /** @par Example:
     @code{.py} SS2Channel chan = ssh2client.scpPut("/tmp/file.txt", size, 0644, 2010-12-25, 2010-12-25, 30s); @endcode
@@ -189,9 +208,39 @@ SSH2Channel SSH2Client::scpPut(string remote_path, softint size, softint mode = 
    static const char *SSH2CLIENT_SCPPUT_ERR = "SSH2CLIENT-SCPPUT-ERROR";
 
    if (size <= 0) {
-      xsink->raiseException(SSH2CLIENT_SCPPUT_ERR, "invalid file size as second argument to SSH2Client::scpPut() (got invalid size "QLLD")", size);
+      xsink->raiseException(SSH2CLIENT_SCPPUT_ERR, "invalid file size as second argument to SSH2Client::scpPut() (got invalid size " QLLD ")", size);
       return 0;
    }
 
    return c->scpPut(xsink, remote_path->getBuffer(), size, (int)mode, mtime ? mtime->getEpochSeconds() : 0, atime ? atime->getEpochSeconds() : 0, timeout);
+}
+
+//! Sends a file to the remote server; the content of the file is read from an @ref InputStream
+/** @par Example:
+    @code{.py} ssh2client.scpPut("/tmp/file.txt", inputStream, size, 0644, 2010-12-25, 2010-12-25, 30s); @endcode
+
+    @param remote_path the path of the file to save on the remote server
+    @param is the input stream to read from
+    @param size the size of the file to send; this parameter is required
+    @param mode the file's mode on the remote machine
+    @param mtime the file's last modified time to create on the remote machine
+    @param atime the file's last access time to create on the remote machine
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
+
+    @throw SSH2CLIENT-NOT-CONNECTED client is not connected
+    @throw SSH2CLIENT-TIMEOUT timeout opening channel
+    @throw SSH2-ERROR error opening channel
+
+    @since ssh2 1.1
+ */
+nothing SSH2Client::scpPut(string remote_path, Qore::InputStream[InputStream] is, softint size, softint mode = 0644, *date mtime, *date atime, timeout timeout = 60s) {
+   SimpleRefHolder<InputStream> isHolder(is);
+   static const char *SSH2CLIENT_SCPPUT_ERR = "SSH2CLIENT-SCPPUT-ERROR";
+
+   if (size <= 0) {
+      xsink->raiseException(SSH2CLIENT_SCPPUT_ERR, "invalid file size as third argument to SSH2Client::scpPut() (got invalid size " QLLD ")", size);
+      return 0;
+   }
+
+   c->scpPut(xsink, remote_path->getBuffer(), is, size, (int)mode, mtime ? mtime->getEpochSeconds() : 0, atime ? atime->getEpochSeconds() : 0, timeout);
 }

@@ -1,0 +1,150 @@
+#!/usr/bin/env qore
+# -*- mode: qore; indent-tabs-mode: nil -*-
+
+%require-our
+%requires qore >= 0.8.12
+%requires ssh2 >= 1.2
+
+%requires Util
+%requires QUnit
+
+%new-style
+%require-types
+%strict-args
+%enable-all-warnings
+
+%exec-class Ssh2ClientTest
+
+class Ssh2ClientTest inherits QUnit::Test {
+    public {
+    }
+
+    private {
+        string uri;
+
+        timeout timeout = 10s;
+
+        const MyOpts = Opts + (
+            "privkey": "k,private-key=s",
+            "timeout": "T,timeout=i",
+            );
+
+        const ColumnOffset = 25;
+
+        const FileContents = "hi there ýčšěáýžšěčéářčě";
+        const BinContents = binary(FileContents);
+        const FileLen = strlen(FileContents);
+        const FileMode = 0755;
+        const FileNameLen = 40;
+    }
+
+    constructor() : Test("Ssh2ClientTest", "1.0", \ARGV, MyOpts) {
+        if (m_options.timeout)
+            timeout = m_options.timeout * 1000;
+        uri = shift ARGV ?? sprintf("%s@localhost", getusername());
+
+        addTestCase("Ssh2Client test", \ssh2ClientTest());
+
+        set_return_value(main());
+    }
+
+    ssh2ClientTest() {
+        string file = get_random_string();
+        string fn = tmp_location() + DirSep + file;
+
+        SSH2Client sc(uri);
+        setPrivateKey(sc);
+        sc.connect();
+
+        hash info = sc.info();
+        if (m_options.verbose)
+            stdout.printf("SSH %s@%s:%d auth: %s, hostkey: %n, crypt_cs: %n, tmp: %s\n", info.ssh2user, info.ssh2host, info.ssh2port, info.authenticated, info.methods.HOSTKEY, info.methods.CRYPT_CS, fn);
+
+        # test SSHClient::scpPut()
+        SSH2Channel chan = sc.scpPut(fn, FileLen, 0622, 1982-01-05, 2010-02-01);
+        chan.write(FileContents);
+        chan.close();
+
+        # test readBlock() from SSH2Client::scpGet()
+        chan = sc.scpGet(fn, -1, \info);
+        assertEq(FileLen, info.size);
+        any str = chan.readBlock(info.size);
+        assertEq(FileContents, str);
+
+        # test readBinaryBlock() from SSH2Client::scpGet()
+        chan = sc.scpGet(fn, -1, \info);
+        binary b = chan.readBinaryBlock(info.size);
+        assertEq(BinContents, b);
+
+        chan = sc.openSessionChannel();
+
+        chan.exec("ls -l | head -5");
+        str = chan.read();
+        assertEq(Type::String, str.type());
+
+        chan.sendEof();
+        chan.close();
+        any rc = chan.getExitStatus();
+        assertEq(Type::Int, rc.type());
+
+        chan = sc.openSessionChannel();
+        chan.requestPty("vt100");
+        chan.shell();
+
+        if (m_options.verbose > 1) {
+            stdout.printf("=======================================\n");
+            stdout.printf("---------- start SSH session ----------\n");
+            stdout.printf("=======================================\n");
+        }
+
+        readUntilPrompt(chan);
+        chan.write(sprintf("/bin/rm %s\n", fn));
+        readUntilPrompt(chan);
+        chan.write("ls -l | head -5\n");
+        readUntilPrompt(chan);
+
+        chan.sendEof();
+        chan.close();
+        if (m_options.verbose > 1) {
+            stdout.printf("exit\n");
+            stdout.printf("=======================================\n");
+            stdout.printf("----------- end SSH session -----------\n");
+            stdout.printf("=======================================\n");
+            stdout.printf("exit status: %d\n", chan.getExitStatus());
+        }
+    }
+
+    private setPrivateKey(SSH2Client client) {
+        if (m_options.privkey) {
+            client.setKeys(m_options.privkey);
+            return;
+        }
+        if (PlatformOS == "Windows")
+            exit(0);
+
+        string sshdir = ENV.HOME + "/.ssh";
+        if (is_file(sshdir + "/id_rsa"))
+            client.setKeys(sshdir + "/id_rsa");
+        else if (is_file(sshdir + "/id_dsa"))
+            client.setKeys(sshdir + "/id_dsa");
+    }
+
+    # read channel until a prompt is recognized
+    private readUntilPrompt(SSH2Channel chan) {
+        string str;
+        do {
+            # read with a 5 second timeout
+            str = chan.read(0, 5s);
+            if (m_options.verbose > 1) {
+                stdout.printf("%s", str);
+                stdout.sync();
+            }
+        } while (str !~ /[\#\$\>] *$/);
+    }
+
+    private usageIntern() {
+        TestReporter::usageIntern(ColumnOffset);
+        printOption("-k,--private-key=ARG", "set private key to use for authentication", ColumnOffset);
+        printOption("-T,--timeout=ARG", sprintf("set timeout in seconds (def: %ds)", timeout / 1000), ColumnOffset);
+    }
+}

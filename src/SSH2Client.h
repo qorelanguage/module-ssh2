@@ -7,7 +7,7 @@
   Qore Programming Language
 
   Copyright 2009 Wolfgang Ritzinger
-  Copyright (C) 2010 - 2016 Qore Technologies, sro
+  Copyright (C) 2010 - 2017 Qore Technologies, s.r.o.
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -44,6 +44,9 @@
 
 #include <set>
 #include <string>
+
+// for maximum SSH2 performance, a 32K buffer is needed
+#define QSSH2_BUFSIZE 32768
 
 DLLLOCAL QoreClass *initSSH2ClientClass(QoreNamespace& ns);
 DLLLOCAL extern qore_classid_t CID_SSH2CLIENT;
@@ -193,8 +196,12 @@ protected:
    }
 
    DLLLOCAL QoreObject *registerChannelUnlocked(LIBSSH2_CHANNEL *channel);
+   DLLLOCAL SSH2Channel *registerChannelUnlockedRaw(LIBSSH2_CHANNEL *channel);
 
    DLLLOCAL virtual int disconnectUnlocked(bool force, int timeout_ms = DEFAULT_TIMEOUT_MS, AbstractDisconnectionHelper* adh = 0, ExceptionSink* xsink = 0);
+
+   DLLLOCAL LIBSSH2_CHANNEL *scpGetRaw(ExceptionSink *xsink, const char *path, int timeout_ms = -1, QoreHashNode *statinfo = 0);
+   DLLLOCAL LIBSSH2_CHANNEL *scpPutRaw(ExceptionSink *xsink, const char *path, size_t size, int mode = 0644, long mtime = 0, long atime = 0, int timeout_ms = -1);
 
    // to ensure thread-safe operations
    mutable QoreThreadLock m;
@@ -228,7 +235,9 @@ public:
    DLLLOCAL QoreObject *openSessionChannel(ExceptionSink *xsink, int timeout_ms = -1);
    DLLLOCAL QoreObject *openDirectTcpipChannel(ExceptionSink *xsink, const char *host, int port, const char *shost = "127.0.0.1", int sport = 22, int timeout_ms = -1);
    DLLLOCAL QoreObject *scpGet(ExceptionSink *xsink, const char *path, int timeout_ms = -1, QoreHashNode *statinfo = 0);
+   DLLLOCAL void scpGet(ExceptionSink *xsink, const char *path, OutputStream *os, int timeout_ms = -1);
    DLLLOCAL QoreObject *scpPut(ExceptionSink *xsink, const char *path, size_t size, int mode = 0644, long mtime = 0, long atime = 0, int timeout_ms = -1);
+   DLLLOCAL void scpPut(ExceptionSink *xsink, const char *path, InputStream *is, size_t size, int mode = 0644, long mtime = 0, long atime = 0, int timeout_ms = -1);
 
 #ifdef _QORE_HAS_SOCKET_PERF_API
    DLLLOCAL void clearWarningQueue(ExceptionSink* xsink);

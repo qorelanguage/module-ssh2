@@ -68,8 +68,7 @@ nothing SSH2Base::connect(timeout timeout = 1m) {
 }
 
 //! Disconnects from the remote system; throws an exception if the object is not currently connected
-/**
-    @par Example:
+/** @par Example:
     @code{.py} sftpclient.disconnect(); @endcode
 
     @throw SSH2CLIENT-NOT-CONNECTED the client is not connected

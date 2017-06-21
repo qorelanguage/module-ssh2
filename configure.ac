@@ -1,7 +1,7 @@
 # Process this file with autoconf to produce a configure script.
 
 # AC_PREREQ(2.59)
-AC_INIT([qore-ssh2-module], [1.1],
+AC_INIT([qore-ssh2-module], [1.2],
         [David Nichols <david(a)qore(dot)org>, Wolfgang Ritzinger <aargon(a)rat(dot)at>],
         [qore-ssh2-module])
 AM_INIT_AUTOMAKE([no-dist-gzip dist-bzip2])
@@ -271,6 +271,12 @@ else
       cpu_family=i386
    fi
    bits=32
+fi
+
+# test for C++11
+AX_CXX_COMPILE_STDCXX_11([noext], [mandatory])
+if test "$HAVE_CXX11" = "1"; then
+    AM_CXXFLAGS=-std=gnu++11
 fi
 
 # checks for how to build threads
@@ -677,8 +683,8 @@ else
       AC_DEFINE_UNQUOTED([QORE_VERSION_CODE], $qvc, [define when missing in Qore headers])
    fi
 
-   if test $qvc -lt 805; then
-      AC_MSG_ERROR([found $qore_version; this module requires at least version 0.8.5])
+   if test $qvc -lt 813; then
+      AC_MSG_ERROR([found $qore_version; this module requires at least version 0.8.13])
    fi
 
    AC_MSG_RESULT([${qore_version} OK])

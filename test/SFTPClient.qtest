@@ -6,7 +6,7 @@
 %strict-args
 %enable-all-warnings
 
-%requires ssh2 >= 1.1
+%requires ssh2 >= 1.2
 
 %requires Util
 %requires QUnit
@@ -35,7 +35,9 @@ class SFTPClientTest inherits QUnit::Test {
         const ColumnOffset = 25;
     }
 
-    constructor() : Test("SFTPClientTest", "1.1", \ARGV, MyOpts) {
+    constructor() : Test("SFTPClientTest", "1.2", \ARGV, MyOpts) {
+        if (m_options.timeout)
+            timeout = m_options.timeout * 1000;
         string uri = shift ARGV ?? sprintf("%s@localhost", getusername());
 
         sc = new SFTPClient(uri);
@@ -86,11 +88,33 @@ class SFTPClientTest inherits QUnit::Test {
 
         # retrieve the file as a binary object
         binary b = sc.getFile(basename(fn), timeout);
-        testAssertionValue("SFTPClient::getFile()", b, BinContents);
+        assertEq(BinContents, b);
+
+        # send and retrieve the file as a stream
+        {
+            BinaryInputStream is(BinContents);
+            sc.put(is, fn, NOTHING, timeout);
+
+            BinaryOutputStream os();
+            # read the file to an output stream
+            sc.get(basename(fn), os, timeout);
+            assertEq(BinContents, os.getData());
+        }
 
         # retrieve the file as a string
         string s = sc.getTextFile(fn, timeout);
-        testAssertionValue("SFTPClient::getTextFile()", s, FileContents);
+        assertEq(FileContents, s);
+
+        # send and retrieve the file as a stream
+        {
+            StringInputStream is(FileContents);
+            sc.put(is, fn, NOTHING, timeout);
+
+            StringOutputStream os();
+            # read the file to an output stream
+            sc.get(basename(fn), os, timeout);
+            assertEq(FileContents, os.getData());
+        }
 
         # test various encodings
         string sutf8 = sc.getTextFile(fn, timeout, "utf8");
@@ -148,6 +172,6 @@ class SFTPClientTest inherits QUnit::Test {
     private usageIntern() {
         TestReporter::usageIntern(ColumnOffset);
 	printOption("-k,--private-key=ARG", "set private key to use for authentication", ColumnOffset);
-        printOption("-T,--timeout=ARG", sprintf("set timeout in seconds (def: %ds)", timeout), ColumnOffset);
+        printOption("-T,--timeout=ARG", sprintf("set timeout in seconds (def: %ds)", timeout / 1000), ColumnOffset);
     }
 }
