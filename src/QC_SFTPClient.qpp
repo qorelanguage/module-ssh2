@@ -202,6 +202,33 @@ list SFTPClient::listFull(*string path, timeout timeout = 60s) [flags=RET_VALUE_
    return rc < 0 ? 0 : attr2hash(attr);
 }
 
+//! Returns a hash of information about a file or \c NOTHING if the file cannot be found
+/** @par Example:
+    @code{.py} *hash h = sftpclient.statFile(path, stat_type); @endcode
+
+    If a connection has not yet been established, it is implicitly attempted here before executing the method.
+
+    @param path the pathname of the file to stat
+    @param stat_type an integer indicating statistic type
+
+    @return \c NOTHING if the path was not found or a hash with the following keys (note that some hash keys may not be present if the data was not returned from the remote server):
+    - \c size: (int) the size of the file in bytes
+    - \c atime: (date) the date/time the file was last accessed
+    - \c mtime: (date) the date/time the file was last modified
+    - \c uid: (int) the userid of the file's owner
+    - \c gid: (int) the groupid of the file
+    - \c mode: (int) the mode of the file as an integer
+    - \c type: the type of file; one of: \c "REGULAR", \c "DIRECTORY", \c "SYMBOLIC-LINK", \c "BLOCK-DEVICE", \c "CHARACTER-DEVICE", \c "FIFO", \c "SYMBOLIC-LINK", \c "SOCKET", or \c "UNKNOWN"
+    - \c permissions: (string) a string giving the symbolic mode of the file
+
+    @throw SFTPCLIENT-TIMEOUT timeout in network operation
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
+*/
+*hash SFTPClient::statFile(string path, int stat_type = 0) [flags=RET_VALUE_ONLY] {
+   LIBSSH2_SFTP_ATTRIBUTES attr;
+   return myself->sftpStat(path->getBuffer(), (int)stat_type, xsink);
+}
+
 //! Deletes a file on the server side; throws an exception if any errors occur
 /** @par Example:
     @code{.py} sftpclient.removeFile(path); @endcode
