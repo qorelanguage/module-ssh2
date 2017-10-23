@@ -329,7 +329,21 @@ public namespace SftpPoller {
             if (mask)
                 logDetail("%s: file regex mask: %s", url, mask);
 
-            connect(path);
+            if (!ih.connected) {
+                logDetail("%s: logging in (timeout %y)", url, timeout);
+                # connect to the remote system
+                sftp.connect(timeout);
+            }
+            else
+                logDetail("%s: already connected: %y", url, ih);
+            if (path && path.size() == 1 && path[0] != ".") {
+                logInfo("path is %n", path);
+                logInfo("%s: connected; changing directory to %s", url, path[0]);
+                # change to the target directory
+                sftp.chdir(path[0], timeout);
+            }
+            else
+                logInfo("%s: connected", url);
 
             map checkRemotePath($1, writable), path;
         }
@@ -411,7 +425,18 @@ public namespace SftpPoller {
             if (mask)
                 logDetail("%s: file regex mask: %s", url, mask);
 
-            connect(path);
+            logDetail("%s: logging in (timeout %y)", url, timeout);
+            # connect to the remote system
+            sftp.connect(timeout);
+            rootSftpPath = sftp.path();
+
+            if (path && path.size() == 1 && path[0] != ".") {
+                logInfo("%s: connected; changing directory to %s", url, path[0]);
+                # change to the target directory
+                sftp.chdir(path[0], timeout);
+            }
+            else
+                logInfo("%s: connected", url);
 
             map checkRemotePath($1, writable), path;
         }
@@ -442,42 +467,6 @@ public namespace SftpPoller {
         private logDebug(string fmt) {
             if (log_debug)
                 call_function(log_debug, vsprintf(fmt, argv));
-        }
-
-        #! perform actual connect call and chdir to $.path
-        private connect(*list path) {
-            hash ih = sftp.info();
-
-            if (!ih.connected) {
-                logDetail("%s: logging in (timeout %y)", url, timeout);
-                # connect to the remote system
-                sftp.connect(timeout);
-                rootSftpPath = sftp.path();
-            }
-            else
-                logDetail("%s: already connected: %y", url, ih);
-                logDetail("Stat on %s: %y", path, sftp.stat(path[0]));
-
-            if (path && path.size() == 1 && path[0] != ".") {
-                logInfo("path is %n", path);
-                logInfo("%s: connected; changing directory to %s", url, path[0]);
-                # change to the target directory
-                sftp.chdir(path[0], timeout);
-            }
-            else
-                logInfo("%s: connected", url);
-
-            logDetail("Stat on %s: %y", path, sftp.stat(path[0]));
-        }
-
-        #! perform check whether we are connected and the connection is responding
-        private bool is_connected() {
-            hash ih = sftp.info();
-
-            if (!ih.connected) 
-                return False;
-            
-            return True;
         }
 
         #! converts a glob mask into a regex

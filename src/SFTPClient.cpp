@@ -573,38 +573,6 @@ int SFTPClient::sftpRename(const char* from, const char* to, int timeout_ms, Exc
    return rc;
 }
 
-
-//printd(5, "SFTPClient::sftpGetFile() permissions: %lo\n", attrs.permissions);
-QoreHashNode* SFTPClient::sftpStat(const char *path, int stat_type, ExceptionSink* xsink) {
-    // int libssh2_sftp_stat_ex(LIBSSH2_SFTP *sftp, const char *path,
-    //                       unsigned int path_len, int stat_type,
-    //                       LIBSSH2_SFTP_ATTRIBUTES *attrs);
-
-    QSftpHelper qh(this, "SFTPCLIENT-STAT-ERROR", "SFTPClient::statFile", stat_type, xsink);
-
-    LIBSSH2_SFTP_ATTRIBUTES attrs;
-    int rc;
-    {
-        QoreSocketTimeoutHelper th(socket, "getStat (stat)");
-
-        while ((rc = libssh2_sftp_stat(sftp_session, path, &attrs)) == LIBSSH2_ERROR_EAGAIN) {
-        if (qh.waitSocket())
-            return 0;
-        }
-    }
-
-    if (rc < 0) {
-        qh.err("libssh2_sftp_stat(%s) returned an error", path);
-        return 0;
-    }
-
-
-    QoreHashNode* h;
-    h->setKeyValue("path", new QoreStringNode(path), xsink);
-
-    return h;
-}
-
 int SFTPClient::sftpUnlink(const char* file, int timeout_ms, ExceptionSink* xsink) {
    assert(file);
 
