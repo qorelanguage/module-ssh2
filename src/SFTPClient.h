@@ -162,6 +162,8 @@ public:
 
    DLLLOCAL int sftpGetAttributes(const char* fname, LIBSSH2_SFTP_ATTRIBUTES *attrs, int timeout_ms, ExceptionSink* xsink);
 
+   DLLLOCAL QoreHashNode *sftpStat(const char* path, int stat_type, ExceptionSink* xsink);
+
    DLLLOCAL QoreHashNode *sftpInfo();
 };
 
