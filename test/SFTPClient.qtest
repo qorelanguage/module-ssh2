@@ -124,6 +124,19 @@ class SFTPClientTest inherits QUnit::Test {
 
         {
             string rfn = sprintf("/%s/%s", tmp_location(), get_random_string());
+            # Check whether the local file exists, the test assumes common /tmp for both local and remote
+            # If the file doesn't exist, attempt to write it
+            if (!is_file(fn)) {
+                {
+                    File f();
+                    if (!f.open(fn, O_CREAT | O_WRONLY, FileMode)) {
+                        f.write(FileContents);
+                    }
+                    f.close();
+                }
+                # delete local file if created
+            }
+            
             rc = sc.transferFile(fn, rfn, timeout);
             testAssertionValue("SFTPClient::transferFile()", rc, FileContents.size());
 
@@ -137,6 +150,8 @@ class SFTPClientTest inherits QUnit::Test {
             # delete file
             sc.removeFile(rfn, timeout);
             testAssertionValue("SFTPClient::removeFile() 1", sc.stat(rfn, timeout));
+
+            on_exit unlink(fn);
         }
 
         # make new file name
