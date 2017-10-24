@@ -182,7 +182,7 @@ void SFTPClient::deref(ExceptionSink* xsink) {
 }
 
 int SFTPClient::sftpConnectedUnlocked() {
-   return (sftp_session ? 1: 0);
+   return (sftp_session ? sftpIsAlive(100,0): 0);
 }
 
 int SFTPClient::sftpConnected() {
@@ -191,7 +191,6 @@ int SFTPClient::sftpConnected() {
 }
 
 int SFTPClient::disconnectUnlocked(bool force, int timeout_ms, AbstractDisconnectionHelper* adh, ExceptionSink* xsink) {
-   //printd(5, "SFTPClient::disconnectUnlocked() force: %d timeout_ms: %d adh: %p xsink: %p\n", force, timeout_ms, adh, xsink);
    int rc;
 
    // disconnect dependent opbjects first
@@ -206,6 +205,11 @@ int SFTPClient::disconnectUnlocked(bool force, int timeout_ms, AbstractDisconnec
 
    return rc;
 }
+
+int SFTPClient::sftpDisconnect(bool force, int timeout_ms, AbstractDisconnectionHelper* adh, ExceptionSink* xsink) {
+    return SFTPClient::disconnectUnlocked(force, timeout_ms, adh, xsink);
+ }
+ 
 
 QoreHashNode* SFTPClient::sftpList(const char* path, int timeout_ms, ExceptionSink* xsink) {
    AutoLocker al(m);
@@ -678,6 +682,36 @@ QoreStringNode* SFTPClient::sftpPathUnlocked() {
 QoreStringNode* SFTPClient::sftpPath() {
    AutoLocker al(m);
    return sftpPathUnlocked();
+}
+
+/**
+ * SFTPClient::sftpIsAlive returns 1 if connection is alive, 0 otherwise
+ */
+int SFTPClient::sftpIsAlive(int timeout_ms, ExceptionSink* xsink) {
+    QSftpHelper qh(this, "SFTPCLIENT-ERROR", "SftpClient::isAlive", timeout_ms, xsink);
+
+    {
+        QoreSocketTimeoutHelper th(socket, "isAlive");
+        do {
+            qh.assign(libssh2_sftp_opendir(sftp_session, sftppath.c_str()));
+            if (!qh) {
+                if (libssh2_session_last_errno(ssh_session) == LIBSSH2_ERROR_EAGAIN) {
+                    if (qh.waitSocket())
+                        return 0;
+                }
+                else {
+                    // We consider error 43 as disconnected
+                    if (libssh2_session_last_errno(ssh_session) == -43) {
+                        return 0;
+                    }
+                    qh.err("Alive test ended with error: %i", libssh2_session_last_errno(ssh_session));
+                    return 0;
+                }
+            }
+            return 1;
+        } while (!qh);
+    }
+    return 1;
 }
 
 /**

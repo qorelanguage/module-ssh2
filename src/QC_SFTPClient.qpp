@@ -541,3 +541,22 @@ nothing SFTPClient::rmdir(string path, timeout timeout = 60s) {
 string SFTPClient::chdir(string path, timeout timeout = 60s) {
    return myself->sftpChdir(path->getBuffer(), (int)timeout, xsink);
 }
+
+
+//! Disconnects from remote server; throws an exception if any errors occur
+/** @par Example:
+    @code{.py} sftpclient.disconnect(force. timeout); @endcode
+
+    If a connection has not yet been established, it is implicitly attempted here before executing the method.
+
+    @return the exit code returned by library
+
+    @param force Should be disconnecting forced
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
+
+    @throw SFTPCLIENT-TIMEOUT timeout in network operation
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
+*/
+int SFTPClient::disconnect(bool force, timeout timeout = 60s) {
+    return myself->sftpDisconnect(force, (int)timeout, 0, xsink);
+ }
