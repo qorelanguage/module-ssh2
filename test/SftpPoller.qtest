@@ -155,7 +155,7 @@ class SftpPollerTest inherits QUnit::Test {
             sc.mkdir(nd);
         } catch (ex) {
             if (ex.desc =~ /LIBSSH2_FX_PERMISSION_DENIED/) {
-                stdout.print("Root is not writable, specify writable directory as --dir(-d).\n");
+                stdout.print("Root is not writable, specify writable directory using --dir(-d).\n");
             }
             throw ex;
         }

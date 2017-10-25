@@ -695,6 +695,9 @@ int SFTPClient::sftpIsAlive(int timeout_ms, ExceptionSink* xsink) {
         do {
             qh.assign(libssh2_sftp_opendir(sftp_session, sftppath.c_str()));
             if (!qh) {
+                if (!ssh_session) {
+                    return 0;
+                }
                 if (libssh2_session_last_errno(ssh_session) == LIBSSH2_ERROR_EAGAIN) {
                     if (qh.waitSocket())
                         return 0;

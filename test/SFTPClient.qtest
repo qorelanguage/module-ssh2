@@ -30,6 +30,7 @@ class SFTPClientTest inherits QUnit::Test {
         const MyOpts = Opts + (
             "privkey": "k,private-key=s",
             "timeout": "T,timeout=i",
+            "dir": "d,dir=s",
             );
 
         const ColumnOffset = 25;
@@ -62,7 +63,10 @@ class SFTPClientTest inherits QUnit::Test {
 
     sftpTests() {
         string file = get_random_string();
-        string fn = "/tmp/" + file;
+
+        string tmpDir = m_options.dir ? m_options.dir : tmp_location();
+
+        string fn = sprintf("%s/%s", tmpDir, file);
 
         sc.connect();
         hash info = sc.info();
@@ -122,8 +126,18 @@ class SFTPClientTest inherits QUnit::Test {
         string siso88592 = sc.getTextFile(fn, timeout, "iso-8859-2");
         testAssertionValue("SFTPClient::getTextFile(iso-8859-2)", siso88592.encoding(), "ISO-8859-2");
 
+        # If local /tmp != remote /tmp, create the file locally too
+        if (!is_file(fn)) {
+            File f();
+            if (!f.open(fn, O_CREAT | O_WRONLY, FileMode)) {
+                f.write(FileContents);
+            }
+            f.close();
+       }
+
+
         {
-            string rfn = sprintf("/%s/%s", tmp_location(), get_random_string());
+            string rfn = sprintf("/%s/%s", tmpDir, get_random_string());
             rc = sc.transferFile(fn, rfn, timeout);
             testAssertionValue("SFTPClient::transferFile()", rc, FileContents.size());
 
@@ -167,11 +181,20 @@ class SFTPClientTest inherits QUnit::Test {
         # remove directory
         sc.rmdir(file + ".new", timeout);
         testAssertionValue("SFTPClient::rmdir()", sc.stat(nfn, timeout));
+
+        # # test alive
+        testAssertionValue("SFTPClient:isAlive()", sc.isAlive(), 1);
+        # # check reconnect on demand
+        sc.disconnect(True, timeout);
+
+        # # test alive
+        testAssertionValue("SFTPClient:isAlive()", sc.isAlive(), 0);
     }
 
     private usageIntern() {
         TestReporter::usageIntern(ColumnOffset);
-	printOption("-k,--private-key=ARG", "set private key to use for authentication", ColumnOffset);
+	    printOption("-k,--private-key=ARG", "set private key to use for authentication", ColumnOffset);
         printOption("-T,--timeout=ARG", sprintf("set timeout in seconds (def: %ds)", timeout / 1000), ColumnOffset);
+        printOption("-d,--dir=ARG", "working directory for tests", ColumnOffset);
     }
 }
