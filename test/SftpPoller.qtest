@@ -197,20 +197,7 @@ class SftpPollerTest inherits QUnit::Test {
         map assertEq(False, exists $1.data), fl;
         # sort by file name
         fl = map $1.(NoRetrievalResult[0].keys()), sort(fl, int sub (hash l, hash r) { return l.name <=> r.name; });
-        assertEq(fl, NoRetrievalResult);
-
-        # Test if connection gets reconnected after disconnecting
-        int rt = sc.disconnect(True, 10);
-        assertEq(0, rt);
-
-        # Perform list action, the connection should get reconnected now
-        sleep(10);
-        sc.list(nd);
-
-        hash connInfo = sc.info();
-        assertEq(True, connInfo.connected);
-
-        printf("Connection info: %y", connInfo);
+        assertEq(fl, NoRetrievalResult);        
     }
 
     sftpPollerRemotePathNegTest() {
