@@ -191,6 +191,7 @@ int SFTPClient::sftpConnected() {
 }
 
 int SFTPClient::disconnectUnlocked(bool force, int timeout_ms, AbstractDisconnectionHelper* adh, ExceptionSink* xsink) {
+    //printd(5, "SFTPClient::disconnectUnlocked() force: %d timeout_ms: %d adh: %p xsink: %p\n", force, timeout_ms, adh, xsink);
    int rc;
 
    // disconnect dependent opbjects first
@@ -688,7 +689,7 @@ QoreStringNode* SFTPClient::sftpPath() {
  * SFTPClient::sftpIsAliveUnlocked returns 1 if connection is alive, 0 otherwise
  */
 int SFTPClient::sftpIsAliveUnlocked(int timeout_ms, ExceptionSink* xsink) {
-    std::string path = sftppath.empty() ? '/' : sftppath;
+    std::string path = sftppath.empty() ? std::string("/") : sftppath;
 
     QSftpHelper qh(this, "SFTPCLIENT-ERROR", "SftpClient::isAliveUnlocked", timeout_ms, xsink);
     do {
