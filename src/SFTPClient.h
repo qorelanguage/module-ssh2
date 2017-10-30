@@ -142,6 +142,8 @@ public:
    DLLLOCAL int sftpConnect(int timeout_ms, ExceptionSink* xsink = 0);
 
    DLLLOCAL int sftpConnected();
+
+   DLLLOCAL int sftpIsAliveUnlocked(int timeout_ms, ExceptionSink* xsink = 0);
    DLLLOCAL int sftpIsAlive(int timeout_ms, ExceptionSink* xsink = 0);
 
    //DLLLOCAL QoreStringNode *sftpPath(ExceptionSink* xsink);

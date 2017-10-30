@@ -185,7 +185,7 @@ class SFTPClientTest inherits QUnit::Test {
         # # test alive
         testAssertionValue("SFTPClient:isAlive()", sc.isAlive(), 1);
         # # check reconnect on demand
-        sc.disconnect(True, timeout);
+        sc.disconnect(timeout);
 
         # # test alive
         testAssertionValue("SFTPClient:isAlive()", sc.isAlive(), 0);

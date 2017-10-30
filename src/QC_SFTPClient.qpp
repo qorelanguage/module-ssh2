@@ -542,39 +542,36 @@ string SFTPClient::chdir(string path, timeout timeout = 60s) {
    return myself->sftpChdir(path->getBuffer(), (int)timeout, xsink);
 }
 
-
-//! Disconnects from remote server; throws an exception if any errors occur
-/** @par Example:
-    @code{.py} sftpclient.disconnect(force. timeout); @endcode
-
-    If a connection has not yet been established, it is implicitly attempted here before executing the method.
-
-    @return the exit code returned by library
-
-    @param force Should be disconnecting forced
-    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
-
-    @throw SFTPCLIENT-TIMEOUT timeout in network operation
-    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
-*/
-int SFTPClient::disconnect(bool force, timeout timeout = 60s) {
-    return myself->sftpDisconnect(force, (int)timeout, 0, xsink);
- }
-
-
 //! Check if connections is responding to test request; throws an exception if any errors occur
 /** @par Example:
-    @code{.py} sftpclient.isAlive(timeout); @endcode
+    @code{.py} sftpclient.isAliveUnlocked(timeout_ms); @endcode
 
     If a connection has not yet been established, it is NOT attempted before executing the method.
 
     @return 1 if server is responding, 0 otherwise
 
-    @param timeout an integer giving a timeout in milliseconds
+    @param timeout_ms an integer giving a timeout in milliseconds
+
+    @throw SFTPCLIENT-TIMEOUT timeout in network operation
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
+*/
+int SFTPClient::isAliveUnlocked(timeout timeout_ms = 60) {
+    return myself->sftpIsAliveUnlocked((int)timeout_ms, xsink);
+}
+
+//! Check if connections is responding to test request; throws an exception if any errors occur
+/** @par Example:
+    @code{.py} sftpclient.isAlive(timeout_ms); @endcode
+
+    If a connection has not yet been established, it is NOT attempted before executing the method.
+
+    @return 1 if server is responding, 0 otherwise
+
+    @param timeout_ms an integer giving a timeout in milliseconds
 
     @throw SFTPCLIENT-TIMEOUT timeout in network operation
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
 */
 int SFTPClient::isAlive(timeout timeout_ms = 60) {
     return myself->sftpIsAlive((int)timeout_ms, xsink);
- }
+}

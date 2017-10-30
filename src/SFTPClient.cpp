@@ -182,7 +182,7 @@ void SFTPClient::deref(ExceptionSink* xsink) {
 }
 
 int SFTPClient::sftpConnectedUnlocked() {
-   return (sftp_session ? sftpIsAlive(100,0): 0);
+   return (sftp_session ? sftpIsAliveUnlocked(100,0): 0);
 }
 
 int SFTPClient::sftpConnected() {
@@ -685,38 +685,44 @@ QoreStringNode* SFTPClient::sftpPath() {
 }
 
 /**
+ * SFTPClient::sftpIsAliveUnlocked returns 1 if connection is alive, 0 otherwise
+ */
+int SFTPClient::sftpIsAliveUnlocked(int timeout_ms, ExceptionSink* xsink) {
+    std::string path = sftppath.empty() ? '/' : sftppath;
+
+    QSftpHelper qh(this, "SFTPCLIENT-ERROR", "SftpClient::isAliveUnlocked", timeout_ms, xsink);
+    do {
+        qh.assign(libssh2_sftp_opendir(sftp_session, path.c_str()));
+        if (!qh) {
+            if (!ssh_session) {
+                return 0;
+            }
+            if (libssh2_session_last_errno(ssh_session) == LIBSSH2_ERROR_EAGAIN) {
+                if (qh.waitSocket())
+                    return 0;
+            }
+            else {
+                // We consider error 43 as disconnected
+                if (libssh2_session_last_errno(ssh_session) == -43) {
+                    return 0;
+                }
+                qh.err("Alive test ended with error: %i", libssh2_session_last_errno(ssh_session));
+                return 0;
+            }
+        }
+        return 1;
+    } while (!qh);
+
+    return 0;
+}
+
+/**
  * SFTPClient::sftpIsAlive returns 1 if connection is alive, 0 otherwise
  */
 int SFTPClient::sftpIsAlive(int timeout_ms, ExceptionSink* xsink) {
-    QSftpHelper qh(this, "SFTPCLIENT-ERROR", "SftpClient::isAlive", timeout_ms, xsink);
-
-    {
-        QoreSocketTimeoutHelper th(socket, "isAlive");
-        do {
-            qh.assign(libssh2_sftp_opendir(sftp_session, sftppath.c_str()));
-            if (!qh) {
-                if (!ssh_session) {
-                    return 0;
-                }
-                if (libssh2_session_last_errno(ssh_session) == LIBSSH2_ERROR_EAGAIN) {
-                    if (qh.waitSocket())
-                        return 0;
-                }
-                else {
-                    // We consider error 43 as disconnected
-                    if (libssh2_session_last_errno(ssh_session) == -43) {
-                        return 0;
-                    }
-                    qh.err("Alive test ended with error: %i", libssh2_session_last_errno(ssh_session));
-                    return 0;
-                }
-            }
-            return 1;
-        } while (!qh);
-    }
-    return 1;
+    AutoLocker al(m);
+    return sftpIsAliveUnlocked(timeout_ms, xsink);
 }
-
 /**
  * connect()
  * returns:
