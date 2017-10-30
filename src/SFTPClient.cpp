@@ -207,11 +207,6 @@ int SFTPClient::disconnectUnlocked(bool force, int timeout_ms, AbstractDisconnec
    return rc;
 }
 
-int SFTPClient::sftpDisconnect(bool force, int timeout_ms, AbstractDisconnectionHelper* adh, ExceptionSink* xsink) {
-    return SFTPClient::disconnectUnlocked(force, timeout_ms, adh, xsink);
- }
- 
-
 QoreHashNode* SFTPClient::sftpList(const char* path, int timeout_ms, ExceptionSink* xsink) {
    AutoLocker al(m);
 

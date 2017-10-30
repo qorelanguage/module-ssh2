@@ -105,7 +105,6 @@ public:
 class SFTPClient : public SSH2Client {
    friend class QSftpHelper;
 private:
-    static const char *cwd;
 
 protected:
    DLLLOCAL virtual ~SFTPClient();
@@ -131,12 +130,6 @@ public:
 
    DLLLOCAL virtual int connect(int timeout_ms, ExceptionSink* xsink) {
       return sftpConnect(timeout_ms, xsink);
-   }
-
-   DLLLOCAL int sftpDisconnect(bool force, int timeout_ms = DEFAULT_TIMEOUT_MS, AbstractDisconnectionHelper* adh = 0, ExceptionSink* xsink = 0);
-
-   DLLLOCAL virtual int disconnect(bool force, int timeout_ms = DEFAULT_TIMEOUT_MS, AbstractDisconnectionHelper* adh = 0, ExceptionSink* xsink = 0) {
-        return sftpDisconnect(force, timeout_ms, adh, xsink);
    }
 
    DLLLOCAL int sftpConnect(int timeout_ms, ExceptionSink* xsink = 0);
