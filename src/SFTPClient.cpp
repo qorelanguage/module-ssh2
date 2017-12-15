@@ -981,6 +981,8 @@ int64 SFTPClient::sftpRetrieveFile(const char* remote_file, const char* local_fi
 
    while (true) {
       size_t bs = fsize - tot;
+      if (!bs)
+         break;
       if (bs > QSSH2_BUFSIZE)
          bs = QSSH2_BUFSIZE;
 
@@ -1069,6 +1071,8 @@ int64 SFTPClient::sftpGet(const char* remote_file, OutputStream *os, int timeout
 
    while (true) {
       size_t bs = fsize - tot;
+      if (!bs)
+         break;
       if (bs > QSSH2_BUFSIZE)
          bs = QSSH2_BUFSIZE;
 

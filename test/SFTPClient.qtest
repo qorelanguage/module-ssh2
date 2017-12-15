@@ -175,6 +175,18 @@ class SFTPClientTest inherits QUnit::Test {
         }
         assertEq("", sc.getTextFile(fn));
         assertEq(binary(), sc.getFile(fn));
+        {
+            StringOutputStream os();
+            sc.get(fn, os);
+            assertEq("", os.getData());
+        }
+        {
+            string tfn = sprintf("%s%s%s", tmp_location(), DirSep, get_random_string());
+            sc.retrieveFile(fn, tfn);
+            on_exit
+                unlink(tfn);
+            assertEq(0, hstat(tfn).size);
+        }
     }
 
     private usageIntern() {
