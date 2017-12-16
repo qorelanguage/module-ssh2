@@ -167,6 +167,26 @@ class SFTPClientTest inherits QUnit::Test {
         # remove directory
         sc.rmdir(file + ".new", timeout);
         testAssertionValue("SFTPClient::rmdir()", sc.stat(nfn, timeout));
+
+        # issue #2549
+        {
+            File f();
+            f.open2(fn, O_TRUNC | O_WRONLY | O_CREAT);
+        }
+        assertEq("", sc.getTextFile(fn));
+        assertEq(binary(), sc.getFile(fn));
+        {
+            StringOutputStream os();
+            sc.get(fn, os);
+            assertEq("", os.getData());
+        }
+        {
+            string tfn = sprintf("%s%s%s", tmp_location(), DirSep, get_random_string());
+            sc.retrieveFile(fn, tfn);
+            on_exit
+                unlink(tfn);
+            assertEq(0, hstat(tfn).size);
+        }
     }
 
     private usageIntern() {

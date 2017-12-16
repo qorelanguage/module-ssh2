@@ -818,7 +818,7 @@ BinaryNode* SFTPClient::sftpGetFile(const char* file, int timeout_ms, ExceptionS
    QoreSocketThroughputHelper th(socket, false);
 
    size_t tot = 0;
-   while (true) {
+   while (fsize - tot) {
       while ((rc = libssh2_sftp_read(*qh, (char*)bn->getPtr() + tot, fsize - tot)) == LIBSSH2_ERROR_EAGAIN) {
          if (qh.waitSocket())
             return 0;
@@ -897,7 +897,7 @@ QoreStringNode* SFTPClient::sftpGetTextFile(const char* file, int timeout_ms, co
    QoreSocketThroughputHelper th(socket, false);
 
    size_t tot = 0;
-   while (true) {
+   while (fsize - tot) {
       while ((rc = libssh2_sftp_read(*qh, (char*)str->getBuffer() + tot, fsize - tot)) == LIBSSH2_ERROR_EAGAIN) {
          if (qh.waitSocket())
             return 0;
@@ -981,6 +981,8 @@ int64 SFTPClient::sftpRetrieveFile(const char* remote_file, const char* local_fi
 
    while (true) {
       size_t bs = fsize - tot;
+      if (!bs)
+         break;
       if (bs > QSSH2_BUFSIZE)
          bs = QSSH2_BUFSIZE;
 
@@ -1069,6 +1071,8 @@ int64 SFTPClient::sftpGet(const char* remote_file, OutputStream *os, int timeout
 
    while (true) {
       size_t bs = fsize - tot;
+      if (!bs)
+         break;
       if (bs > QSSH2_BUFSIZE)
          bs = QSSH2_BUFSIZE;
 
