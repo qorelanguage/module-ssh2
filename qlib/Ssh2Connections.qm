@@ -1,7 +1,7 @@
 # -*- mode: qore; indent-tabs-mode: nil -*-
 #! @file Ssh2Connections.qm SSH2 module connection implementations
 
-/*  Ssh2Connections.qm Copyright 2013 - 2016 Qore Technologies, s.r.o.
+/*  Ssh2Connections.qm Copyright 2013 - 2018 Qore Technologies, s.r.o.
 
     Permission is hereby granted, free of charge, to any person obtaining a
     copy of this software and associated documentation files (the "Software"),
@@ -23,7 +23,7 @@
 */
 
 # minimum required Qore version
-%requires qore >= 0.8.13
+%requires qore >= 0.9
 
 # require type definitions everywhere
 %require-types
@@ -35,12 +35,12 @@
 
 %requires(reexport) ssh2
 #%requires Util >= 1.0
-%requires(reexport) ConnectionProvider >= 1.0
+%requires(reexport) ConnectionProvider >= 1.1
 
 %new-style
 
 module Ssh2Connections {
-    version = "1.0";
+    version = "1.1";
     desc = "user module for providing SSH2 connections";
     author = "David Nichols <david@qore.org>";
     url = "http://qore.org";
@@ -70,6 +70,12 @@ module Ssh2Connections {
 
     @section ssh2connections_relnotes Ssh2Connections Module Release History
 
+    @subsection ssh2connections_v1_1 Ssh2Connections v1.1
+    - the @ref Ssh2Connections::Ssh2ClientConnection::getConstructorInfo() "Ssh2ClientConnection::getConstructorInfo()"
+      and @ref Ssh2Connections::SftpConnection::getConstructorInfo() "SftpConnection::getConstructorInfo()"
+      methods were added to allow connections to be created dynamically, potentially in another process from a network
+      call (<a href="https://github.com/qorelanguage/qore/issues/2628">issue 2628</a>)
+
     @subsection ssh2connections_v1_0 Ssh2Connections v1.0
     - the initial version of the Ssh2Connections module
 */
@@ -96,9 +102,9 @@ public namespace Ssh2Connections {
         /** @return a hash with a single key: \c "keyfile"
         */
         hash getOptions() {
-            return (
+            return {
                 "keyfile": True,
-                );
+            };
         }
     }
 
@@ -137,6 +143,23 @@ public namespace Ssh2Connections {
                 sc.connect();
             }
             return sc;
+        }
+
+        #! returns a hash that can be used to contruct the object dynamically
+        /** @since %Ssh2Connections 1.1
+        */
+        private hash<ConnectionConstructorInfo> getConstructorInfoImpl() {
+            string my_code;
+            if (opts.keyfile)
+                my_code = sprintf("obj.setKeys(%y); ", opts.keyfile);
+            my_code += "if (connect) {obj.connect();}";
+
+            return new hash<ConnectionConstructorInfo>((
+                "module": "ssh2",
+                "class_name": "Qore::SSH2::SSH2Client",
+                "args": url,
+                "post_processing": my_code,
+            ));
         }
 
         #! static constructor
@@ -197,18 +220,34 @@ public namespace Ssh2Connections {
                 sc.setKeys(opts.keyfile);
             if (connect) {
                 sc.connect();
-                if (rtpath)
+                if (rtpath.val())
                     sc.chdir(rtpath);
             }
             return sc;
         }
 
+        #! returns a hash that can be used to contruct the object dynamically
+        /** @since %Ssh2Connections 1.1
+        */
+        private hash<ConnectionConstructorInfo> getConstructorInfoImpl() {
+            string my_code;
+            if (opts.keyfile)
+                my_code = sprintf("obj.setKeys(%y); ", opts.keyfile);
+
+             my_code += sprintf("if (connect) {obj.connect(); *string rtpath = rtopts.path ?* %s; if (rtpath.path_add.val()) {if (rtpath !~ /\\/$/ && rtopts.path_add !~ /^\\//) {rtpath += \"/\";} rtpath += rtopts.path_add;} if (rtpath.val()) {obj.chdir(rtpath);}}", urlh.path.val() ? sprintf("%y", urlh.path) : "NOTHING");
+
+            return new hash<ConnectionConstructorInfo>((
+                "module": "ssh2",
+                "class_name": "Qore::SSH2::SFTPClient",
+                "args": url,
+                "post_processing": my_code,
+            ));
+        }
+
         private *string getRuntimePath(*hash rtopts) {
-            *string rtpath = urlh.path;
-            if (rtopts.path)
-                rtpath = rtopts.path;
-            if (rtopts.path_add) {
-                if (rtpath =~ /\/$/ && rtopts.path_add !~ /^\//)
+            *string rtpath = rtopts.path ?* urlh.path;
+            if (rtopts.path_add.val()) {
+                if (rtpath !~ /\/$/ && rtopts.path_add !~ /^\//)
                     rtpath += "/";
                 rtpath += rtopts.path_add;
             }
