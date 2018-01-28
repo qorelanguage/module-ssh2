@@ -23,10 +23,10 @@ class Ssh2ConnectionsTest inherits QUnit::Test {
 
         timeout timeout = 10s;
 
-        const MyOpts = Opts + (
+        const MyOpts = Opts + {
             "privkey": "k,private-key=s",
             "timeout": "T,timeout=i",
-            );
+        };
 
         const ColumnOffset = 25;
     }
@@ -77,6 +77,12 @@ class Ssh2ConnectionsTest inherits QUnit::Test {
         testAssertionValue("SftpClient::info()", info.connected, True);
         testAssertionValue("SftpClient::list()", sc.list(NOTHING, timeout).type(), Type::Hash);
         testAssertionValue("SftpClient::listFull()", sc.listFull(NOTHING, timeout).type(), Type::List);
+
+        hash<ConnectionConstructorInfo> conn_info = conn.getConstructorInfo();
+        assertEq("ssh2", conn_info.module);
+        assertEq("Qore::SSH2::SFTPClient", conn_info.class_name);
+        assertEq(uri, conn_info.args[0]);
+        checkPostProcessing(conn_info);
     }
 
     ssh2Test() {
@@ -87,6 +93,30 @@ class Ssh2ConnectionsTest inherits QUnit::Test {
         chan.exec("ls -l | head -5");
         any str = chan.read();
         assertEq(Type::String, str.type());
+
+        hash<ConnectionConstructorInfo> conn_info = conn.getConstructorInfo();
+        assertEq("ssh2", conn_info.module);
+        assertEq("Qore::SSH2::SSH2Client", conn_info.class_name);
+        assertEq(uri, conn_info.args[0]);
+        checkPreAndPostProcessing(info);
+    }
+
+    private checkPreAndPostProcessing(hash<ConnectionConstructorInfo> info) {
+        Program p(PO_NEW_STYLE | PO_STRICT_ARGS | PO_REQUIRE_TYPES);
+        if (info.module)
+            p.loadModule(info.module);
+        if (info.pre_processing) {
+            string pre_processing = sprintf("sub pre_processing(reference<*softlist<auto>> args, bool connect, *hash rtopts) { %s }", info.pre_processing);
+            # ensure that the pre processing code can be parsed
+            p.parse(pre_processing, "pre processing");
+            assertTrue(True, "pre processing: " + info.class_name);
+        }
+        if (info.post_processing) {
+            string post_processing = sprintf("sub post_processing(%s obj, bool connect, *hash rtopts) { %s }", info.class_name, info.post_processing);
+            # ensure that the post processing code can be parsed
+            p.parse(post_processing, "post processing");
+            assertTrue(True, "post processing: " + info.class_name);
+        }
     }
 
     private usageIntern() {
