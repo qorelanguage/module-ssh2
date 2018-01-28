@@ -82,7 +82,7 @@ class Ssh2ConnectionsTest inherits QUnit::Test {
         assertEq("ssh2", conn_info.module);
         assertEq("Qore::SSH2::SFTPClient", conn_info.class_name);
         assertEq(uri, conn_info.args[0]);
-        checkPostProcessing(conn_info);
+        checkPreAndPostProcessing(conn_info);
     }
 
     ssh2Test() {
@@ -98,7 +98,7 @@ class Ssh2ConnectionsTest inherits QUnit::Test {
         assertEq("ssh2", conn_info.module);
         assertEq("Qore::SSH2::SSH2Client", conn_info.class_name);
         assertEq(uri, conn_info.args[0]);
-        checkPreAndPostProcessing(info);
+        checkPreAndPostProcessing(conn_info);
     }
 
     private checkPreAndPostProcessing(hash<ConnectionConstructorInfo> info) {
