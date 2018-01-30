@@ -1196,10 +1196,10 @@ int64 SFTPClient::sftpTransferFile(const char* local_path, const char* remote_pa
 
    BlockingHelper bh(this);
 
-   QSftpHelper qh(this, "SFTPCLIENT-PUTFILE-ERROR", "SFTPClient::putFile", timeout_ms, xsink);
+   QSftpHelper qh(this, "SFTPCLIENT-TRANSFERFILE-ERROR", "SFTPClient::transferFile", timeout_ms, xsink);
 
    {
-      QoreSocketTimeoutHelper th(socket, "putFile (open)");
+      QoreSocketTimeoutHelper th(socket, "transferFile (open)");
 
       // if this works we try to open an sftp handle on the other side
       do {
@@ -1231,8 +1231,9 @@ int64 SFTPClient::sftpTransferFile(const char* local_path, const char* remote_pa
       if (bs > QSSH2_BUFSIZE)
          bs = QSSH2_BUFSIZE;
 
-      if (f.readBinary(**buf, bs, xsink))
+      if (f.readBinary(**buf, bs, xsink)) {
          return -1;
+      }
 
       assert(buf->size());
 
@@ -1255,7 +1256,7 @@ int64 SFTPClient::sftpTransferFile(const char* local_path, const char* remote_pa
          if (total == buf->size())
             break;
       }
-      size += rc;
+      size += total;
       buf->setSize(0);
    }
 
