@@ -20,17 +20,18 @@ class SFTPClientTest inherits QUnit::Test {
         timeout timeout = 10s;
         SFTPClient sc;
 
-        const FileContents = "hi there ýčšěáýžšěčéářčě";
+        # issue #2633: ensure that the file is larger than the LIBSSH2 block size
+        const FileContents = "hi there ýčšěáýžšěčéářčě" + strmul("x", 128 * 1024);
         const BinContents = binary(FileContents);
         const FileLen = FileContents.size();
         const FileMode = 0755;
 
         const FileNameLen = 40;
 
-        const MyOpts = Opts + (
+        const MyOpts = Opts + {
             "privkey": "k,private-key=s",
             "timeout": "T,timeout=i",
-            );
+        };
 
         const ColumnOffset = 25;
     }
@@ -48,7 +49,7 @@ class SFTPClientTest inherits QUnit::Test {
             if (PlatformOS == "Windows")
                 exit(0);
 
-            string sshdir = `echo -n ~/.ssh`;
+            string sshdir = ENV.HOME + DirSep + ".ssh";
             if (is_file(sshdir + "/id_rsa"))
                 sc.setKeys(sshdir + "/id_rsa");
             else if (is_file(sshdir + "/id_dsa"))
