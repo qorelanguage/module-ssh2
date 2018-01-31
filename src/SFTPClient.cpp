@@ -1156,6 +1156,7 @@ size_t SFTPClient::sftpPutFile(const char* outb, size_t towrite, const char* fna
       }
       size += rc;
    }
+   assert(size == towrite);
 
    th.finalize(size);
 
@@ -1252,7 +1253,9 @@ int64 SFTPClient::sftpTransferFile(const char* local_path, const char* remote_pa
             qh.err("libssh2_sftp_write(" QLLD ") failed while writing '%s', total written: " QLLD ", total to write: " QLLD, towrite - size, file.c_str(), size, towrite);
             return -1;
          }
+         assert(rc <= (buf->size() - total));
          total += rc;
+         assert(total <= buf->size());
          if (total == buf->size())
             break;
       }
