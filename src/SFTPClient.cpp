@@ -5,7 +5,7 @@
   libssh2 SFTP client integration into qore
 
   Copyright (C) 2009 Wolfgang Ritzinger
-  Copyright (C) 2010 - 2017 Qore Technologies, s.r.o.
+  Copyright (C) 2010 - 2018 Qore Technologies, s.r.o.
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -1196,10 +1196,10 @@ int64 SFTPClient::sftpTransferFile(const char* local_path, const char* remote_pa
 
    BlockingHelper bh(this);
 
-   QSftpHelper qh(this, "SFTPCLIENT-PUTFILE-ERROR", "SFTPClient::putFile", timeout_ms, xsink);
+   QSftpHelper qh(this, "SFTPCLIENT-TRANSFERFILE-ERROR", "SFTPClient::transferFile", timeout_ms, xsink);
 
    {
-      QoreSocketTimeoutHelper th(socket, "putFile (open)");
+      QoreSocketTimeoutHelper th(socket, "transferFile (open)");
 
       // if this works we try to open an sftp handle on the other side
       do {
@@ -1231,23 +1231,32 @@ int64 SFTPClient::sftpTransferFile(const char* local_path, const char* remote_pa
       if (bs > QSSH2_BUFSIZE)
          bs = QSSH2_BUFSIZE;
 
-      if (f.readBinary(**buf, bs, xsink))
+      if (f.readBinary(**buf, bs, xsink)) {
          return -1;
+      }
 
       assert(buf->size());
 
+      // issue #2633: if libssh2_sftp_write() returns less than the buffer size, then we have to keep sending that data
+      // and cannot change the transfer buffer: https://www.libssh2.org/libssh2_sftp_write.html
+      ssize_t total = 0;
       ssize_t rc;
-      while ((rc = libssh2_sftp_write(*qh, (const char*)buf->getPtr(), buf->size())) == LIBSSH2_ERROR_EAGAIN) {
-         if (qh.waitSocket()) {
-            // note: memory leak here! we cannot close the handle due to the timeout
+      while (true) {
+         while ((rc = libssh2_sftp_write(*qh, (const char*)buf->getPtr() + total, buf->size() - total)) == LIBSSH2_ERROR_EAGAIN) {
+            if (qh.waitSocket()) {
+               // note: memory leak here! we cannot close the handle due to the timeout
+               return -1;
+            }
+         }
+         if (rc < 0) {
+            qh.err("libssh2_sftp_write(" QLLD ") failed while writing '%s', total written: " QLLD ", total to write: " QLLD, towrite - size, file.c_str(), size, towrite);
             return -1;
          }
+         total += rc;
+         if (total == buf->size())
+            break;
       }
-      if (rc < 0) {
-         qh.err("libssh2_sftp_write(" QLLD ") failed while writing '%s', total written: " QLLD ", total to write: " QLLD, towrite - size, file.c_str(), size, towrite);
-         return -1;
-      }
-      size += rc;
+      size += total;
       buf->setSize(0);
    }
 
@@ -1314,9 +1323,12 @@ int64 SFTPClient::sftpPut(InputStream *is, const char* remote_path, int mode, in
          break;
       }
 
-      while (r) {
+      // issue #2633: if libssh2_sftp_write() returns less than the buffer size, then we have to keep sending that data
+      // and cannot change the transfer buffer: https://www.libssh2.org/libssh2_sftp_write.html
+      ssize_t total = 0;
+      while (true) {
          ssize_t rc;
-         while ((rc = libssh2_sftp_write(*qh, buf.get(), r)) == LIBSSH2_ERROR_EAGAIN) {
+         while ((rc = libssh2_sftp_write(*qh, buf.get() + total, r - total)) == LIBSSH2_ERROR_EAGAIN) {
             if (qh.waitSocket()) {
                // note: memory leak here! we cannot close the handle due to the timeout
                return -1;
@@ -1326,8 +1338,10 @@ int64 SFTPClient::sftpPut(InputStream *is, const char* remote_path, int mode, in
             qh.err("libssh2_sftp_write(" QLLD ") failed while writing '%s', total written: " QLLD, r, file.c_str(), size);
             return -1;
          }
+         total += rc;
          size += rc;
-         r -= rc;
+         if (total == r)
+            break;
       }
    }
 
