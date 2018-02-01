@@ -123,8 +123,26 @@ class SFTPClientTest inherits QUnit::Test {
         string siso88592 = sc.getTextFile(fn, timeout, "iso-8859-2");
         testAssertionValue("SFTPClient::getTextFile(iso-8859-2)", siso88592.encoding(), "ISO-8859-2");
 
+        bool tempCreated = False;
+
         {
             string rfn = sprintf("/%s/%s", tmp_location(), get_random_string());
+            # Check whether the local file exists, the test assumes common /tmp for both local and remote
+            # If the file doesn't exist, attempt to write it
+            if (!is_file(fn)) {
+                tempCreated = True;
+                {
+                    File f();
+                    if (!f.open(fn, O_CREAT | O_WRONLY, FileMode)) {
+                        f.write(FileContents);
+                    }
+                    f.close();
+                }
+                # We need to upload this file for further test
+                rc = sc.transferFile(fn, fn, timeout);
+                testAssertionValue("SFTPClient::transferFile()", rc, FileContents.size());
+            }
+
             rc = sc.transferFile(fn, rfn, timeout);
             testAssertionValue("SFTPClient::transferFile()", rc, FileContents.size());
 
@@ -139,6 +157,9 @@ class SFTPClientTest inherits QUnit::Test {
             sc.removeFile(rfn, timeout);
             testAssertionValue("SFTPClient::removeFile() 1", sc.stat(rfn, timeout));
         }
+
+        # delete local file if created
+        on_exit tempCreated && is_file(fn) && unlink(fn);
 
         # make new file name
         string nfn = fn + ".new";
