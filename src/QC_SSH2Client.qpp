@@ -29,7 +29,7 @@ extern QoreClass* QC_SSH2BASE;
 extern QoreClass* QC_SSH2CHANNEL;
 
 //! allows Qore programs to establish an ssh2 connection to a remote server
-/** 
+/**
  */
 qclass SSH2Client [arg=SSH2Client* c; ns=Qore::SSH2; dom=NETWORK; vparent=SSH2Base];
 
@@ -119,7 +119,7 @@ SSH2Channel SSH2Client::openSessionChannel(timeout timeout = 60s) {
  */
 SSH2Channel SSH2Client::openDirectTcpipChannel(string host, softint port, string source_host = "127.0.0.1", softint source_port = 22, timeout timeout = 60s) {
    static const char *SSH2CLIENT_OPENDIRECTTCPIPCHANNEL_ERR = "SSH2CLIENT-OPENDIRECTTCPIPCHANNEL-ERROR";
-   
+
    if (!port) {
       xsink->raiseException(SSH2CLIENT_OPENDIRECTTCPIPCHANNEL_ERR, "port number for forwarded channel as second argument to SSH2Client::openDirectTcpipChannel() cannot be zero");
       return 0;
@@ -184,9 +184,9 @@ SSH2Channel SSH2Client::scpGet(string path, timeout timeout = 60s, *reference st
  */
 SSH2Channel SSH2Client::scpPut(string remote_path, softint size, softint mode = 0644, *date mtime, *date atime, timeout timeout = 60s) {
    static const char *SSH2CLIENT_SCPPUT_ERR = "SSH2CLIENT-SCPPUT-ERROR";
-   
+
    if (size <= 0) {
-      xsink->raiseException(SSH2CLIENT_SCPPUT_ERR, "invalid file size as second argument to SSH2Client::scpPut() (got invalid size "QLLD")", size);
+      xsink->raiseException(SSH2CLIENT_SCPPUT_ERR, "invalid file size as second argument to SSH2Client::scpPut() (got invalid size " QLLD ")", size);
       return 0;
    }
 
