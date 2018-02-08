@@ -26,9 +26,9 @@ const opts = (
     "help": "h,help"
     );
 
-sub get_random_filename() returns string {    
+sub get_random_filename() returns string {
     my string $name;
-    
+
     for (my int $i = 0; $i < FileNameLen; ++$i) {
         my int $c = rand() % 52;
         if ($c < 26)
@@ -69,12 +69,12 @@ sub ssh_test(string $url) {
 
     if ($o.privkey)
         $sc.setKeys($o.privkey);
-    
+
     $sc.connect();
 
     my hash $info = $sc.info();
     stdout.printf("SSH %s@%s:%d auth: %s, hostkey: %n, crypt_cs: %n, tmp: %s\n", $info.ssh2user, $info.ssh2host, $info.ssh2port, $info.authenticated, $info.methods.HOSTKEY, $info.methods.CRYPT_CS, $fn);
-    
+
     # test SSHClient::scpPut()
     my SSH2Channel $chan = $sc.scpPut($fn, FileLen, 0622, 1982-01-05, 2010-02-01);
     test_value($chan instanceof SSH2Channel, True, "SSH2Client::scpPut()");
@@ -117,7 +117,7 @@ sub ssh_test(string $url) {
     readUntilPrompt($chan);
     $chan.write("ls -l | head -5\n");
     readUntilPrompt($chan);
-    
+
     $chan.sendEof();
     $chan.close();
     stdout.printf("exit\n");
@@ -129,12 +129,14 @@ sub ssh_test(string $url) {
 
 sub sftp_test_intern(SFTPClient $sc) {
     my string $file = get_random_filename();
+    my string $file1 = get_random_filename();
     my string $fn = "/tmp/" + $file;
+    my string $fn1 = "/tmp/" + $file1;
 
     my hash $info = $sc.info();
 
     stdout.printf("SFTP %s@%s:%d auth: %s, hostkey: %n, crypt_cs: %n, tmp: %s\n", $info.ssh2user, $info.ssh2host, $info.ssh2port, $info.authenticated, $info.methods.HOSTKEY, $info.methods.CRYPT_CS, $fn);
-    
+
     test_value($info.connected, True, "SFTPClient::info()");
     test_value(type($sc.list(NOTHING, $timeout)), Type::Hash, "SFTPClient::list()");
     test_value(type($sc.listFull(NOTHING, $timeout)), Type::List, "SFTPClient::listFull()");
@@ -142,6 +144,9 @@ sub sftp_test_intern(SFTPClient $sc) {
     # create a file: seems that sshd ignores the mode when creating a file
     my int $rc = $sc.putFile(FileContents, $fn, NOTHING, $timeout);
     test_value($rc, strlen(FileContents), "SFTPClient::putFile()");
+
+    $rc = $sc.putFile("", $fn1, NOTHING, $timeout);
+    test_value($rc, 0, "SFTPClient::putFile() 1");
 
     $sc.chmod($fn, FileMode, $timeout);
     $info = $sc.stat($fn, $timeout);
@@ -158,6 +163,9 @@ sub sftp_test_intern(SFTPClient $sc) {
     # retrieve the file as a string
     my string $s = $sc.getTextFile($fn, $timeout);
     test_value($s, FileContents, "SFTPClient::getTextFile()");
+
+    my string $s1 = $sc.getTextFile($fn1, $timeout);
+    test_value($s1, 0, "SFTPClient::getTextFile() 1");
 
     # test various encodings
     my string $sutf8 = $sc.getTextFile($fn, $timeout, "utf8");
@@ -202,7 +210,7 @@ sub sftp_test(string $url) {
         my SFTPClient $sc($url);
         if ($o.privkey)
             $sc.setKeys($o.privkey);
-    
+
         $sc.connect($timeout);
 
         my code $test = sub () {

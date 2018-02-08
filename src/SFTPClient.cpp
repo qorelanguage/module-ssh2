@@ -850,7 +850,7 @@ BinaryNode *SFTPClient::sftp_getFile(const char* file, int timeout_ms, Exception
 #endif
 
    size_t tot = 0;
-   while (true) {
+   while (fsize) {
       while ((rc = libssh2_sftp_read(*qh, (char*)bn->getPtr() + tot, fsize - tot)) == LIBSSH2_ERROR_EAGAIN) {
          if (qh.waitSocket())
             return 0;
@@ -937,7 +937,7 @@ QoreStringNode *SFTPClient::sftp_getTextFile(const char* file, int timeout_ms, c
 #endif
 
    size_t tot = 0;
-   while (true) {
+   while (fsize) {
       while ((rc = libssh2_sftp_read(*qh, (char*)str->getBuffer() + tot, fsize - tot)) == LIBSSH2_ERROR_EAGAIN) {
          if (qh.waitSocket())
             return 0;
