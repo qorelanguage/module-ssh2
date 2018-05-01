@@ -20,7 +20,8 @@ EXTRA_DIST = COPYING.LGPL COPYING.MIT AUTHORS README \
 	src/QC_SSH2Client.qpp \
 	src/QC_SSH2Channel.qpp \
 	src/QC_SFTPClient.qpp \
-	test/ssh2-test.q \
+	test/Ssh2Client.qtest \
+    test/Ssh2Connections.qtest \
 	test/SFTPClient.qtest \
 	test/SftpPollerMultiDirs.qtest \
 	test/SftpPoller.qtest \
