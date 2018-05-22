@@ -9,7 +9,7 @@ include(CheckCXXCompilerFlag)
 include(CheckCXXSymbolExists)
 include(CheckIncludeFileCXX)
 
-find_package(Qore 0.8.13 REQUIRED)
+find_package(Qore 0.9 REQUIRED)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBSSH2 REQUIRED libssh2>=1.1)
