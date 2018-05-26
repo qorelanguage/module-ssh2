@@ -840,9 +840,9 @@ void SSH2Client::clearWarningQueue(ExceptionSink* xsink) {
    socket.clearWarningQueue(xsink);
 }
 
-void SSH2Client::setWarningQueue(ExceptionSink* xsink, int64 warning_ms, int64 warning_bs, Queue* wq, AbstractQoreNode* arg, int64 min_ms) {
-   AutoLocker al(m);
-   socket.setWarningQueue(xsink, warning_ms, warning_bs, wq, arg, min_ms);
+void SSH2Client::setWarningQueue(ExceptionSink* xsink, int64 warning_ms, int64 warning_bs, Queue* wq, QoreValue arg, int64 min_ms) {
+    AutoLocker al(m);
+    socket.setWarningQueue(xsink, warning_ms, warning_bs, wq, arg, min_ms);
 }
 
 QoreHashNode* SSH2Client::getUsageInfo() const {
