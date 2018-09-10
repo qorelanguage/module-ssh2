@@ -1219,10 +1219,7 @@ int64 SFTPClient::sftpTransferFile(const char* local_path, const char* remote_pa
    }
 
    SimpleRefHolder<BinaryNode> buf(new BinaryNode);
-   if (buf->preallocate(QSSH2_BUFSIZE)) {
-      xsink->outOfMemory();
-      return -1;
-   }
+   // issue #2982: do not preallocate the binary buffer here; it will be managed in the QoreFile::readbinary() call below
 
    QoreSocketThroughputHelper th(socket, true);
 
