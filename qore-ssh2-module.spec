@@ -1,4 +1,4 @@
-%define mod_ver 1.2
+%define mod_ver 1.3
 
 %{?_datarootdir: %global mydatarootdir %_datarootdir}
 %{!?_datarootdir: %global mydatarootdir /usr/share}
@@ -49,7 +49,11 @@ Source: http://prdownloads.sourceforge.net/qore/%{name}-%{version}.tar.bz2
 #Source0: %{name}-%{version}.tar.bz2
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: gcc-c++
+<<<<<<< HEAD
 BuildRequires: qore-devel >= 0.8.13
+=======
+BuildRequires: qore-devel >= 0.9
+>>>>>>> develop
 BuildRequires: qore
 BuildRequires: libssh2-devel >= 1.1
 BuildRequires: openssl-devel
@@ -102,6 +106,9 @@ This RPM provides API documentation, test and example programs
 %doc docs/ssh2/ docs/SftpPoller/ test/
 
 %changelog
+* Sun Jan 26 2018 David Nichols <david@qore.org> - 1.3
+- updated to version 1.3
+
 * Thu Feb 2 2017 David Nichols <david@qore.org> - 1.2
 - updated to version 1.2
 

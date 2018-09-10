@@ -1,28 +1,28 @@
 /* -*- mode: c++; indent-tabs-mode: nil -*- */
 /** @file SSH2Base.qpp defines the SSH2Base class */
 /*
-  QC_SSH2Base.qpp
+    QC_SSH2Base.qpp
 
-  libssh2 ssh2 client integration in Qore
+    libssh2 ssh2 client integration in Qore
 
-  Qore Programming Language
+    Qore Programming Language
 
-  Copyright 2009 Wolfgang Ritzinger
-  Copyright 2010 - 2017 Qore Technologies, s.r.o.
+    Copyright 2009 Wolfgang Ritzinger
+    Copyright 2010 - 2018 Qore Technologies, s.r.o.
 
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
 
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
 
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include "QC_SSH2Base.h"
@@ -197,7 +197,7 @@ nothing SSH2Base::setWarningQueue(int warning_ms, int warning_bs, Queue[Queue] q
       return 0;
    }
    // pass reference from QoreObject::getReferencedPrivateData() to function
-   myself->setWarningQueue(xsink, warning_ms, warning_bs, q.release(), arg.getReferencedValue(), min_ms);
+   myself->setWarningQueue(xsink, warning_ms, warning_bs, q.release(), arg.refSelf(), min_ms);
 #else
    missing_method_error("SSH2Base::setWarningQueue", "0.8.10", xsink);
    return 0;
