@@ -159,7 +159,7 @@ class SFTPClientTest inherits QUnit::Test {
         }
 
         # delete local file if created
-        on_exit tempCreated && is_file(fn) && unlink(fn);
+        on_exit if(tempCreated && is_file(fn)) unlink(fn);
 
         # make new file name
         string nfn = fn + ".new";
