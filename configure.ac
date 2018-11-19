@@ -720,6 +720,8 @@ else
    fi
 fi
 AC_SUBST([userlibdir])
+usermoddir="`echo ${userlibdir}|sed s/-modules.*//`"
+AC_SUBST([usermoddir])
 
 AC_ARG_ENABLE([profile],
      [AS_HELP_STRING([--enable-profile],

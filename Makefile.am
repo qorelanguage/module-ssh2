@@ -41,7 +41,10 @@ QLIB_TMP_DOXYFILES = docs/qlib/SftpPoller.qm.dox.h docs/qlib/Ssh2Connections.qm.
 QDX = qdx
 DX_CLEANFILES = ${DOXYFILES} $(QLIB_TMP_DOXYFILES)
 
-docs/qlib/Doxyfile.SftpPoller: docs/qlib/Doxyfile.tmpl
+docs/qlib/Doxyfile.tmp: docs/qlib/Doxyfile.tmpl
+	sed s:__USERMODDIR__:${usermoddir}: $< > $@
+
+docs/qlib/Doxyfile.SftpPoller: docs/qlib/Doxyfile.tmp
 	$(QDX) -M=qlib/SftpPoller.qm:qlib/SftpPoller.qm.dox.h -tssh2.tag=../../ssh2/html $< $@
 
 docs/qlib/SftpPoller.qm.dox.h: qlib/SftpPoller.qm
@@ -51,7 +54,7 @@ docs/SftpPoller/html: docs/qlib/SftpPoller.qm.dox.h docs/qlib/Doxyfile.SftpPolle
 	cd docs; $(DOXYGEN_CMD) qlib/Doxyfile.SftpPoller
 	$(QDX) --post docs/SftpPoller/html docs/SftpPoller/html/search
 
-docs/qlib/Doxyfile.Ssh2Connections: docs/qlib/Doxyfile.tmpl
+docs/qlib/Doxyfile.Ssh2Connections: docs/qlib/Doxyfile.tmp
 	$(QDX) -M=qlib/Ssh2Connections.qm:qlib/Ssh2Connections.qm.dox.h -tssh2.tag=../../ssh2/html $< $@
 
 docs/qlib/Ssh2Connections.qm.dox.h: qlib/Ssh2Connections.qm
@@ -69,7 +72,7 @@ docs/mainpage.doxygen: docs/mainpage.doxygen.tmpl
 	$(QDX) -d $< $@
 
 docs/doxyfile: docs/doxyfile.tmpl
-	sed s/__VERSION__/${VERSION}/ $< > $@
+	sed -e s/__VERSION__/${VERSION}/ -e s:__USERMODDIR__:${usermoddir}: $< > $@
 
 doxygen-doc: $(DOXYGEN_OUTPUT)
 
