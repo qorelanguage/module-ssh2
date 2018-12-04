@@ -61,7 +61,7 @@ class Ssh2ConnectionsTest inherits QUnit::Test {
     }
 
     sftpTest() {
-        SftpConnection conn("test", "test", uri, False, getOptions(), parse_url(uri));
+        SftpConnection conn("test", "test", uri, {}, getOptions());
 
         SFTPClient sc = conn.get();
 
@@ -86,7 +86,7 @@ class Ssh2ConnectionsTest inherits QUnit::Test {
     }
 
     ssh2Test() {
-        Ssh2ClientConnection conn("test", "test", uri, False, getOptions(), parse_url(uri));
+        Ssh2ClientConnection conn("test", "test", uri, {}, getOptions());
 
         SSH2Client sc = conn.get();
         SSH2Channel chan = sc.openSessionChannel();

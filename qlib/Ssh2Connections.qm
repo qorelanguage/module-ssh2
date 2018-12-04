@@ -87,15 +87,32 @@ public namespace Ssh2Connections {
         - \c "keyfile": a path to a private key file in PEM format to use for key-based authentication
     */
     public class AbstractSsh2Connection inherits ConnectionProvider::AbstractConnection {
-        #! creates the SftpConnection object
+        #! DEPRECATED: creates the AbstractSsh2Connection object
         /** @param name the name of the connection
             @param desc connection description
             @param url connection URL
             @param monitor monitoring flag
             @param opts connection options
             @param urlh broken down URL hash (as returned by @ref Qore::parse_url())
+
+            @deprecated since Qore 0.9
         */
-        constructor(string name, string desc, string url, bool monitor, *hash opts, hash urlh) : AbstractConnection(name, desc, url, monitor, opts, urlh) {
+        deprecated
+        constructor(string name, string desc, string url, bool monitor, *hash opts, hash urlh)
+            : AbstractConnection(name, desc, url, {"monitor": monitor}, opts ?? {}) {
+        }
+
+        #! creates the AbstractSsh2Connection object
+        /** @param name the name of the connection
+            @param description connection description
+            @param url connection URL (potentially with password info)
+            @param attributes various attributes. See below
+            @param options connection options
+
+            See @ref AbstractConnection::constructor() for \c attributes and \c options reference.
+         */
+        constructor(string name, string description, string url, hash attributes = {}, hash options = {})
+            : AbstractConnection(name, description, url, attributes, options) {
         }
 
         #! returns valid options
@@ -113,15 +130,31 @@ public namespace Ssh2Connections {
         - \c "keyfile": a path to a private key file in PEM format to use for key-based authentication (environment variables can be prefixed with \c "$" in the path (or optionally enclosed in curly brackets as in \c "${var}") and will be substituted with the value of the environment variable)
     */
     public class Ssh2ClientConnection inherits AbstractSsh2Connection {
-        #! creates the Ssh2ClientConnection object
+        #! DEPRECATED: creates the Ssh2ClientConnection object
         /** @param name the name of the connection
             @param desc connection description
             @param url connection URL
             @param monitor monitoring flag
             @param opts connection options
             @param urlh broken down URL hash (as returned by @ref Qore::parse_url())
+
+            @deprecated since Qore 0.9
         */
-        constructor(string name, string desc, string url, bool monitor, *hash opts, hash urlh) : AbstractSsh2Connection(name, desc, url, monitor, opts, urlh) {
+        constructor(string name, string desc, string url, bool monitor, *hash opts, hash urlh)
+            : AbstractSsh2Connection(name, desc, url, {"monitor": monitor}, opts ?? {}) {
+        }
+
+        #! creates the Ssh2ClientConnection object
+        /** @param name the name of the connection
+            @param description connection description
+            @param url connection URL (potentially with password info)
+            @param attributes various attributes. See below
+            @param options connection options
+
+            See @ref AbstractConnection::constructor() for \c attributes and \c options reference.
+         */
+        constructor(string name, string description, string url, hash attributes = {}, hash options = {})
+            : AbstractSsh2Connection(name, description, url, attributes, options) {
         }
 
         #! returns \c "ssh2"
@@ -162,9 +195,12 @@ public namespace Ssh2Connections {
             ));
         }
 
-        #! static constructor
+        #! DEPRECATED: static constructor
+        /** @deprecated since Qore 0.9 in favor of new constructor and Qore::Reflection
+         */
+        deprecated
         static SftpConnection make(string name, string desc, string url, bool monitor, *hash opts, hash urlh) {
-            return new SftpConnection(name, desc, url, monitor, opts, urlh);
+            return new SftpConnection(name, desc, url, {"monitor": monitor}, opts ?? {});
         }
     }
 
@@ -177,15 +213,31 @@ public namespace Ssh2Connections {
         - \c "path_add": appends the given string to the path component of the URL at runtime
     */
     public class SftpConnection inherits AbstractSsh2Connection {
-        #! creates the SftpConnection object
+        #! DEPRECATED: creates the SftpConnection object
         /** @param name the name of the connection
             @param desc connection description
             @param url connection URL
             @param monitor monitoring flag
             @param opts connection options
             @param urlh broken down URL hash (as returned by @ref Qore::parse_url())
+
+            @deprecated since Qore 0.9
         */
-        constructor(string name, string desc, string url, bool monitor, *hash opts, hash urlh) : AbstractSsh2Connection(name, desc, url, monitor, opts, urlh) {
+        constructor(string name, string desc, string url, bool monitor, *hash opts, hash urlh)
+            : AbstractSsh2Connection(name, desc, url, {"monitor": monitor}, opts ?? {}) {
+        }
+
+        #! creates the SftpConnection object
+        /** @param name the name of the connection
+            @param description connection description
+            @param url connection URL (potentially with password info)
+            @param attributes various attributes. See below
+            @param options connection options
+
+            See @ref AbstractConnection::constructor() for \c attributes and \c options reference.
+         */
+        constructor(string name, string description, string url, hash attributes = {}, hash options = {})
+            : AbstractSsh2Connection(name, description, url, attributes, options) {
         }
 
         #! returns \c "sftp"
@@ -254,9 +306,12 @@ public namespace Ssh2Connections {
             return rtpath;
         }
 
-        #! static constructor
+        #! DEPRECATED: static constructor
+        /** @deprecated since Qore 0.9 in favor of new constructor and Qore::Reflection
+         */
+        deprecated
         static SftpConnection make(string name, string desc, string url, bool monitor, *hash opts, hash urlh) {
-            return new SftpConnection(name, desc, url, monitor, opts, urlh);
+            return new SftpConnection(name, desc, url, {"monitor": monitor}, opts ?? {});
         }
     }
 }
