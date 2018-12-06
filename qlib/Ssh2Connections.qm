@@ -35,12 +35,12 @@
 
 %requires(reexport) ssh2
 #%requires Util >= 1.0
-%requires(reexport) ConnectionProvider >= 1.1
+%requires(reexport) ConnectionProvider >= 1.2
 
 %new-style
 
 module Ssh2Connections {
-    version = "1.1";
+    version = "1.2";
     desc = "user module for providing SSH2 connections";
     author = "David Nichols <david@qore.org>";
     url = "http://qore.org";
@@ -69,6 +69,9 @@ module Ssh2Connections {
     - @ref Ssh2Connections::Ssh2ClientConnection "Ssh2ClientConnection"
 
     @section ssh2connections_relnotes Ssh2Connections Module Release History
+
+    @subsection ssh2connections_v1_2 Ssh2Connections v1.2
+    - new AbstractConnection infrastructure
 
     @subsection ssh2connections_v1_1 Ssh2Connections v1.1
     - the @ref Ssh2Connections::Ssh2ClientConnection::getConstructorInfo() "Ssh2ClientConnection::getConstructorInfo()"
@@ -140,6 +143,7 @@ public namespace Ssh2Connections {
 
             @deprecated since Qore 0.9
         */
+        deprecated
         constructor(string name, string desc, string url, bool monitor, *hash opts, hash urlh)
             : AbstractSsh2Connection(name, desc, url, {"monitor": monitor}, opts ?? {}) {
         }
@@ -223,6 +227,7 @@ public namespace Ssh2Connections {
 
             @deprecated since Qore 0.9
         */
+        deprecated
         constructor(string name, string desc, string url, bool monitor, *hash opts, hash urlh)
             : AbstractSsh2Connection(name, desc, url, {"monitor": monitor}, opts ?? {}) {
         }
