@@ -85,7 +85,7 @@ set(module_name "ssh2")
 add_library(${module_name} SHARED ${CPP_SRC} ${QPP_SOURCES})
 
 qore_binary_module(${module_name} ${PROJECT_VERSION} ${LIBSSH2_LDFLAGS} Threads::Threads)
-qore_user_modules(${QMOD})
+qore_user_modules("${QMOD}")
 
 qore_dist(${PROJECT_VERSION})
 
