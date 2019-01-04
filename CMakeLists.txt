@@ -3,13 +3,13 @@
 
 cmake_minimum_required(VERSION 3.0.0)
 
-project(qore-ssh2-module VERSION 1.2.0)
+project(qore-ssh2-module VERSION 1.3.0)
 
 include(CheckCXXCompilerFlag)
 include(CheckCXXSymbolExists)
 include(CheckIncludeFileCXX)
 
-find_package(Qore 0.8.13 REQUIRED)
+find_package(Qore 0.9 REQUIRED)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBSSH2 REQUIRED libssh2>=1.1)

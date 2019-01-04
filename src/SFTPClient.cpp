@@ -1,25 +1,25 @@
 /* -*- indent-tabs-mode: nil -*- */
 /*
-  SFTPClient.cpp
+    SFTPClient.cpp
 
-  libssh2 SFTP client integration into qore
+    libssh2 SFTP client integration into qore
 
-  Copyright (C) 2009 Wolfgang Ritzinger
-  Copyright (C) 2010 - 2018 Qore Technologies, s.r.o.
+    Copyright (C) 2009 Wolfgang Ritzinger
+    Copyright (C) 2010 - 2018 Qore Technologies, s.r.o.
 
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
 
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
 
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include "SFTPClient.h"
@@ -208,166 +208,166 @@ int SFTPClient::disconnectUnlocked(bool force, int timeout_ms, AbstractDisconnec
 }
 
 QoreHashNode* SFTPClient::sftpList(const char* path, int timeout_ms, ExceptionSink* xsink) {
-   AutoLocker al(m);
+    AutoLocker al(m);
 
-   // try to make an implicit connection
-   if (!sftpConnectedUnlocked() && sftpConnectUnlocked(timeout_ms, xsink))
-      return 0;
+    // try to make an implicit connection
+    if (!sftpConnectedUnlocked() && sftpConnectUnlocked(timeout_ms, xsink))
+        return 0;
 
-   std::string pstr;
-   if (!path) // there is no path given so we use the sftpPath
-      pstr = sftppath;
-   else if (path[0] == '/') // absolute path, take it
-      pstr = path;
-   else // relative path
-      pstr = sftppath + "/" + path;
+    std::string pstr;
+    if (!path) // there is no path given so we use the sftpPath
+        pstr = sftppath;
+    else if (path[0] == '/') // absolute path, take it
+        pstr = path;
+    else // relative path
+        pstr = sftppath + "/" + path;
 
-   BlockingHelper bh(this);
+    BlockingHelper bh(this);
 
-   QSftpHelper qh(this, "SFTPCLIENT-LIST-ERROR", "SFTPClient::list", timeout_ms, xsink);
+    QSftpHelper qh(this, "SFTPCLIENT-LIST-ERROR", "SFTPClient::list", timeout_ms, xsink);
 
-   {
-      QoreSocketTimeoutHelper th(socket, "list");
+    {
+        QoreSocketTimeoutHelper th(socket, "list");
 
-      do {
-         qh.assign(libssh2_sftp_opendir(sftp_session, pstr.c_str()));
-         if (!qh) {
-            if (libssh2_session_last_errno(ssh_session) == LIBSSH2_ERROR_EAGAIN) {
-               if (qh.waitSocket())
-                  return 0;
+        do {
+            qh.assign(libssh2_sftp_opendir(sftp_session, pstr.c_str()));
+            if (!qh) {
+                if (libssh2_session_last_errno(ssh_session) == LIBSSH2_ERROR_EAGAIN) {
+                    if (qh.waitSocket())
+                        return 0;
+                }
+                else {
+                    qh.err("error reading directory '%s'", pstr.c_str());
+                    return 0;
+                }
             }
-            else {
-               qh.err("error reading directory '%s'", pstr.c_str());
-               return 0;
-            }
-         }
-      } while (!qh);
-   }
+        } while (!qh);
+    }
 
-   // create objects after only possible error
-   ReferenceHolder<QoreListNode> files(new QoreListNode, xsink);
-   ReferenceHolder<QoreListNode> dirs(new QoreListNode, xsink);
-   ReferenceHolder<QoreListNode> links(new QoreListNode, xsink);
+    // create objects after only possible error
+    ReferenceHolder<QoreListNode> files(new QoreListNode(autoTypeInfo), xsink);
+    ReferenceHolder<QoreListNode> dirs(new QoreListNode(autoTypeInfo), xsink);
+    ReferenceHolder<QoreListNode> links(new QoreListNode(autoTypeInfo), xsink);
 
-   char buff[PATH_MAX];
-   LIBSSH2_SFTP_ATTRIBUTES attrs;
+    char buff[PATH_MAX];
+    LIBSSH2_SFTP_ATTRIBUTES attrs;
 
-   while (true) {
-      int rc;
-      while ((rc = libssh2_sftp_readdir(*qh, buff, sizeof(buff), &attrs)) == LIBSSH2_ERROR_EAGAIN) {
-         if (qh.waitSocket())
+    while (true) {
+        int rc;
+        while ((rc = libssh2_sftp_readdir(*qh, buff, sizeof(buff), &attrs)) == LIBSSH2_ERROR_EAGAIN) {
+            if (qh.waitSocket())
+                return 0;
+        }
+        if (!rc)
+            break;
+        if (rc < 0) {
+            qh.err("error reading directory '%s'", pstr.c_str());
             return 0;
-      }
-      if (!rc)
-         break;
-      if (rc < 0) {
-         qh.err("error reading directory '%s'", pstr.c_str());
-         return 0;
-      }
-      if (attrs.flags & LIBSSH2_SFTP_ATTR_PERMISSIONS) {
-         // contains st_mode() from sys/stat.h
-         if (S_ISDIR(attrs.permissions))
-            dirs->push(new QoreStringNode(buff));
+        }
+        if (attrs.flags & LIBSSH2_SFTP_ATTR_PERMISSIONS) {
+            // contains st_mode() from sys/stat.h
+            if (S_ISDIR(attrs.permissions))
+                dirs->push(new QoreStringNode(buff), xsink);
 #ifdef S_ISLNK
-         else if (S_ISLNK(attrs.permissions))
-            links->push(new QoreStringNode(buff));
+            else if (S_ISLNK(attrs.permissions))
+                links->push(new QoreStringNode(buff), xsink);
 #endif
-         else // everything else is a file
-            files->push(new QoreStringNode(buff));
-      }
-      else
-         // no info for filetype. we take it as file
-         files->push(new QoreStringNode(buff));
-   }
+            else // everything else is a file
+                files->push(new QoreStringNode(buff), xsink);
+        }
+        else
+            // no info for filetype. we take it as file
+            files->push(new QoreStringNode(buff), xsink);
+    }
 
-   QoreHashNode* ret = new QoreHashNode;
+    QoreHashNode* ret = new QoreHashNode;
 
-   ret->setKeyValue("path", new QoreStringNode(pstr.c_str()), xsink);
-   // QoreListNode::sort() returns a new QoreListNode object
-   ret->setKeyValue("directories", dirs->sort(), xsink);
-   ret->setKeyValue("files", files->sort(), xsink);
-   ret->setKeyValue("links", links->sort(), xsink);
+    ret->setKeyValue("path", new QoreStringNode(pstr.c_str()), xsink);
+    // QoreListNode::sort() returns a new QoreListNode object
+    ret->setKeyValue("directories", dirs->sort(xsink), xsink);
+    ret->setKeyValue("files", files->sort(xsink), xsink);
+    ret->setKeyValue("links", links->sort(xsink), xsink);
 
-   return ret;
+    return ret;
 }
 
 QoreListNode* SFTPClient::sftpListFull(const char* path, int timeout_ms, ExceptionSink* xsink) {
-   AutoLocker al(m);
+    AutoLocker al(m);
 
-   // try to make an implicit connection
-   if (!sftpConnectedUnlocked() && sftpConnectUnlocked(timeout_ms, xsink))
-      return 0;
+    // try to make an implicit connection
+    if (!sftpConnectedUnlocked() && sftpConnectUnlocked(timeout_ms, xsink))
+        return 0;
 
-   std::string pstr;
-   if (!path) // there is no path given so we use the sftpPath
-      pstr = sftppath;
-   else if (path[0] == '/') // absolute path, take it
-      pstr = path;
-   else // relative path
-      pstr = sftppath + "/" + path;
+    std::string pstr;
+    if (!path) // there is no path given so we use the sftpPath
+        pstr = sftppath;
+    else if (path[0] == '/') // absolute path, take it
+        pstr = path;
+    else // relative path
+        pstr = sftppath + "/" + path;
 
-   BlockingHelper bh(this);
+    BlockingHelper bh(this);
 
-   QSftpHelper qh(this, "SFTPCLIENT-LISTFULL-ERROR", "SFTPClient::listFull", timeout_ms, xsink);
+    QSftpHelper qh(this, "SFTPCLIENT-LISTFULL-ERROR", "SFTPClient::listFull", timeout_ms, xsink);
 
-   {
-      QoreSocketTimeoutHelper th(socket, "list");
+    {
+        QoreSocketTimeoutHelper th(socket, "list");
 
-      do {
-         qh.assign(libssh2_sftp_opendir(sftp_session, pstr.c_str()));
-         if (!qh) {
-            if (libssh2_session_last_errno(ssh_session) == LIBSSH2_ERROR_EAGAIN) {
-               if (qh.waitSocket())
-                  return 0;
+        do {
+            qh.assign(libssh2_sftp_opendir(sftp_session, pstr.c_str()));
+            if (!qh) {
+                if (libssh2_session_last_errno(ssh_session) == LIBSSH2_ERROR_EAGAIN) {
+                if (qh.waitSocket())
+                    return 0;
+                }
+                else {
+                qh.err("error reading directory '%s'", pstr.c_str());
+                return 0;
+                }
             }
-            else {
-               qh.err("error reading directory '%s'", pstr.c_str());
-               return 0;
-            }
-         }
-      } while (!qh);
-   }
+        } while (!qh);
+    }
 
-   // create objects after only possible error
-   ReferenceHolder<QoreListNode> rv(new QoreListNode, xsink);
+    // create objects after only possible error
+    ReferenceHolder<QoreListNode> rv(new QoreListNode(autoTypeInfo), xsink);
 
-   char buff[PATH_MAX];
-   LIBSSH2_SFTP_ATTRIBUTES attrs;
+    char buff[PATH_MAX];
+    LIBSSH2_SFTP_ATTRIBUTES attrs;
 
-   while (true) {
-      int rc;
-      while ((rc = libssh2_sftp_readdir(*qh, buff, sizeof(buff), &attrs)) == LIBSSH2_ERROR_EAGAIN) {
-         if (qh.waitSocket())
+    while (true) {
+        int rc;
+        while ((rc = libssh2_sftp_readdir(*qh, buff, sizeof(buff), &attrs)) == LIBSSH2_ERROR_EAGAIN) {
+            if (qh.waitSocket())
+                return 0;
+        }
+        if (!rc)
+            break;
+        if (rc < 0) {
+            qh.err("error reading directory '%s'", pstr.c_str());
             return 0;
-      }
-      if (!rc)
-         break;
-      if (rc < 0) {
-         qh.err("error reading directory '%s'", pstr.c_str());
-         return 0;
-      }
+        }
 
-      QoreHashNode* h = new QoreHashNode;
-      h->setKeyValue("name", new QoreStringNode(buff), 0);
+        QoreHashNode* h = new QoreHashNode;
+        h->setKeyValue("name", new QoreStringNode(buff), 0);
 
-      if (attrs.flags & LIBSSH2_SFTP_ATTR_PERMISSIONS) {
-         QoreStringNode* perm = new QoreStringNode;
-         const char* type = ssh2_mode_to_perm(attrs.permissions, *perm);
+        if (attrs.flags & LIBSSH2_SFTP_ATTR_PERMISSIONS) {
+            QoreStringNode* perm = new QoreStringNode;
+            const char* type = ssh2_mode_to_perm(attrs.permissions, *perm);
 
-         h->setKeyValue("size", new QoreBigIntNode(attrs.filesize), 0);
-         h->setKeyValue("atime", DateTimeNode::makeAbsolute(currentTZ(), (int64)attrs.atime), 0);
-         h->setKeyValue("mtime", DateTimeNode::makeAbsolute(currentTZ(), (int64)attrs.mtime), 0);
-         h->setKeyValue("uid", new QoreBigIntNode(attrs.uid), 0);
-         h->setKeyValue("gid", new QoreBigIntNode(attrs.gid), 0);
-         h->setKeyValue("mode", new QoreBigIntNode(attrs.permissions), 0);
-         h->setKeyValue("type", new QoreStringNode(type), 0);
-         h->setKeyValue("perm", perm, 0);
-      }
+            h->setKeyValue("size", attrs.filesize, 0);
+            h->setKeyValue("atime", DateTimeNode::makeAbsolute(currentTZ(), (int64)attrs.atime), 0);
+            h->setKeyValue("mtime", DateTimeNode::makeAbsolute(currentTZ(), (int64)attrs.mtime), 0);
+            h->setKeyValue("uid", attrs.uid, 0);
+            h->setKeyValue("gid", attrs.gid, 0);
+            h->setKeyValue("mode", attrs.permissions, 0);
+            h->setKeyValue("type", new QoreStringNode(type), 0);
+            h->setKeyValue("perm", perm, 0);
+        }
 
-      rv->push(h);
-   }
+        rv->push(h, xsink);
+    }
 
-   return rv.release();
+    return rv.release();
 }
 
 // return 0 if ok, -1 otherwise
@@ -1439,7 +1439,7 @@ void SFTPClient::doSessionErrUnlocked(ExceptionSink* xsink, QoreStringNode* desc
 QoreHashNode* SFTPClient::sftpInfo() {
    AutoLocker al(m);
    QoreHashNode* h = sshInfoIntern();
-   h->setKeyValue("path", sftppath.empty() ? 0 : new QoreStringNode(sftppath), 0);
+   h->setKeyValue("path", sftppath.empty() ? QoreValue() : new QoreStringNode(sftppath), 0);
    return h;
 }
 

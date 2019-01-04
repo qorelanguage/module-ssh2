@@ -1,50 +1,50 @@
 /* -*- mode: c++; indent-tabs-mode: nil -*- */
 /** @file SFTPClient.qpp defines the SFTPClient class */
 /*
-  SFTPClient.qpp
+    SFTPClient.qpp
 
-  libssh2 SFTP client integration into qore
+    libssh2 SFTP client integration into qore
 
-  Copyright 2009 Wolfgang Ritzinger
-  Copyright 2010 - 2017 Qore Technologies, s.r.o.
+    Copyright 2009 Wolfgang Ritzinger
+    Copyright 2010 - 2018 Qore Technologies, s.r.o.
 
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
 
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
 
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include "SFTPClient.h"
 #include "QC_SSH2Base.h"
 
 static QoreHashNode *attr2hash(const LIBSSH2_SFTP_ATTRIBUTES &attr) {
-   QoreHashNode *ret = new QoreHashNode;
+    QoreHashNode *ret = new QoreHashNode(autoTypeInfo);
 
-   if (attr.flags & LIBSSH2_SFTP_ATTR_SIZE)
-      ret->setKeyValue("size", new QoreBigIntNode(attr.filesize), 0);
-   if (attr.flags & LIBSSH2_SFTP_ATTR_ACMODTIME) {
-      ret->setKeyValue("atime", DateTimeNode::makeAbsolute(currentTZ(), (int64)attr.atime), 0);
-      ret->setKeyValue("mtime", DateTimeNode::makeAbsolute(currentTZ(), (int64)attr.mtime), 0);
-   }
-   if (attr.flags & LIBSSH2_SFTP_ATTR_UIDGID) {
-      ret->setKeyValue("uid", new QoreBigIntNode(attr.uid), 0);
-      ret->setKeyValue("gid", new QoreBigIntNode(attr.gid), 0);
-   }
-   if (attr.flags & LIBSSH2_SFTP_ATTR_PERMISSIONS) {
-      ret->setKeyValue("mode", new QoreBigIntNode(attr.permissions), 0);
-      ret->setKeyValue("permissions", new QoreStringNode(mode2str(attr.permissions)), 0);
-   }
+    if (attr.flags & LIBSSH2_SFTP_ATTR_SIZE)
+        ret->setKeyValue("size", attr.filesize, 0);
+    if (attr.flags & LIBSSH2_SFTP_ATTR_ACMODTIME) {
+        ret->setKeyValue("atime", DateTimeNode::makeAbsolute(currentTZ(), (int64)attr.atime), 0);
+        ret->setKeyValue("mtime", DateTimeNode::makeAbsolute(currentTZ(), (int64)attr.mtime), 0);
+    }
+    if (attr.flags & LIBSSH2_SFTP_ATTR_UIDGID) {
+        ret->setKeyValue("uid", attr.uid, 0);
+        ret->setKeyValue("gid", attr.gid, 0);
+    }
+    if (attr.flags & LIBSSH2_SFTP_ATTR_PERMISSIONS) {
+        ret->setKeyValue("mode", attr.permissions, 0);
+        ret->setKeyValue("permissions", new QoreStringNode(mode2str(attr.permissions)), 0);
+    }
 
-   return ret;
+    return ret;
 }
 
 //! allows Qore programs to use the sftp protocol with a remote server
@@ -104,7 +104,7 @@ SFTPClient::copy() {
     - \c path: (*string) a string giving the path name set in the object or \c NOTHING if no path is set
 */
 hash SFTPClient::info() [flags=CONSTANT] {
-   return myself->sftpInfo();
+    return myself->sftpInfo();
 }
 
 //! Returns the current path as a string or \c NOTHING if no path is set

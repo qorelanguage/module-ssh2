@@ -1,25 +1,25 @@
 /* -*- indent-tabs-mode: nil -*- */
 /*
-  SSH2Client.cpp
+    SSH2Client.cpp
 
-  libssh2 ssh2 client integration into qore
+    libssh2 ssh2 client integration into qore
 
-  Copyright 2009 Wolfgang Ritzinger
-  Copyright (C) 2010 - 2015 Qore Technologies, sro
+    Copyright 2009 Wolfgang Ritzinger
+    Copyright (C) 2010 - 2018 Qore Technologies, s.r.o.
 
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
 
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
 
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include "SSH2Client.h"
@@ -95,13 +95,13 @@ std::string mode2str(const int mode) {
 }
 
 static void map_ssh2_sbuf_to_hash(QoreHashNode *h, struct stat *sbuf) {
-   // note that dev_t on Linux is an unsigned 64-bit integer, so we could lose precision here
-   h->setKeyValue("mode",        new QoreBigIntNode(sbuf->st_mode), 0);
-   h->setKeyValue("permissions", new QoreStringNode(mode2str(sbuf->st_mode)), 0);
-   h->setKeyValue("size",        new QoreBigIntNode(sbuf->st_size), 0);
+    // note that dev_t on Linux is an unsigned 64-bit integer, so we could lose precision here
+    h->setKeyValue("mode",        sbuf->st_mode, 0);
+    h->setKeyValue("permissions", new QoreStringNode(mode2str(sbuf->st_mode)), 0);
+    h->setKeyValue("size",        sbuf->st_size, 0);
 
-   h->setKeyValue("atime",       DateTimeNode::makeAbsolute(currentTZ(), (int64)sbuf->st_atime), 0);
-   h->setKeyValue("mtime",       DateTimeNode::makeAbsolute(currentTZ(), (int64)sbuf->st_mtime), 0);
+    h->setKeyValue("atime",       DateTimeNode::makeAbsolute(currentTZ(), (int64)sbuf->st_atime), 0);
+    h->setKeyValue("mtime",       DateTimeNode::makeAbsolute(currentTZ(), (int64)sbuf->st_mtime), 0);
 }
 
 /**
@@ -110,20 +110,20 @@ static void map_ssh2_sbuf_to_hash(QoreHashNode *h, struct stat *sbuf) {
  * this just prefills the values for connection with hostname and port
  */
 SSH2Client::SSH2Client(const char *hostname, const uint32_t port) : sshhost(hostname), sshport(port), sshauthenticatedwith(0), ssh_session(0) {
-   setKeysIntern();
+    setKeysIntern();
 }
 
 SSH2Client::SSH2Client(QoreURL &url, const uint32_t port) :
-   sshhost(url.getHost() ? url.getHost()->getBuffer() : ""),
-   sshuser(url.getUserName() ? url.getUserName()->getBuffer() : ""),
-   sshpass(url.getPassword() ? url.getPassword()->getBuffer() : ""),
-   sshport(port ? port : (uint32_t)url.getPort()),
-   sshauthenticatedwith(0),
-   ssh_session(0) {
-   if (!sshport)
-      sshport = DEFAULT_SSH_PORT;
+    sshhost(url.getHost() ? url.getHost()->getBuffer() : ""),
+    sshuser(url.getUserName() ? url.getUserName()->getBuffer() : ""),
+    sshpass(url.getPassword() ? url.getPassword()->getBuffer() : ""),
+    sshport(port ? port : (uint32_t)url.getPort()),
+    sshauthenticatedwith(0),
+    ssh_session(0) {
+    if (!sshport)
+        sshport = DEFAULT_SSH_PORT;
 
-   setKeysIntern();
+    setKeysIntern();
 }
 
 /*
@@ -131,51 +131,47 @@ SSH2Client::SSH2Client(QoreURL &url, const uint32_t port) :
  * free resources
  */
 SSH2Client::~SSH2Client() {
-   QORE_TRACE("SSH2Client::~SSH2Client()");
-   printd(5, "SSH2Client::~SSH2Client() this: %p\n", this);
+    QORE_TRACE("SSH2Client::~SSH2Client()");
+    printd(5, "SSH2Client::~SSH2Client() this: %p\n", this);
 
-   // first close all open channels
-   {
-      AutoLocker al(m);
-      for (channel_set_t::iterator i = channel_set.begin(), e = channel_set.end(); i != e; ++i) {
-	 (*i)->closeUnlocked();
-      }
-   }
+    // first close all open channels
+    {
+        AutoLocker al(m);
+        for (channel_set_t::iterator i = channel_set.begin(), e = channel_set.end(); i != e; ++i) {
+            (*i)->closeUnlocked();
+        }
+    }
 
-   // disconnect
-   disconnectUnlocked(true);
+    // disconnect
+    disconnectUnlocked(true);
 }
 
 void SSH2Client::setKeysIntern() {
 #ifdef HAVE_PWD_H
-   // only set if the current user has access to the filesystem
-   if (getProgram()->getParseOptions64() & PO_NO_FILESYSTEM)
-      return;
+    // only set if the current user has access to the filesystem
+    if (getProgram()->getParseOptions64() & PO_NO_FILESYSTEM)
+        return;
 
-   // prefill the user and 'estimate' the key files for rsa
-   struct passwd *usrpwd = getpwuid(getuid());
-   if (usrpwd) {
-      sshuser = usrpwd->pw_name;
-      sshkeys_priv = usrpwd->pw_dir;
-      sshkeys_priv += "/.ssh/id_rsa";
-#ifdef _QORE_HAS_PATH_IS_READABLE
-      if (!q_path_is_readable(sshkeys_priv.c_str())) {
-         printd(5, "SSH2Client::setKeysIntern() skipping automatic setting of keys because '%s' is not readable\n", sshkeys_priv.c_str());
-         sshkeys_priv.clear();
-         return;
-      }
-#endif
-      sshkeys_pub = usrpwd->pw_dir;
-      sshkeys_pub += "/.ssh/id_rsa.pub";
-#ifdef _QORE_HAS_PATH_IS_READABLE
-      if (!q_path_is_readable(sshkeys_pub.c_str())) {
-         printd(5, "SSH2Client::setKeysIntern() skipping automatic setting of keys because '%s' is not readable\n", sshkeys_pub.c_str());
-         sshkeys_priv.clear();
-         sshkeys_pub.clear();
-         return;
-      }
-#endif
-   }
+    // prefill the user and 'estimate' the key files for rsa
+    struct passwd *usrpwd = getpwuid(getuid());
+    if (usrpwd) {
+        sshuser = usrpwd->pw_name;
+        sshkeys_priv = usrpwd->pw_dir;
+        sshkeys_priv += "/.ssh/id_rsa";
+        if (!q_path_is_readable(sshkeys_priv.c_str())) {
+            printd(5, "SSH2Client::setKeysIntern() skipping automatic setting of keys because '%s' is not readable\n", sshkeys_priv.c_str());
+            sshkeys_priv.clear();
+            return;
+        }
+        sshkeys_pub = usrpwd->pw_dir;
+        sshkeys_pub += "/.ssh/id_rsa.pub";
+        if (!q_path_is_readable(sshkeys_pub.c_str())) {
+            printd(5, "SSH2Client::setKeysIntern() skipping automatic setting of keys because '%s' is not readable\n", sshkeys_pub.c_str());
+            sshkeys_priv.clear();
+            sshkeys_pub.clear();
+            return;
+        }
+    }
 #endif
 }
 
@@ -188,39 +184,39 @@ void SSH2Client::setKeysIntern() {
  * sets errno
  */
 int SSH2Client::disconnectUnlocked(bool force, int timeout_ms, AbstractDisconnectionHelper* adh, ExceptionSink *xsink) {
-   if (!ssh_session) {
-      if (!force) {
-         errno = EINVAL;
-         xsink && xsink->raiseException(SSH2CLIENT_NOT_CONNECTED, "disconnect(): %s", strerror(errno));
-      }
-   }
-   else {
-      if (adh)
-         adh->preDisconnect();
+    if (!ssh_session) {
+        if (!force) {
+            errno = EINVAL;
+            xsink && xsink->raiseException(SSH2CLIENT_NOT_CONNECTED, "disconnect(): %s", strerror(errno));
+        }
+    }
+    else {
+        if (adh)
+            adh->preDisconnect();
 
-      setBlockingUnlocked(false);
+        setBlockingUnlocked(false);
 
-      // close ssh session if not null
-      int rc;
-      while ((rc = libssh2_session_disconnect(ssh_session, (char*)"qore program disconnect")) == LIBSSH2_ERROR_EAGAIN) {
-         if (waitSocketUnlocked(xsink, SSH2CLIENT_TIMEOUT, "SSSHCLIENT-DISCONNECT", "SSHClient::disconnect", timeout_ms, true))
-            break;
-      }
+        // close ssh session if not null
+        int rc;
+        while ((rc = libssh2_session_disconnect(ssh_session, (char*)"qore program disconnect")) == LIBSSH2_ERROR_EAGAIN) {
+            if (waitSocketUnlocked(xsink, SSH2CLIENT_TIMEOUT, "SSSHCLIENT-DISCONNECT", "SSHClient::disconnect", timeout_ms, true))
+                break;
+        }
 
-      while ((rc = libssh2_session_free(ssh_session)) == LIBSSH2_ERROR_EAGAIN) {
-         // there can be a memory leak here, but there is no other way to free memory without waiting for the remote socket
-         if (waitSocketUnlocked(xsink, SSH2CLIENT_TIMEOUT, "SSSHCLIENT-DISCONNECT", "SSHClient::disconnect", timeout_ms, true))
-            break;
-      }
+        while ((rc = libssh2_session_free(ssh_session)) == LIBSSH2_ERROR_EAGAIN) {
+            // there can be a memory leak here, but there is no other way to free memory without waiting for the remote socket
+            if (waitSocketUnlocked(xsink, SSH2CLIENT_TIMEOUT, "SSSHCLIENT-DISCONNECT", "SSHClient::disconnect", timeout_ms, true))
+                break;
+        }
 
-      ssh_session = 0;
-   }
+        ssh_session = 0;
+    }
 
-   if (sshauthenticatedwith)
-      sshauthenticatedwith = 0;
+    if (sshauthenticatedwith)
+        sshauthenticatedwith = 0;
 
-   socket.close();
-   return 0;
+    socket.close();
+    return 0;
 }
 
 /**
@@ -373,10 +369,10 @@ QoreStringNode *SSH2Client::fingerprint() {
 }
 
 static void kbd_callback(const char *name, int name_len,
-			 const char *instruction, int instruction_len, int num_prompts,
-			 const LIBSSH2_USERAUTH_KBDINT_PROMPT *prompts,
-			 LIBSSH2_USERAUTH_KBDINT_RESPONSE *responses,
-			 void **abstract) {
+                         const char *instruction, int instruction_len, int num_prompts,
+                         const LIBSSH2_USERAUTH_KBDINT_PROMPT *prompts,
+                         LIBSSH2_USERAUTH_KBDINT_RESPONSE *responses,
+                         void **abstract) {
    const char *password = keyboardPassword.get();
    //printd(5, "kdb_callback() num_prompts=%d pass=%s\n", num_prompts, password);
    if (num_prompts == 1) {
@@ -396,11 +392,11 @@ int SSH2Client::startupUnlocked() {
 /**
  * connect()
  * returns:
- * 0	ok
- * 1	host not found
- * 2	port not identified
- * 3	socket not created
- * 4	session init failure
+ * 0    ok
+ * 1    host not found
+ * 2    port not identified
+ * 3    socket not created
+ * 4    session init failure
  */
 int SSH2Client::sshConnectUnlocked(int timeout_ms, ExceptionSink *xsink = 0) {
    // check for host connectivity
@@ -581,172 +577,172 @@ QoreHashNode *SSH2Client::sshInfo() {
 }
 
 QoreHashNode *SSH2Client::sshInfoIntern() {
-   QoreHashNode *ret = new QoreHashNode;
-   ret->setKeyValue("ssh2host", new QoreStringNode(getHost()), 0);
-   ret->setKeyValue("ssh2port", new QoreBigIntNode(getPort()), 0);
-   ret->setKeyValue("ssh2user", new QoreStringNode(getUser()), 0);
-   //ret->setKeyValue("ssh2pass", new QoreStringNode(myself->sshpass), 0);
-   ret->setKeyValue("keyfile_priv", new QoreStringNode(getKeyPriv()), 0);
-   ret->setKeyValue("keyfile_pub", new QoreStringNode(getKeyPub()), 0);
-   ret->setKeyValue("fingerprint", fingerprintUnlocked(), 0);
-   //  ret->setKeyValue("userauthlist", myself->sshauthlist? new QoreStringNode(myself->sshauthlist): NULL, 0);
-   const char *str=getAuthenticatedWith();
-   ret->setKeyValue("authenticated", str ? new QoreStringNode(str) : NULL, 0);
-   ret->setKeyValue("connected", get_bool_node(sshConnectedUnlocked()), 0);
+    QoreHashNode *ret = new QoreHashNode(autoTypeInfo);
+    ret->setKeyValue("ssh2host", new QoreStringNode(getHost()), 0);
+    ret->setKeyValue("ssh2port", getPort(), 0);
+    ret->setKeyValue("ssh2user", new QoreStringNode(getUser()), 0);
+    //ret->setKeyValue("ssh2pass", new QoreStringNode(myself->sshpass), 0);
+    ret->setKeyValue("keyfile_priv", new QoreStringNode(getKeyPriv()), 0);
+    ret->setKeyValue("keyfile_pub", new QoreStringNode(getKeyPub()), 0);
+    ret->setKeyValue("fingerprint", fingerprintUnlocked(), 0);
+    //  ret->setKeyValue("userauthlist", myself->sshauthlist? new QoreStringNode(myself->sshauthlist): NULL, 0);
+    const char *str=getAuthenticatedWith();
+    ret->setKeyValue("authenticated", str ? new QoreStringNode(str) : NULL, 0);
+    ret->setKeyValue("connected", (bool)sshConnectedUnlocked(), 0);
 
-   if (sshConnectedUnlocked()) {
-      const char *meth;
-      QoreHashNode *methods = new QoreHashNode;
+    if (sshConnectedUnlocked()) {
+        const char *meth;
+        QoreHashNode *methods = new QoreHashNode;
 #ifdef LIBSSH2_METHOD_KEX
-      meth = libssh2_session_methods(ssh_session, LIBSSH2_METHOD_KEX);
-      if (meth)
-         methods->setKeyValue("KEX", new QoreStringNode(meth), 0);
+        meth = libssh2_session_methods(ssh_session, LIBSSH2_METHOD_KEX);
+        if (meth)
+            methods->setKeyValue("KEX", new QoreStringNode(meth), 0);
 #endif
 #ifdef LIBSSH2_METHOD_HOSTKEY
-      meth = libssh2_session_methods(ssh_session, LIBSSH2_METHOD_HOSTKEY);
-      if (meth)
-         methods->setKeyValue("HOSTKEY", new QoreStringNode(meth), 0);
+        meth = libssh2_session_methods(ssh_session, LIBSSH2_METHOD_HOSTKEY);
+        if (meth)
+            methods->setKeyValue("HOSTKEY", new QoreStringNode(meth), 0);
 #endif
 #ifdef LIBSSH2_METHOD_CRYPT_CS
-      meth = libssh2_session_methods(ssh_session, LIBSSH2_METHOD_CRYPT_CS);
-      if (meth)
-         methods->setKeyValue("CRYPT_CS", new QoreStringNode(meth), 0);
+        meth = libssh2_session_methods(ssh_session, LIBSSH2_METHOD_CRYPT_CS);
+        if (meth)
+            methods->setKeyValue("CRYPT_CS", new QoreStringNode(meth), 0);
 #endif
 #ifdef LIBSSH2_METHOD_CRYPT_SC
-      meth = libssh2_session_methods(ssh_session, LIBSSH2_METHOD_CRYPT_SC);
-      if (meth)
-         methods->setKeyValue("CRYPT_SC", new QoreStringNode(meth), 0);
+        meth = libssh2_session_methods(ssh_session, LIBSSH2_METHOD_CRYPT_SC);
+        if (meth)
+            methods->setKeyValue("CRYPT_SC", new QoreStringNode(meth), 0);
 #endif
 #ifdef LIBSSH2_METHOD_MAC_CS
-      meth = libssh2_session_methods(ssh_session, LIBSSH2_METHOD_MAC_CS);
-      if (meth)
-         methods->setKeyValue("MAC_CS", new QoreStringNode(meth), 0);
+        meth = libssh2_session_methods(ssh_session, LIBSSH2_METHOD_MAC_CS);
+        if (meth)
+            methods->setKeyValue("MAC_CS", new QoreStringNode(meth), 0);
 #endif
 #ifdef LIBSSH2_METHOD_MAC_SC
-      meth = libssh2_session_methods(ssh_session, LIBSSH2_METHOD_MAC_SC);
-      if (meth)
-         methods->setKeyValue("MAC_SC", new QoreStringNode(meth), 0);
+        meth = libssh2_session_methods(ssh_session, LIBSSH2_METHOD_MAC_SC);
+        if (meth)
+            methods->setKeyValue("MAC_SC", new QoreStringNode(meth), 0);
 #endif
 #ifdef LIBSSH2_METHOD_COMP_CS
-      meth = libssh2_session_methods(ssh_session, LIBSSH2_METHOD_COMP_CS);
-      if (meth)
-         methods->setKeyValue("COMP_CS", new QoreStringNode(meth), 0);
+        meth = libssh2_session_methods(ssh_session, LIBSSH2_METHOD_COMP_CS);
+        if (meth)
+            methods->setKeyValue("COMP_CS", new QoreStringNode(meth), 0);
 #endif
 #ifdef LIBSSH2_METHOD_COMP_SC
-      meth = libssh2_session_methods(ssh_session, LIBSSH2_METHOD_COMP_SC);
-      if (meth)
-         methods->setKeyValue("COMP_SC", new QoreStringNode(meth), 0);
+        meth = libssh2_session_methods(ssh_session, LIBSSH2_METHOD_COMP_SC);
+        if (meth)
+            methods->setKeyValue("COMP_SC", new QoreStringNode(meth), 0);
 #endif
 #ifdef LIBSSH2_METHOD_LANG_CS
-      meth = libssh2_session_methods(ssh_session, LIBSSH2_METHOD_LANG_CS);
-      if (meth)
-         methods->setKeyValue("LANG_CS", new QoreStringNode(meth), 0);
+        meth = libssh2_session_methods(ssh_session, LIBSSH2_METHOD_LANG_CS);
+        if (meth)
+            methods->setKeyValue("LANG_CS", new QoreStringNode(meth), 0);
 #endif
 #ifdef LIBSSH2_METHOD_LANG_SC
-      meth = libssh2_session_methods(ssh_session, LIBSSH2_METHOD_LANG_SC);
-      if (meth)
-         methods->setKeyValue("LANG_SC", new QoreStringNode(meth), 0);
+        meth = libssh2_session_methods(ssh_session, LIBSSH2_METHOD_LANG_SC);
+        if (meth)
+            methods->setKeyValue("LANG_SC", new QoreStringNode(meth), 0);
 #endif
-      ret->setKeyValue("methods", methods, 0);
-   }
+        ret->setKeyValue("methods", methods, 0);
+    }
 
-   return ret;
+    return ret;
 }
 
 QoreObject *SSH2Client::openSessionChannel(ExceptionSink *xsink, int timeout_ms) {
-   static const char *SSH2CLIENT_OPENSESSIONCHANNEL_ERROR = "SSH2CLIENT-OPENSESSIONCHANNEL-ERROR";
+    static const char *SSH2CLIENT_OPENSESSIONCHANNEL_ERROR = "SSH2CLIENT-OPENSESSIONCHANNEL-ERROR";
 
-   AutoLocker al(m);
+    AutoLocker al(m);
 
-   if (!sshConnectedUnlocked()) {
-      xsink->raiseException(SSH2CLIENT_NOT_CONNECTED, "cannot call SSH2Client::openSessionChannel() while client is not connected");
-      return 0;
-   }
+    if (!sshConnectedUnlocked()) {
+        xsink->raiseException(SSH2CLIENT_NOT_CONNECTED, "cannot call SSH2Client::openSessionChannel() while client is not connected");
+        return nullptr;
+    }
 
-   BlockingHelper bh(this);
+    BlockingHelper bh(this);
 
-   LIBSSH2_CHANNEL *channel;
-   while (true) {
-      channel = libssh2_channel_open_session(ssh_session);
-      //printd(0, "SSH2Client::openSessionChannel(timeout_ms = %d) channel=%p rc=%d\n", timeout_ms, channel, libssh2_session_last_errno(ssh_session));
-      if (!channel) {
-	 if (libssh2_session_last_error(ssh_session, 0, 0, 0) == LIBSSH2_ERROR_EAGAIN) {
-	    if (waitSocketUnlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2CLIENT_OPENSESSIONCHANNEL_ERROR, "SSH2Client::openSessionChannel", timeout_ms))
-	       return 0;
-	    continue;
-	 }
-	 doSessionErrUnlocked(xsink);
-	 return 0;
-      }
-      break;
-   }
+    LIBSSH2_CHANNEL *channel;
+    while (true) {
+        channel = libssh2_channel_open_session(ssh_session);
+        //printd(0, "SSH2Client::openSessionChannel(timeout_ms = %d) channel=%p rc=%d\n", timeout_ms, channel, libssh2_session_last_errno(ssh_session));
+        if (!channel) {
+            if (libssh2_session_last_error(ssh_session, 0, 0, 0) == LIBSSH2_ERROR_EAGAIN) {
+                if (waitSocketUnlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2CLIENT_OPENSESSIONCHANNEL_ERROR, "SSH2Client::openSessionChannel", timeout_ms))
+                    return nullptr;
+                continue;
+            }
+            doSessionErrUnlocked(xsink);
+            return nullptr;
+        }
+        break;
+    }
 
-   return registerChannelUnlocked(channel);
+    return registerChannelUnlocked(channel);
 }
 
 QoreObject *SSH2Client::openDirectTcpipChannel(ExceptionSink *xsink, const char *host, int port, const char *shost, int sport, int timeout_ms) {
-   static const char *SSH2CLIENT_OPENDIRECTTCPIPCHANNEL_ERROR = "SSH2CLIENT-OPENDIRECTTCPIPCHANNEL-ERROR";
+    static const char *SSH2CLIENT_OPENDIRECTTCPIPCHANNEL_ERROR = "SSH2CLIENT-OPENDIRECTTCPIPCHANNEL-ERROR";
 
-   AutoLocker al(m);
+    AutoLocker al(m);
 
-   if (!sshConnectedUnlocked()) {
-      xsink->raiseException(SSH2CLIENT_NOT_CONNECTED, "cannot call SSH2Client::openDirectTcpipChannel() while client is not connected");
-      return 0;
-   }
+    if (!sshConnectedUnlocked()) {
+        xsink->raiseException(SSH2CLIENT_NOT_CONNECTED, "cannot call SSH2Client::openDirectTcpipChannel() while client is not connected");
+        return nullptr;
+    }
 
-   BlockingHelper bh(this);
+    BlockingHelper bh(this);
 
-   LIBSSH2_CHANNEL *channel;
-   while (true) {
-      channel = libssh2_channel_direct_tcpip_ex(ssh_session, host, port, shost, sport);
-      if (!channel) {
-	 if (libssh2_session_last_error(ssh_session, 0, 0, 0) == LIBSSH2_ERROR_EAGAIN) {
-	    if (waitSocketUnlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2CLIENT_OPENDIRECTTCPIPCHANNEL_ERROR, "SSH2Client::openDirectTcpipChannel", timeout_ms))
-	       return 0;
-	    continue;
-	 }
-	 doSessionErrUnlocked(xsink);
-	 return 0;
-      }
-      break;
-   }
+    LIBSSH2_CHANNEL *channel;
+    while (true) {
+        channel = libssh2_channel_direct_tcpip_ex(ssh_session, host, port, shost, sport);
+        if (!channel) {
+            if (libssh2_session_last_error(ssh_session, 0, 0, 0) == LIBSSH2_ERROR_EAGAIN) {
+                if (waitSocketUnlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2CLIENT_OPENDIRECTTCPIPCHANNEL_ERROR, "SSH2Client::openDirectTcpipChannel", timeout_ms))
+                    return nullptr;
+                continue;
+            }
+            doSessionErrUnlocked(xsink);
+            return nullptr;
+        }
+        break;
+    }
 
-   return registerChannelUnlocked(channel);
+    return registerChannelUnlocked(channel);
 }
 
-LIBSSH2_CHANNEL *SSH2Client::scpGetRaw(ExceptionSink *xsink, const char *path, int timeout_ms, QoreHashNode *statinfo) {
-   static const char *SSH2CLIENT_SCPGET_ERROR = "SSH2CLIENT-SCPGET-ERROR";
+LIBSSH2_CHANNEL* SSH2Client::scpGetRaw(ExceptionSink *xsink, const char *path, int timeout_ms, QoreHashNode *statinfo) {
+    static const char *SSH2CLIENT_SCPGET_ERROR = "SSH2CLIENT-SCPGET-ERROR";
 
-   AutoLocker al(m);
+    AutoLocker al(m);
 
-   if (!sshConnectedUnlocked()) {
-      xsink->raiseException(SSH2CLIENT_NOT_CONNECTED, "cannot call SSH2Client::scpGet() while client is not connected");
-      return 0;
-   }
+    if (!sshConnectedUnlocked()) {
+        xsink->raiseException(SSH2CLIENT_NOT_CONNECTED, "cannot call SSH2Client::scpGet() while client is not connected");
+        return nullptr;
+    }
 
-   BlockingHelper bh(this);
+    BlockingHelper bh(this);
 
-   struct stat sb;
-   LIBSSH2_CHANNEL *channel;
-   while (true) {
-      channel = libssh2_scp_recv(ssh_session, path, &sb);
-      if (!channel) {
-         if (libssh2_session_last_error(ssh_session, 0, 0, 0) == LIBSSH2_ERROR_EAGAIN) {
-            if (waitSocketUnlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2CLIENT_SCPGET_ERROR, "SSH2Client::scpGet", timeout_ms))
-               return 0;
-            continue;
-         }
-         doSessionErrUnlocked(xsink);
-         return 0;
-      }
-      break;
-   }
+    struct stat sb;
+    LIBSSH2_CHANNEL *channel;
+    while (true) {
+        channel = libssh2_scp_recv(ssh_session, path, &sb);
+        if (!channel) {
+            if (libssh2_session_last_error(ssh_session, 0, 0, 0) == LIBSSH2_ERROR_EAGAIN) {
+                if (waitSocketUnlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2CLIENT_SCPGET_ERROR, "SSH2Client::scpGet", timeout_ms))
+                    return nullptr;
+                continue;
+            }
+            doSessionErrUnlocked(xsink);
+            return 0;
+        }
+        break;
+    }
 
-   // write file status info to statinfo if available
-   if (statinfo)
-      map_ssh2_sbuf_to_hash(statinfo, &sb);
+    // write file status info to statinfo if available
+    if (statinfo)
+        map_ssh2_sbuf_to_hash(statinfo, &sb);
 
-   return channel;
+    return channel;
 }
 
 QoreObject *SSH2Client::scpGet(ExceptionSink *xsink, const char *path, int timeout_ms, QoreHashNode *statinfo) {
@@ -844,9 +840,9 @@ void SSH2Client::clearWarningQueue(ExceptionSink* xsink) {
    socket.clearWarningQueue(xsink);
 }
 
-void SSH2Client::setWarningQueue(ExceptionSink* xsink, int64 warning_ms, int64 warning_bs, Queue* wq, AbstractQoreNode* arg, int64 min_ms) {
-   AutoLocker al(m);
-   socket.setWarningQueue(xsink, warning_ms, warning_bs, wq, arg, min_ms);
+void SSH2Client::setWarningQueue(ExceptionSink* xsink, int64 warning_ms, int64 warning_bs, Queue* wq, QoreValue arg, int64 min_ms) {
+    AutoLocker al(m);
+    socket.setWarningQueue(xsink, warning_ms, warning_bs, wq, arg, min_ms);
 }
 
 QoreHashNode* SSH2Client::getUsageInfo() const {

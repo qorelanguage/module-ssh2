@@ -1,27 +1,27 @@
 /* -*- mode: c++; indent-tabs-mode: nil -*- */
 /*
-  SSH2Client.h
+    SSH2Client.h
 
-  libssh2 ssh2 client integration in Qore
+    libssh2 ssh2 client integration in Qore
 
-  Qore Programming Language
+    Qore Programming Language
 
-  Copyright 2009 Wolfgang Ritzinger
-  Copyright (C) 2010 - 2017 Qore Technologies, s.r.o.
+    Copyright 2009 Wolfgang Ritzinger
+    Copyright (C) 2010 - 2018 Qore Technologies, s.r.o.
 
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
 
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
 
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #ifndef _QORE_SSH2CLIENT_H
@@ -239,12 +239,10 @@ public:
    DLLLOCAL QoreObject *scpPut(ExceptionSink *xsink, const char *path, size_t size, int mode = 0644, long mtime = 0, long atime = 0, int timeout_ms = -1);
    DLLLOCAL void scpPut(ExceptionSink *xsink, const char *path, InputStream *is, size_t size, int mode = 0644, long mtime = 0, long atime = 0, int timeout_ms = -1);
 
-#ifdef _QORE_HAS_SOCKET_PERF_API
    DLLLOCAL void clearWarningQueue(ExceptionSink* xsink);
-   DLLLOCAL void setWarningQueue(ExceptionSink* xsink, int64 warning_ms, int64 warning_bs, Queue* wq, AbstractQoreNode* arg, int64 min_ms = 1000);
+   DLLLOCAL void setWarningQueue(ExceptionSink* xsink, int64 warning_ms, int64 warning_bs, Queue* wq, QoreValue arg, int64 min_ms = 1000);
    DLLLOCAL QoreHashNode* getUsageInfo() const;
    DLLLOCAL void clearStats();
-#endif
 };
 
 class BlockingHelper {
