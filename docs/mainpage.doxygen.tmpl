@@ -103,6 +103,15 @@ stdout.printf("exit status: %d\n", chan.getExitStatus());@endcode
     @section ssh2releasenotes Release Notes
 
     @subsection ssh2v13 Version 1.3
+    - added the following base class APIs:
+      - @ref Qore::SSH2::SSH2Base::getAuthenticatedWith() "SSH2Base::getAuthenticatedWith()"
+      - @ref Qore::SSH2::SSH2Base::getHost() "SSH2Base::getHost()"
+      - @ref Qore::SSH2::SSH2Base::getKeyPriv() "SSH2Base::getKeyPriv()"
+      - @ref Qore::SSH2::SSH2Base::getKeyPub() "SSH2Base::getKeyPub()"
+      - @ref Qore::SSH2::SSH2Base::getPassword() "SSH2Base::getPassword()"
+      - @ref Qore::SSH2::SSH2Base::getPort() "SSH2Base::getPort()"
+      - @ref Qore::SSH2::SSH2Base::getUser() "SSH2Base::getUser()"
+      (<a href="https://github.com/qorelanguage/qore/issues/3445">issue 3445</a>)
     - updated the <a href="../../Ssh2Connections/html/index.html">Ssh2Connections</a> module to support the updated
       abstract connection API (<a href="https://github.com/qorelanguage/qore/issues/2628">issue 2628</a>)
 

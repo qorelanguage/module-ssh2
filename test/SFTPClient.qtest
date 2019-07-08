@@ -62,11 +62,27 @@ class SFTPClientTest inherits QUnit::Test {
     }
 
     sftpTests() {
+        {
+            SFTPClient sc1("sftp://test@localhost");
+            assertEq("test", sc1.getUser());
+            assertEq("localhost", sc1.getHost());
+            assertEq(22, sc1.getPort());
+            assertNothing(sc1.getAuthenticatedWith());
+        }
+
         string file = get_random_string();
         string fn = "/tmp/" + file;
 
         sc.connect();
-        hash info = sc.info();
+
+        assertEq(Type::String, sc.getAuthenticatedWith().type());
+        assertGt(0, sc.getPort());
+        if (m_options.privkey) {
+            assertEq(Type::String, sc.getKeyPriv().type());
+            assertEq(Type::String, sc.getKeyPub().type());
+        }
+
+        hash<auto> info = sc.info();
 
         if (m_options.verbose)
             stdout.printf("SFTP %s@%s:%d auth: %y, hostkey: %y, crypt_cs: %y, tmp: %s\n", info.ssh2user, info.ssh2host, info.ssh2port, info.authenticated, info.methods.HOSTKEY, info.methods.CRYPT_CS, fn);
