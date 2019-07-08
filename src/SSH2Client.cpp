@@ -5,7 +5,7 @@
     libssh2 ssh2 client integration into qore
 
     Copyright 2009 Wolfgang Ritzinger
-    Copyright (C) 2010 - 2018 Qore Technologies, s.r.o.
+    Copyright (C) 2010 - 2019 Qore Technologies, s.r.o.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -148,28 +148,31 @@ SSH2Client::~SSH2Client() {
 
 void SSH2Client::setKeysIntern() {
 #ifdef HAVE_PWD_H
-    // only set if the current user has access to the filesystem
-    if (getProgram()->getParseOptions64() & PO_NO_FILESYSTEM)
-        return;
-
     // prefill the user and 'estimate' the key files for rsa
     struct passwd *usrpwd = getpwuid(getuid());
+    //printd(5, "SSH2Client::setKeysIntern() usrpwd: %p (sshuser: '%s')\n", usrpwd, sshuser.c_str());
+
     if (usrpwd) {
-        sshuser = usrpwd->pw_name;
-        sshkeys_priv = usrpwd->pw_dir;
-        sshkeys_priv += "/.ssh/id_rsa";
-        if (!q_path_is_readable(sshkeys_priv.c_str())) {
-            printd(5, "SSH2Client::setKeysIntern() skipping automatic setting of keys because '%s' is not readable\n", sshkeys_priv.c_str());
-            sshkeys_priv.clear();
-            return;
+        // only set keys if the current user has access to the filesystem
+        if (!(getProgram()->getParseOptions64() & PO_NO_FILESYSTEM)) {
+            sshkeys_priv = usrpwd->pw_dir;
+            sshkeys_priv += "/.ssh/id_rsa";
+            if (!q_path_is_readable(sshkeys_priv.c_str())) {
+                printd(5, "SSH2Client::setKeysIntern() skipping automatic setting of keys because '%s' is not readable\n", sshkeys_priv.c_str());
+                sshkeys_priv.clear();
+                return;
+            }
+            sshkeys_pub = usrpwd->pw_dir;
+            sshkeys_pub += "/.ssh/id_rsa.pub";
+            if (!q_path_is_readable(sshkeys_pub.c_str())) {
+                printd(5, "SSH2Client::setKeysIntern() skipping automatic setting of keys because '%s' is not readable\n", sshkeys_pub.c_str());
+                sshkeys_priv.clear();
+                sshkeys_pub.clear();
+                return;
+            }
         }
-        sshkeys_pub = usrpwd->pw_dir;
-        sshkeys_pub += "/.ssh/id_rsa.pub";
-        if (!q_path_is_readable(sshkeys_pub.c_str())) {
-            printd(5, "SSH2Client::setKeysIntern() skipping automatic setting of keys because '%s' is not readable\n", sshkeys_pub.c_str());
-            sshkeys_priv.clear();
-            sshkeys_pub.clear();
-            return;
+        if (sshuser.empty()) {
+            sshuser = usrpwd->pw_name;
         }
     }
 #endif

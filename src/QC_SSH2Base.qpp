@@ -8,7 +8,7 @@
     Qore Programming Language
 
     Copyright 2009 Wolfgang Ritzinger
-    Copyright 2010 - 2018 Qore Technologies, s.r.o.
+    Copyright 2010 - 2019 Qore Technologies, s.r.o.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -250,3 +250,82 @@ SSH2Base::clearStats() {
    return 0;
 #endif
 }
+
+//! returns the target hostname if any is set
+/** @return the target hostname if any is set
+
+    @since ssh2 1.3
+*/
+*string SSH2Base::getHost() {
+    SimpleRefHolder<QoreStringNode> rv(new QoreStringNode);
+    myself->getHostLocked(**rv);
+    return rv->empty() ? nullptr : rv.release();
+}
+
+//! returns the target port
+/** @return the target port
+
+    @since ssh2 1.3
+*/
+int SSH2Base::getPort() {
+    return myself->getPortLocked();
+}
+
+//! returns the target user if any is set
+/** @return the target user if any is set
+
+    @since ssh2 1.3
+*/
+*string SSH2Base::getUser() {
+    SimpleRefHolder<QoreStringNode> rv(new QoreStringNode);
+    myself->getUserLocked(**rv);
+    return rv->empty() ? nullptr : rv.release();
+}
+
+//! returns the connection passsword if any is set
+/** @return the connection passsword if any is set
+
+    @since ssh2 1.3
+*/
+*string SSH2Base::getPassword() {
+    SimpleRefHolder<QoreStringNode> rv(new QoreStringNode);
+    myself->getPasswordLocked(**rv);
+    return rv->empty() ? nullptr : rv.release();
+}
+
+//! returns the private key path if any is set
+/** @return the private key path if any is set
+
+    @since ssh2 1.3
+*/
+*string SSH2Base::getKeyPriv() {
+    SimpleRefHolder<QoreStringNode> rv(new QoreStringNode);
+    myself->getKeyPrivLocked(**rv);
+    return rv->empty() ? nullptr : rv.release();
+}
+
+//! returns the public key path if any is set
+/** @return the public key path if any is set
+
+    @since ssh2 1.3
+*/
+*string SSH2Base::getKeyPub() {
+    SimpleRefHolder<QoreStringNode> rv(new QoreStringNode);
+    myself->getKeyPubLocked(**rv);
+    return rv->empty() ? nullptr : rv.release();
+}
+
+//! returns the authentication type if connected
+/** @return the authentication type if connected; one of the following strings is returned:
+    - \c "password"
+    - \c "publickey"
+    - \c "keyboard-interactive"
+
+    @since ssh2 1.3
+*/
+*string SSH2Base::getAuthenticatedWith() {
+    SimpleRefHolder<QoreStringNode> rv(new QoreStringNode);
+    myself->getAuthenticatedWithLocked(**rv);
+    return rv->empty() ? nullptr : rv.release();
+}
+
