@@ -207,7 +207,7 @@ nothing SSH2Base::setWarningQueue(int warning_ms, int warning_bs, Queue[Queue] q
 //! Returns performance statistics for the socket
 /** @par Example:
     @code{.py}
-hash h = sftpclient.getUsageInfo();
+hash<auto> h = sftpclient.getUsageInfo();
     @endcode
 
     @return a hash with the following keys:
@@ -223,7 +223,7 @@ hash h = sftpclient.getUsageInfo();
 
     @see SSH2Base::clearStats()
  */
-hash SSH2Base::getUsageInfo() [flags=CONSTANT] {
+hash<auto> SSH2Base::getUsageInfo() [flags=CONSTANT] {
 #ifdef _QORE_HAS_SOCKET_PERF_API
    return myself->getUsageInfo();
 #else
