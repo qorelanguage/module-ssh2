@@ -341,7 +341,7 @@ QoreListNode* SFTPClient::sftpListFull(const char* path, int timeout_ms, Excepti
         }
 
         ReferenceHolder<QoreHashNode> h(new QoreHashNode(hashdeclSftpFileInfo, xsink), xsink);
-        h->setKeyValue("name", new QoreStringNode(buff), 0);
+        h->setKeyValue("name", new QoreStringNode(buff), xsink);
 
         if (attrs.flags & LIBSSH2_SFTP_ATTR_PERMISSIONS) {
             SimpleRefHolder<QoreStringNode> perm(new QoreStringNode);
