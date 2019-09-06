@@ -6,7 +6,7 @@
     libssh2 SFTP client integration into qore
 
     Copyright 2009 Wolfgang Ritzinger
-    Copyright 2010 - 2018 Qore Technologies, s.r.o.
+    Copyright 2010 - 2019 Qore Technologies, s.r.o.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -26,25 +26,109 @@
 #include "SFTPClient.h"
 #include "QC_SSH2Base.h"
 
-static QoreHashNode *attr2hash(const LIBSSH2_SFTP_ATTRIBUTES &attr) {
-    QoreHashNode *ret = new QoreHashNode(autoTypeInfo);
+static QoreHashNode *attr2hash(const LIBSSH2_SFTP_ATTRIBUTES &attr, ExceptionSink* xsink) {
+    ReferenceHolder<QoreHashNode> ret(new QoreHashNode(hashdeclSsh2StatInfo, xsink), xsink);
 
     if (attr.flags & LIBSSH2_SFTP_ATTR_SIZE)
-        ret->setKeyValue("size", attr.filesize, 0);
+        ret->setKeyValue("size", attr.filesize, xsink);
     if (attr.flags & LIBSSH2_SFTP_ATTR_ACMODTIME) {
-        ret->setKeyValue("atime", DateTimeNode::makeAbsolute(currentTZ(), (int64)attr.atime), 0);
-        ret->setKeyValue("mtime", DateTimeNode::makeAbsolute(currentTZ(), (int64)attr.mtime), 0);
+        ret->setKeyValue("atime", DateTimeNode::makeAbsolute(currentTZ(), (int64)attr.atime), xsink);
+        ret->setKeyValue("mtime", DateTimeNode::makeAbsolute(currentTZ(), (int64)attr.mtime), xsink);
     }
     if (attr.flags & LIBSSH2_SFTP_ATTR_UIDGID) {
-        ret->setKeyValue("uid", attr.uid, 0);
-        ret->setKeyValue("gid", attr.gid, 0);
+        ret->setKeyValue("uid", attr.uid, xsink);
+        ret->setKeyValue("gid", attr.gid, xsink);
     }
     if (attr.flags & LIBSSH2_SFTP_ATTR_PERMISSIONS) {
-        ret->setKeyValue("mode", attr.permissions, 0);
-        ret->setKeyValue("permissions", new QoreStringNode(mode2str(attr.permissions)), 0);
+        ret->setKeyValue("mode", attr.permissions, xsink);
+        ret->setKeyValue("permissions", new QoreStringNode(mode2str(attr.permissions)), xsink);
     }
 
-    return ret;
+    return ret.release();
+}
+
+//! SFTP file event hash
+/**
+*/
+hashdecl SftpFileInfo {
+    //! the name of the file, link, or directory
+    string name;
+
+    //! the size of the file in bytes
+    int size;
+
+    //! the UID of the owner of the file
+    int uid;
+
+    //! the GID of the owner of the file
+    int gid;
+
+    //! the permissions / mode of the file
+    int mode;
+
+    //! the last accessed date/time of the file
+    date atime;
+
+    //! the last modified date/time of the file
+    date mtime;
+
+    //! the type of file; one of: \c "REGULAR", \c "DIRECTORY", \c "SYMBOLIC-LINK", \c "BLOCK-DEVICE", \c "CHARACTER-DEVICE", \c "FIFO", \c "SYMBOLIC-LINK", \c "SOCKET", \c "UNKNOWN"
+    string type;
+
+    //! a string giving UNIX-style permissions for the file (ex: "-rwxr-xr-x")
+    string perm;
+}
+
+//! SFTP dir event hash
+/**
+*/
+hashdecl SftpDirInfo {
+    //! the path used
+    string path;
+
+    //! sorted list of subdirectory names in the directory
+    list<string> directories;
+
+    //! sorted list of file names in the directory
+    list<string> files;
+
+    //! sorted list of symbolic links in the directory
+    list<string> links;
+}
+
+//! SFTP connection info hash
+/**
+*/
+hashdecl SftpConnectionInfo {
+    //! the host name of the remote server
+    string ssh2host;
+
+    //! the port number of the remote server
+    int ssh2port;
+
+    //! the user name used for the connection
+    string ssh2user;
+
+    //! the filename of the local private key file used
+    string keyfile_priv;
+
+    //! the filename of the local public key file used
+    string keyfile_pub;
+
+    //! The fingerprint of the public host key of the remote server as a string of hex digit pairs separated by colons (:), ex: \c "AC:AA:DF:3F:49:82:5A:1A:DE:C9:ED:14:00:7D:65:9E" or \c NOTHING if not connected
+    *string fingerprint;
+
+    //! a string giving the authentication mechanism used: \c "publickey", \c "password", \c "keyboard-interactive" or \c NOTHING if not connected
+    *string authenticated;
+
+    //! tells if the connection is currently active or not
+    bool connected;
+
+    //! a hash of strings giving the crytographic methods used for the connection
+    hash<string, string> methods;
+
+    //! a string giving the path name set in the object or \c NOTHING if no path is set
+    *string path;
 }
 
 //! allows Qore programs to use the sftp protocol with a remote server
@@ -87,7 +171,7 @@ SFTPClient::copy() {
 
 //! Returns a hash with information about the current connection status
 /** @par Example:
-    @code{.py} hash h = sftpclient.info(); @endcode
+    @code{.py} hash<SftpConnectionInfo> h = sftpclient.info(); @endcode
 
     this method is safe to call when not connected
 
@@ -103,8 +187,8 @@ SFTPClient::copy() {
     - \c methods: (hash) a hash of strings giving the crytographic methods used for the connection
     - \c path: (*string) a string giving the path name set in the object or \c NOTHING if no path is set
 */
-hash SFTPClient::info() [flags=CONSTANT] {
-    return myself->sftpInfo();
+hash<SftpConnectionInfo> SFTPClient::info() [flags=CONSTANT] {
+    return myself->sftpInfo(xsink);
 }
 
 //! Returns the current path as a string or \c NOTHING if no path is set
@@ -119,14 +203,14 @@ hash SFTPClient::info() [flags=CONSTANT] {
 
 //! Returns a hash of directory information; throws an exception if any errors occur
 /** @par Example:
-    @code{.py} hash h = sftpclient.list(path); @endcode
+    @code{.py} hash<auto> h = sftpclient.list(path); @endcode
 
     If a connection has not yet been established, it is implicitly attempted here before executing the method.
 
     @param path The pathname of the directory to list; if no path is given, then information about the current directory is returned
     @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
 
-    @return a hash with the following keys containing  and sorted lists of directory, file, or symbolic link names, respectively:
+    @return a hash with the following keys containing and sorted lists of directory, file, or symbolic link names, respectively:
     - \c path: the path used
     - \c directories: sorted list of subdirectory names in the directory
     - \c files: sorted list of file names in the directory
@@ -138,13 +222,13 @@ hash SFTPClient::info() [flags=CONSTANT] {
 
     @see SFTPClient::listFull()
 */
-hash SFTPClient::list(*string path, timeout timeout = 60s) [flags=RET_VALUE_ONLY] {
+hash<SftpDirInfo> SFTPClient::list(*string path, timeout timeout = 60s) [flags=RET_VALUE_ONLY] {
    return myself->sftpList(path ? path->getBuffer() : 0, (int)timeout, xsink);
 }
 
 //! Returns a list of directory information with detailed information for files, links, and directories; throws an exception if any errors occur
 /** @par Example:
-    @code{.py} list l = sftpclient.listFull(path); @endcode
+    @code{.py} listlist<hash<SftpFileInfo>> l = sftpclient.listFull(path); @endcode
 
     If a connection has not yet been established, it is implicitly attempted here before executing the method.
 
@@ -170,13 +254,13 @@ hash SFTPClient::list(*string path, timeout timeout = 60s) [flags=RET_VALUE_ONLY
 
     @since ssh2 0.9.8.1
 */
-list SFTPClient::listFull(*string path, timeout timeout = 60s) [flags=RET_VALUE_ONLY] {
+list<hash<SftpFileInfo>> SFTPClient::listFull(*string path, timeout timeout = 60s) [flags=RET_VALUE_ONLY] {
    return myself->sftpListFull(path ? path->getBuffer() : 0, (int)timeout, xsink);
 }
 
 //! Returns a hash of information about a file or \c NOTHING if the file cannot be found
 /** @par Example:
-    @code{.py} *hash h = sftpclient.stat(path); @endcode
+    @code{.py} *hash<Ssh2StatInfo> h = sftpclient.stat(path); @endcode
 
     If a connection has not yet been established, it is implicitly attempted here before executing the method.
 
@@ -196,10 +280,10 @@ list SFTPClient::listFull(*string path, timeout timeout = 60s) [flags=RET_VALUE_
     @throw SFTPCLIENT-TIMEOUT timeout in network operation
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
 */
-*hash SFTPClient::stat(string path, timeout timeout = 60s) [flags=RET_VALUE_ONLY] {
-   LIBSSH2_SFTP_ATTRIBUTES attr;
-   int rc = myself->sftpGetAttributes(path->getBuffer(), &attr, (int)timeout, xsink);
-   return rc < 0 ? 0 : attr2hash(attr);
+*hash<Ssh2StatInfo> SFTPClient::stat(string path, timeout timeout = 60s) [flags=RET_VALUE_ONLY] {
+    LIBSSH2_SFTP_ATTRIBUTES attr;
+    int rc = myself->sftpGetAttributes(path->getBuffer(), &attr, (int)timeout, xsink);
+    return rc < 0 ? QoreValue() : attr2hash(attr, xsink);
 }
 
 //! Deletes a file on the server side; throws an exception if any errors occur

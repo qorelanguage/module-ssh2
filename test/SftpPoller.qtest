@@ -17,7 +17,7 @@ class MySftpPoller inherits SftpPoller {
     public {}
 
     private {
-        list l = ();
+        list<hash<SftpPollerFileEventInfo>> l = ();
         bool verbose;
     }
 
@@ -25,18 +25,18 @@ class MySftpPoller inherits SftpPoller {
         verbose = n_verbose;
     }
 
-    nothing singleFileEvent(hash fh) {
+    nothing singleFileEvent(hash<SftpPollerFileEventInfo> fh) {
         if (verbose)
             printf("GOT FILE: %y\n", fh - "data" + ("data_type": fh.data.type(), "data_size": fh.data.size()));
         # in this case, the polling stop operation will take effect after all the singleFileEvent() calls are made for the polling operation
         stopNoWait();
     }
 
-    nothing postSingleFileEvent(hash fh) {
+    nothing postSingleFileEvent(hash<SftpPollerFileEventInfo> fh) {
         l += fh;
     }
 
-    list getFileList() {
+    list<hash<SftpPollerFileEventInfo>> getFileList() {
         return l;
     }
 }

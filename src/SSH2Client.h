@@ -266,8 +266,8 @@ public:
 
     DLLLOCAL int sshConnected();
 
-    DLLLOCAL QoreHashNode *sshInfo();
-    DLLLOCAL QoreHashNode *sshInfoIntern();
+    DLLLOCAL QoreHashNode *sshInfo(const TypedHashDecl* hashdecl, ExceptionSink* xsink);
+    DLLLOCAL QoreHashNode *sshInfoIntern(const TypedHashDecl* hashdecl, ExceptionSink* xsink);
 
     DLLLOCAL QoreObject *openSessionChannel(ExceptionSink *xsink, int timeout_ms = -1);
     DLLLOCAL QoreObject *openDirectTcpipChannel(ExceptionSink *xsink, const char *host, int port, const char *shost = "127.0.0.1", int sport = 22, int timeout_ms = -1);
