@@ -23,7 +23,7 @@
 */
 
 # make sure we have the required qore version
-%requires qore >= 0.9.3
+%requires qore >= 0.9.4
 
 # requires ssh2 functionality
 %requires (reexport) ssh2
@@ -31,18 +31,19 @@
 # assume local vars and do not allow $ chars
 %new-style
 
+%requires DataProvider
+
 module SftpPoller {
-    version = "1.2";
+    version = "1.3";
     desc = "SftpPoller module";
     author = "David Nichols <david@qore.org>";
     url = "http://qore.org";
     license = "MIT";
+    init = sub () {
+        # register the event data type
+        DataProvider::registerType("qore:sftp:event", new SftpPollerFileEventInfoDataType());
+    };
 }
-
-/*  Version History
-    * 2017-02-02 v1.1: Pavel Kveton <pavel.kveton@qoretechnologies.org>
-    * 2014-03-01 v1.0: David Nichols <david@qore.org>: initial version
-*/
 
 /** @mainpage SftpPoller Module
 
@@ -103,12 +104,46 @@ poller.waitStop();
 
     @section sftppollerrelnotes SftpPoller Module Release Notes
 
+    @section sftppollerv1_3 Version 1.3
+    - added support for data provider APIs
+
     @section sftppollerv1_0 Version 1.0
     - initial release
 */
 
 #! main SftpPoller namespace
 public namespace SftpPoller {
+    #! Single file event data description
+    public class SftpPollerFileEventInfoDataType inherits HashDataType {
+        public {
+            #! Descriptions for the hashdecl members
+            const FieldDescriptions = {
+                "name": "the name of the file, link, or directory",
+                "size": "the size of the file in bytes",
+                "uid": "the UID of the owner of the file",
+                "gid": "the GID of the owner of the file",
+                "mode": "the permissions / mode of the file",
+                "atime": "the last accessed date/time of the file",
+                "mtime": "the last modified date/time of the file",
+                "type": "the type of file; one of:\n- `REGULAR`\n- \c `DIRECTORY`\n- `SYMBOLIC-LINK`\n"
+                    "- `BLOCK-DEVICE`\n- `CHARACTER-DEVICE`\n- `FIFO`\n- `SYMBOLIC-LINK`\n- `SOCKET`\n"
+                    "- `UNKNOWN`",
+                "perm": "a string giving UNIX-style permissions for the file (ex: `-rwxr-xr-x`)",
+                "data": "the file's data; this will be a string unless the `binary` option is set to `True`, in "
+                    "which case this key is assigned to the files binary data; this hash key is only present if "
+                    "`skip_file_content_retrieval` was `False` in the `SftpPoller::constructor()` option hash",
+                "filepath": "the remote filepath relative to SFTP root directory",
+            };
+        }
+
+        #! Creates the type
+        constructor() {
+            # add members for base hashdecl
+            map addField(new QoreDataField($1.getName(), FieldDescriptions{$1.getName()}, $1.getType(),
+                $1.getDefaultValue())), TypedHash::forName("SftpPoller::SftpPollerFileEventInfo").getMembers();
+        }
+    }
+
     #! SftpPoller file event hash
     public hashdecl SftpPollerFileEventInfo {
         #! the name of the file, link, or directory
