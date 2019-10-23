@@ -50,6 +50,12 @@ chown -R qore:qore ${MODULE_SRC_DIR} /home/qore
 mkdir -p /var/run/sshd
 /usr/sbin/sshd
 
+echo "/usr/share/qore-modules:"
+ls -R /usr/share/qore-modules
+echo
+echo "/usr/lib/x86_64-linux-gnu/qore-modules:"
+ls -R /usr/lib/x86_64-linux-gnu/qore-modules
+
 # run the tests
 export QORE_MODULE_DIR=${MODULE_SRC_DIR}/qlib:${QORE_MODULE_DIR}
 cd ${MODULE_SRC_DIR}
