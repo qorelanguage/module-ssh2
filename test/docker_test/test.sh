@@ -37,7 +37,7 @@ make install
 
 # add Qore user and group
 groupadd -o -g ${QORE_GID} qore
-useradd -o -m -d ${QORE_HOME} -u ${QORE_UID} -g ${QORE_GID} qore
+useradd -o -m -d ${QORE_HOME} -u ${QORE_UID} -g ${QORE_GID} -s /bin/bash qore
 
 # generate SSH keys
 gosu qore:qore ssh-keygen -q -f ${QORE_HOME}/.ssh/id_rsa -N ""
