@@ -42,8 +42,8 @@ useradd -o -m -d ${QORE_HOME} -u ${QORE_UID} -g ${QORE_GID} qore
 # generate SSH keys
 gosu qore:qore ssh-keygen -q -f ${QORE_HOME}/.ssh/id_rsa -N ""
 gosu qore:qore cp ${QORE_HOME}/.ssh/id_rsa.pub ${QORE_HOME}/.ssh/authorized_keys
-gosu qore:qore echo "localhost `cat /etc/ssh/ssh_host_rsa_key.pub`" > ${QORE_HOME}/.ssh/known_hosts
-gosu qore:qore echo "localhost `cat /etc/ssh/ssh_host_ecdsa_key.pub`" > ${QORE_HOME}/.ssh/known_hosts
+gosu qore:qore echo "localhost `cat /etc/ssh/ssh_host_rsa_key.pub`" >> ${QORE_HOME}/.ssh/known_hosts
+gosu qore:qore echo "localhost `cat /etc/ssh/ssh_host_ecdsa_key.pub`" >> ${QORE_HOME}/.ssh/known_hosts
 chmod 600 ${QORE_HOME}/.ssh/authorized_keys
 
 # own everything by the qore user
