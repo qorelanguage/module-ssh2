@@ -43,6 +43,9 @@ gosu qore:qore ssh-keygen -q -f /home/qore/.ssh/id_rsa -N ""
 gosu qore:qore cp /home/qore/.ssh/id_rsa.pub /home/qore/.ssh/authorized_keys
 chmod 600 /home/qore/.ssh/authorized_keys
 
+# turn on sshd debugging output
+#echo LogLevel DEBUG3 >> /etc/ssh/sshd_config
+
 # own everything by the qore user
 chown -R qore:qore ${MODULE_SRC_DIR} /home/qore
 
@@ -53,6 +56,7 @@ mkdir -p /var/run/sshd
 # run the tests
 export QORE_MODULE_DIR=${MODULE_SRC_DIR}/qlib:${QORE_MODULE_DIR}
 cd ${MODULE_SRC_DIR}
+
 for test in test/*.qtest; do
     gosu qore:qore qore $test -vv
 done

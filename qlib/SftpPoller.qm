@@ -116,7 +116,7 @@ public namespace SftpPoller {
     #! Single file event data description
     public class SftpPollerFileEventInfoDataType inherits HashDataType {
         public {
-            #! Descriptions for the hashdecl members
+            #! Markdown descriptions for hashdecl members
             const FieldDescriptions = {
                 "name": "the name of the file, link, or directory",
                 "size": "the size of the file in bytes",
@@ -125,7 +125,7 @@ public namespace SftpPoller {
                 "mode": "the permissions / mode of the file",
                 "atime": "the last accessed date/time of the file",
                 "mtime": "the last modified date/time of the file",
-                "type": "the type of file; one of:\n- `REGULAR`\n- \c `DIRECTORY`\n- `SYMBOLIC-LINK`\n"
+                "type": "the type of file; one of:\n- `REGULAR`\n- `DIRECTORY`\n- `SYMBOLIC-LINK`\n"
                     "- `BLOCK-DEVICE`\n- `CHARACTER-DEVICE`\n- `FIFO`\n- `SYMBOLIC-LINK`\n- `SOCKET`\n"
                     "- `UNKNOWN`",
                 "perm": "a string giving UNIX-style permissions for the file (ex: `-rwxr-xr-x`)",
