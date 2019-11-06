@@ -44,8 +44,7 @@ class SFTPClientTest inherits QUnit::Test {
         sc = new SFTPClient(uri);
         if (m_options.privkey) {
             sc.setKeys(m_options.privkey);
-        }
-        else {
+        } else {
             if (PlatformOS == "Windows")
                 exit(0);
 
