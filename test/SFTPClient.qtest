@@ -31,6 +31,7 @@ class SFTPClientTest inherits QUnit::Test {
         const MyOpts = Opts + {
             "privkey": "k,private-key=s",
             "timeout": "T,timeout=i",
+            "dir": "d,dir=s",
         };
 
         const ColumnOffset = 25;
@@ -70,7 +71,10 @@ class SFTPClientTest inherits QUnit::Test {
         }
 
         string file = get_random_string();
-        string fn = "/tmp/" + file;
+
+        string tmpDir = m_options.dir ? m_options.dir : tmp_location();
+
+        string fn = sprintf("%s/%s", tmpDir, file);
 
         sc.connect();
 
@@ -100,7 +104,7 @@ class SFTPClientTest inherits QUnit::Test {
         testAssertionValue("SFTPClient::stat() mode", info.mode & 0777, FileMode);
         testAssertionValue("SFTPClient::stat() permissions", info.permissions, "-rwxr-xr-x");
 
-        testAssertionValue("(before getFile()) SFTPClient::chdir()", realpath("/tmp"), sc.chdir("/tmp"));
+        testAssertionValue("(before getFile()) SFTPClient::chdir()", realpath(tmpDir), sc.chdir(tmpDir));
 
         # retrieve the file as a binary object
         binary b = sc.getFile(basename(fn), timeout);
@@ -128,7 +132,7 @@ class SFTPClientTest inherits QUnit::Test {
 
             StringOutputStream os();
             # read the file to an output stream
-            sc.get(basename(fn), os, timeout);
+            sc.get(fn, os, timeout);
             assertEq(FileContents, os.getData());
         }
 
@@ -198,8 +202,8 @@ class SFTPClientTest inherits QUnit::Test {
         testAssertionValue("SFTPClient::rename() and SFTPClient::stat() on dir", info.atime.type(), Type::Date);
         testAssertionValue("SFTPClient::stat() on non-existent file", sc.stat(fn, timeout));
 
-        string np = sc.chdir("/tmp", timeout);
-        testAssertionValue("SFTPClient::chdir()", realpath("/tmp"), np);
+        string np = sc.chdir(tmpDir, timeout);
+        testAssertionValue("SFTPClient::chdir()", realpath(tmpDir), np);
 
         # remove directory
         sc.rmdir(file + ".new", timeout);
@@ -224,11 +228,20 @@ class SFTPClientTest inherits QUnit::Test {
                 unlink(tfn);
             assertEq(0, hstat(tfn).size);
         }
+
+        # # test alive
+        testAssertionValue("SFTPClient:isAlive()", sc.isAlive(), True);
+        # # check reconnect on demand
+        sc.disconnect(timeout);
+
+        # # test alive
+        testAssertionValue("SFTPClient:isAlive()", sc.isAlive(), False);
     }
 
     private usageIntern() {
         TestReporter::usageIntern(ColumnOffset);
-	printOption("-k,--private-key=ARG", "set private key to use for authentication", ColumnOffset);
+        printOption("-k,--private-key=ARG", "set private key to use for authentication", ColumnOffset);
         printOption("-T,--timeout=ARG", sprintf("set timeout in seconds (def: %ds)", timeout / 1000), ColumnOffset);
+        printOption("-d,--dir=ARG", "working directory for tests", ColumnOffset);
     }
 }

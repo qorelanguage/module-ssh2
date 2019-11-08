@@ -36,6 +36,9 @@ build/
 .project
 .settings/
 
+# Visual Studio Code 
+.vscode
+
 # ignore temp doxygen files
 docs/*.tag
 docs/ssh2/

@@ -50,6 +50,7 @@ class SftpPollerTest inherits QUnit::Test {
         const MyOpts = Opts + (
             "privkey": "k,private-key=s",
             "mask": "m,mask=s",
+            "dir": "d,dir=s"
             );
 
         SFTPClient sc;
@@ -136,17 +137,29 @@ class SftpPollerTest inherits QUnit::Test {
                 printf("DEBUG: %s\n", msg);
         };
 
-        hash opts = (
+        hash<auto> opts = (
             "log_info": info,
             "log_detail": detail,
             "log_debug": debug,
             "mask": "*.txt",
             "writable": True,
-            );
+        );
 
-        # setup directory
         string nd = sprintf("%s/", get_random_string());
-        sc.mkdir(nd);
+        # setup directory
+        if (m_options.dir) {
+            nd = sprintf("%s/%s/",  m_options.dir, get_random_string());
+        }
+
+        try {
+            sc.mkdir(nd);
+        } catch (hash<ExceptionInfo> ex) {
+            if (ex.desc =~ /LIBSSH2_FX_PERMISSION_DENIED/) {
+                stdout.print("Root is not writable, specify writable directory using --dir(-d).\n");
+            }
+            rethrow;
+        }
+
         map sc.putFile($1.value, nd + $1.key), Files.pairIterator();
         on_exit {
             map sc.removeFile($1), Files.keyIterator();
@@ -201,13 +214,13 @@ class SftpPollerTest inherits QUnit::Test {
                 printf("DEBUG: %s\n", msg);
         };
 
-        hash opts = (
+        hash<auto> opts = (
             "log_info": info,
             "log_detail": detail,
             "log_debug": debug,
             "mask": "*.txt",
             "writable": True,
-            );
+        );
 
         # setup directory
         string nd = sprintf("%s/%s/", tmp_location(), get_random_string());

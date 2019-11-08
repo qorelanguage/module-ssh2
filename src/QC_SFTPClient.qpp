@@ -146,20 +146,20 @@ qclass SFTPClient [arg=SFTPClient* myself; ns=Qore::SSH2; dom=NETWORK; vparent=S
     @throw SFTPCLIENT-PARAMETER-ERROR unknown protocol passed in URL; no hostname in URL
  */
 SFTPClient::constructor(string url, softint port = 0) {
-   QoreURL qurl(url);
+    QoreURL qurl(url);
 
-   if (!qurl.getHost()) {
-      xsink->raiseException("SFTPCLIENT-PARAMETER-ERROR", "no hostname found in URL '%s'", url->getBuffer());
-      return;
-   }
+    if (!qurl.getHost()) {
+        xsink->raiseException("SFTPCLIENT-PARAMETER-ERROR", "no hostname found in URL '%s'", url->c_str());
+        return;
+    }
 
-   if (qurl.getProtocol() && strcasecmp("sftp", qurl.getProtocol()->getBuffer())) {
-      xsink->raiseException("SFTPCLIENT-PARAMETER-ERROR", "URL given in the first argument to SFTPClient::constructor() specifies invalid protocol '%s' (expecting 'sftp')", qurl.getProtocol()->getBuffer());
-      return;
-   }
+    if (qurl.getProtocol() && strcasecmp("sftp", qurl.getProtocol()->c_str())) {
+        xsink->raiseException("SFTPCLIENT-PARAMETER-ERROR", "URL given in the first argument to SFTPClient::constructor() specifies invalid protocol '%s' (expecting 'sftp')", qurl.getProtocol()->getBuffer());
+        return;
+    }
 
-   // create private data object
-   self->setPrivate(CID_SFTPCLIENT, new SFTPClient(qurl, (int)port));
+    // create private data object
+    self->setPrivate(CID_SFTPCLIENT, new SFTPClient(qurl, (int)port));
 }
 
 //! Throws an exception; currently SFTPClient objects cannot be copied
@@ -198,7 +198,7 @@ hash<SftpConnectionInfo> SFTPClient::info() [flags=CONSTANT] {
     @return the current path as a string or \c NOTHING if no path is set
 */
 *string SFTPClient::path() [flags=CONSTANT] {
-   return myself->sftpPath();
+    return myself->sftpPath();
 }
 
 //! Returns a hash of directory information; throws an exception if any errors occur
@@ -223,7 +223,7 @@ hash<SftpConnectionInfo> SFTPClient::info() [flags=CONSTANT] {
     @see SFTPClient::listFull()
 */
 hash<SftpDirInfo> SFTPClient::list(*string path, timeout timeout = 60s) [flags=RET_VALUE_ONLY] {
-   return myself->sftpList(path ? path->getBuffer() : 0, (int)timeout, xsink);
+    return myself->sftpList(path ? path->c_str() : nullptr, (int)timeout, xsink);
 }
 
 //! Returns a list of directory information with detailed information for files, links, and directories; throws an exception if any errors occur
@@ -255,7 +255,7 @@ hash<SftpDirInfo> SFTPClient::list(*string path, timeout timeout = 60s) [flags=R
     @since ssh2 0.9.8.1
 */
 list<hash<SftpFileInfo>> SFTPClient::listFull(*string path, timeout timeout = 60s) [flags=RET_VALUE_ONLY] {
-   return myself->sftpListFull(path ? path->getBuffer() : 0, (int)timeout, xsink);
+    return myself->sftpListFull(path ? path->c_str() : nullptr, (int)timeout, xsink);
 }
 
 //! Returns a hash of information about a file or \c NOTHING if the file cannot be found
@@ -282,7 +282,7 @@ list<hash<SftpFileInfo>> SFTPClient::listFull(*string path, timeout timeout = 60
 */
 *hash<Ssh2StatInfo> SFTPClient::stat(string path, timeout timeout = 60s) [flags=RET_VALUE_ONLY] {
     LIBSSH2_SFTP_ATTRIBUTES attr;
-    int rc = myself->sftpGetAttributes(path->getBuffer(), &attr, (int)timeout, xsink);
+    int rc = myself->sftpGetAttributes(path->c_str(), &attr, (int)timeout, xsink);
     return rc < 0 ? QoreValue() : attr2hash(attr, xsink);
 }
 
@@ -299,7 +299,7 @@ list<hash<SftpFileInfo>> SFTPClient::listFull(*string path, timeout timeout = 60
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
 */
 nothing SFTPClient::removeFile(string path, timeout timeout = 60s) {
-   myself->sftpUnlink(path->getBuffer(), (int)timeout, xsink);
+    myself->sftpUnlink(path->c_str(), (int)timeout, xsink);
 }
 
 //! Renames or moves a remote file; throws an exception if any errors occur
@@ -317,7 +317,7 @@ nothing SFTPClient::removeFile(string path, timeout timeout = 60s) {
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message; file exists and server does not allow overwriting
 */
 nothing SFTPClient::rename(string old_name, string new_name, timeout timeout = 60s) {
-   myself->sftpRename(old_name->getBuffer(), new_name->getBuffer(), (int)timeout, xsink);
+    myself->sftpRename(old_name->c_str(), new_name->c_str(), (int)timeout, xsink);
 }
 
 //! Changes the mode of a remote file or directory; sticky bits may not be set; throws an exception if any errors occur
@@ -336,12 +336,12 @@ nothing SFTPClient::rename(string old_name, string new_name, timeout timeout = 6
 */
 nothing SFTPClient::chmod(string path, int mode, timeout timeout = 60s) {
    // check if mode is in range
-  if (mode != (mode & (int64)SFTP_UGOMASK)) {
-      xsink->raiseException("SFTPCLIENT-PARAMETER-ERROR", "mode setting is only possible for user, group and other (no sticky bits)");
-      return 0;
-   }
+    if (mode != (mode & (int64)SFTP_UGOMASK)) {
+        xsink->raiseException("SFTPCLIENT-PARAMETER-ERROR", "mode setting is only possible for user, group and other (no sticky bits)");
+        return QoreValue();
+    }
 
-  myself->sftpChmod(path->getBuffer(), (int)mode, (int)timeout, xsink);
+    myself->sftpChmod(path->c_str(), (int)mode, (int)timeout, xsink);
 }
 
 //! Retrieves a remote file and writes its content to an @ref Qore::OutputStream "OutputStream"; throws an exception if any errors occur
@@ -367,8 +367,8 @@ nothing SFTPClient::chmod(string path, int mode, timeout timeout = 60s) {
     @since ssh2 1.1
 */
 int SFTPClient::get(string remote_path, Qore::OutputStream[OutputStream] os, timeout timeout = 60s) {
-   SimpleRefHolder<OutputStream> osHolder(os);
-   return myself->sftpGet(remote_path->getBuffer(), os, (int) timeout, xsink);
+    SimpleRefHolder<OutputStream> osHolder(os);
+    return myself->sftpGet(remote_path->c_str(), os, (int) timeout, xsink);
 }
 
 //! Retrieves a remote file and returns it as a binary object; throws an exception if any errors occur
@@ -393,7 +393,7 @@ int SFTPClient::get(string remote_path, Qore::OutputStream[OutputStream] os, tim
     - SFTPClient::transferFile()
 */
 binary SFTPClient::getFile(string path, timeout timeout = 60s) {
-   return myself->sftpGetFile(path->getBuffer(), (int)timeout, xsink);
+    return myself->sftpGetFile(path->c_str(), (int)timeout, xsink);
 }
 
 //! Retrieves a remote file and returns it as a string; throws an exception if any errors occur
@@ -419,8 +419,8 @@ binary SFTPClient::getFile(string path, timeout timeout = 60s) {
     - SFTPClient::transferFile()
 */
 string SFTPClient::getTextFile(string path, timeout timeout = 60s, *string encoding) {
-   const QoreEncoding *qe = encoding ? QEM.findCreate(encoding) : QCS_DEFAULT;
-   return myself->sftpGetTextFile(path->getBuffer(), (int)timeout, qe, xsink);
+    const QoreEncoding *qe = encoding ? QEM.findCreate(encoding) : QCS_DEFAULT;
+    return myself->sftpGetTextFile(path->c_str(), (int)timeout, qe, xsink);
 }
 
 //! Retrieves a remote file and saves it on the local filesystem; throws an exception if any errors occur
@@ -450,7 +450,7 @@ string SFTPClient::getTextFile(string path, timeout timeout = 60s, *string encod
     @since ssh2 1.0
 */
 int SFTPClient::retrieveFile(string remote_path, string local_path, timeout timeout = 60s, int mode = 0644) [dom=FILESYSTEM] {
-   return myself->sftpRetrieveFile(remote_path->getBuffer(), local_path->getBuffer(), (int)timeout, mode, xsink);
+    return myself->sftpRetrieveFile(remote_path->c_str(), local_path->c_str(), (int)timeout, mode, xsink);
 }
 
 //! Saves a file on the remote server from a binary argument and returns the number of bytes sent; throws an exception if any errors occur
@@ -479,8 +479,8 @@ int SFTPClient::retrieveFile(string remote_path, string local_path, timeout time
     - SFTPClient::transferFile()
 */
 int SFTPClient::putFile(binary bin, string path, int mode = 0644, timeout timeout = 60s) {
-   // transfer the file
-   return myself->sftpPutFile((const char *)bin->getPtr(), bin->size(), path->getBuffer(), (int)mode, (int)timeout, xsink);
+    // transfer the file
+    return myself->sftpPutFile((const char *)bin->getPtr(), bin->size(), path->c_str(), (int)mode, (int)timeout, xsink);
 }
 
 //! Saves a file on the remote server from a string argument and returns the number of bytes sent; throws an exception if any errors occur
@@ -509,8 +509,8 @@ int SFTPClient::putFile(binary bin, string path, int mode = 0644, timeout timeou
     - SFTPClient::transferFile()
 */
 int SFTPClient::putFile(string data, string path, int mode = 0644, timeout timeout = 60s) {
-   // transfer the file
-   return myself->sftpPutFile(data->getBuffer(), data->strlen(), path->getBuffer(), (int)mode, (int)timeout, xsink);
+    // transfer the file
+    return myself->sftpPutFile(data->c_str(), data->strlen(), path->c_str(), (int)mode, (int)timeout, xsink);
 }
 
 //! Transfers a local file to the remote server and returns the number of bytes sent; throws an exception if any errors occur
@@ -540,8 +540,8 @@ int SFTPClient::putFile(string data, string path, int mode = 0644, timeout timeo
     @since ssh2 1.0
 */
 int SFTPClient::transferFile(string local_path, string remote_path, timeout timeout = 60s, *int mode) [dom=FILESYSTEM] {
-   // transfer the file
-   return myself->sftpTransferFile(local_path->getBuffer(), remote_path->getBuffer(), (int)mode, (int)timeout, xsink);
+    // transfer the file
+    return myself->sftpTransferFile(local_path->c_str(), remote_path->c_str(), (int)mode, (int)timeout, xsink);
 }
 
 //! Saves a file on the remote server from an InputStream and returns the number of bytes sent; throws an exception if any errors occur
@@ -571,8 +571,8 @@ int SFTPClient::transferFile(string local_path, string remote_path, timeout time
     @since ssh2 1.1
 */
 int SFTPClient::put(Qore::InputStream[InputStream] is, string remote_path, timeout timeout = 60s, int mode = 0644) {
-   SimpleRefHolder<InputStream> isHolder(is);
-   return myself->sftpPut(is, remote_path->getBuffer(), (int) mode, (int) timeout, xsink);
+    SimpleRefHolder<InputStream> isHolder(is);
+    return myself->sftpPut(is, remote_path->c_str(), (int) mode, (int) timeout, xsink);
 }
 
 //! Makes a directory on the remote server; throws an exception if any errors occur
@@ -590,7 +590,7 @@ int SFTPClient::put(Qore::InputStream[InputStream] is, string remote_path, timeo
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
 */
 nothing SFTPClient::mkdir(string path, int mode = 0755, timeout timeout = 60s) {
-   myself->sftpMkdir(path->getBuffer(), (int)mode, (int)timeout, xsink);
+    myself->sftpMkdir(path->c_str(), (int)mode, (int)timeout, xsink);
 }
 
 //! Removes a directory on the remote server; throws an exception if any errors occur
@@ -607,7 +607,7 @@ nothing SFTPClient::mkdir(string path, int mode = 0755, timeout timeout = 60s) {
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
 */
 nothing SFTPClient::rmdir(string path, timeout timeout = 60s) {
-   myself->sftpRmdir(path->getBuffer(), (int)timeout, xsink);
+    myself->sftpRmdir(path->c_str(), (int)timeout, xsink);
 }
 
 //! Changes the directory on the remote server and returns the new directory; throws an exception if any errors occur
@@ -623,5 +623,44 @@ nothing SFTPClient::rmdir(string path, timeout timeout = 60s) {
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
 */
 string SFTPClient::chdir(string path, timeout timeout = 60s) {
-   return myself->sftpChdir(path->getBuffer(), (int)timeout, xsink);
+    return myself->sftpChdir(path->c_str(), (int)timeout, xsink);
+}
+
+//! Check if connections is responding to test request; throws an exception if any errors occur
+/** @par Example:
+    @code{.py} sftpclient.isAliveEx(timeout_ms); @endcode
+
+    If a connection has not yet been established, it is NOT attempted before executing the method.
+
+    This variant does not throw exceptions due to I/O errors or timeouts.
+
+    @return True if server is responding, False otherwise
+
+    @param timeout_ms an integer giving a timeout in milliseconds
+
+    @see isAliveEx()
+*/
+bool SFTPClient::isAlive(timeout timeout_ms = 60) {
+    return myself->sftpIsAlive((int)timeout_ms);
+}
+
+//! Check if connections is responding to test request
+/** @par Example:
+    @code{.py} sftpclient.isAliveEx(timeout_ms); @endcode
+
+    If a connection has not yet been established, it is NOT attempted before executing the method.
+
+    This variant throws exceptions if I/O errors or timeouts are encountered.
+
+    @return True if server is responding, False otherwise
+
+    @param timeout_ms an integer giving a timeout in milliseconds
+
+    @throw SFTPCLIENT-TIMEOUT timeout in network operation
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
+
+    @see isAlive()
+*/
+bool SFTPClient::isAliveEx(timeout timeout_ms = 60) {
+    return myself->sftpIsAliveEx((int)timeout_ms, xsink);
 }
