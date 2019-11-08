@@ -137,27 +137,27 @@ class SftpPollerTest inherits QUnit::Test {
                 printf("DEBUG: %s\n", msg);
         };
 
-        hash opts = (
+        hash<auto> opts = (
             "log_info": info,
             "log_detail": detail,
             "log_debug": debug,
             "mask": "*.txt",
             "writable": True,
-            );
+        );
 
         string nd = sprintf("%s/", get_random_string());
         # setup directory
         if (m_options.dir) {
             nd = sprintf("%s/%s/",  m_options.dir, get_random_string());
-        } 
+        }
 
         try {
             sc.mkdir(nd);
-        } catch (ex) {
+        } catch (hash<ExceptionInfo> ex) {
             if (ex.desc =~ /LIBSSH2_FX_PERMISSION_DENIED/) {
                 stdout.print("Root is not writable, specify writable directory using --dir(-d).\n");
             }
-            throw ex;
+            rethrow;
         }
 
         map sc.putFile($1.value, nd + $1.key), Files.pairIterator();
@@ -197,7 +197,7 @@ class SftpPollerTest inherits QUnit::Test {
         map assertEq(False, exists $1.data), fl;
         # sort by file name
         fl = map $1.(NoRetrievalResult[0].keys()), sort(fl, int sub (hash l, hash r) { return l.name <=> r.name; });
-        assertEq(fl, NoRetrievalResult);        
+        assertEq(fl, NoRetrievalResult);
     }
 
     sftpPollerRemotePathNegTest() {
@@ -214,13 +214,13 @@ class SftpPollerTest inherits QUnit::Test {
                 printf("DEBUG: %s\n", msg);
         };
 
-        hash opts = (
+        hash<auto> opts = (
             "log_info": info,
             "log_detail": detail,
             "log_debug": debug,
             "mask": "*.txt",
             "writable": True,
-            );
+        );
 
         # setup directory
         string nd = sprintf("%s/%s/", tmp_location(), get_random_string());
