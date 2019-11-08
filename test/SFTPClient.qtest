@@ -20,18 +20,19 @@ class SFTPClientTest inherits QUnit::Test {
         timeout timeout = 10s;
         SFTPClient sc;
 
-        const FileContents = "hi there ýčšěáýžšěčéářčě";
+        # issue #2633: ensure that the file is larger than the LIBSSH2 block size
+        const FileContents = "hi there ýčšěáýžšěčéářčě" + strmul("x", 128 * 1024);
         const BinContents = binary(FileContents);
         const FileLen = FileContents.size();
         const FileMode = 0755;
 
         const FileNameLen = 40;
 
-        const MyOpts = Opts + (
+        const MyOpts = Opts + {
             "privkey": "k,private-key=s",
             "timeout": "T,timeout=i",
             "dir": "d,dir=s",
-            );
+        };
 
         const ColumnOffset = 25;
     }
@@ -44,12 +45,11 @@ class SFTPClientTest inherits QUnit::Test {
         sc = new SFTPClient(uri);
         if (m_options.privkey) {
             sc.setKeys(m_options.privkey);
-        }
-        else {
+        } else {
             if (PlatformOS == "Windows")
                 exit(0);
 
-            string sshdir = `echo -n ~/.ssh`;
+            string sshdir = ENV.HOME + DirSep + ".ssh";
             if (is_file(sshdir + "/id_rsa"))
                 sc.setKeys(sshdir + "/id_rsa");
             else if (is_file(sshdir + "/id_dsa"))
@@ -62,6 +62,14 @@ class SFTPClientTest inherits QUnit::Test {
     }
 
     sftpTests() {
+        {
+            SFTPClient sc1("sftp://test@localhost");
+            assertEq("test", sc1.getUser());
+            assertEq("localhost", sc1.getHost());
+            assertEq(22, sc1.getPort());
+            assertNothing(sc1.getAuthenticatedWith());
+        }
+
         string file = get_random_string();
 
         string tmpDir = m_options.dir ? m_options.dir : tmp_location();
@@ -69,7 +77,15 @@ class SFTPClientTest inherits QUnit::Test {
         string fn = sprintf("%s/%s", tmpDir, file);
 
         sc.connect();
-        hash info = sc.info();
+
+        assertEq(Type::String, sc.getAuthenticatedWith().type());
+        assertGt(0, sc.getPort());
+        if (m_options.privkey) {
+            assertEq(Type::String, sc.getKeyPriv().type());
+            assertEq(Type::String, sc.getKeyPub().type());
+        }
+
+        hash<auto> info = sc.info();
 
         if (m_options.verbose)
             stdout.printf("SFTP %s@%s:%d auth: %y, hostkey: %y, crypt_cs: %y, tmp: %s\n", info.ssh2user, info.ssh2host, info.ssh2port, info.authenticated, info.methods.HOSTKEY, info.methods.CRYPT_CS, fn);
@@ -88,7 +104,7 @@ class SFTPClientTest inherits QUnit::Test {
         testAssertionValue("SFTPClient::stat() mode", info.mode & 0777, FileMode);
         testAssertionValue("SFTPClient::stat() permissions", info.permissions, "-rwxr-xr-x");
 
-        testAssertionValue("(before getFile()) SFTPClient::chdir()", realpath("/tmp"), sc.chdir("/tmp"));
+        testAssertionValue("(before getFile()) SFTPClient::chdir()", realpath(tmpDir), sc.chdir(tmpDir));
 
         # retrieve the file as a binary object
         binary b = sc.getFile(basename(fn), timeout);
@@ -116,7 +132,7 @@ class SFTPClientTest inherits QUnit::Test {
 
             StringOutputStream os();
             # read the file to an output stream
-            sc.get(basename(fn), os, timeout);
+            sc.get(fn, os, timeout);
             assertEq(FileContents, os.getData());
         }
 
@@ -162,7 +178,7 @@ class SFTPClientTest inherits QUnit::Test {
         }
 
         # delete local file if created
-        on_exit tempCreated && is_file(fn) && unlink(fn);
+        on_exit if (tempCreated && is_file(fn)) unlink(fn);
 
         # make new file name
         string nfn = fn + ".new";
@@ -186,20 +202,40 @@ class SFTPClientTest inherits QUnit::Test {
         testAssertionValue("SFTPClient::rename() and SFTPClient::stat() on dir", info.atime.type(), Type::Date);
         testAssertionValue("SFTPClient::stat() on non-existent file", sc.stat(fn, timeout));
 
-        string np = sc.chdir("/tmp", timeout);
-        testAssertionValue("SFTPClient::chdir()", realpath("/tmp"), np);
+        string np = sc.chdir(tmpDir, timeout);
+        testAssertionValue("SFTPClient::chdir()", realpath(tmpDir), np);
 
         # remove directory
         sc.rmdir(file + ".new", timeout);
         testAssertionValue("SFTPClient::rmdir()", sc.stat(nfn, timeout));
 
+        # issue #2549
+        {
+            File f();
+            f.open2(fn, O_TRUNC | O_WRONLY | O_CREAT);
+        }
+        assertEq("", sc.getTextFile(fn));
+        assertEq(binary(), sc.getFile(fn));
+        {
+            StringOutputStream os();
+            sc.get(fn, os);
+            assertEq("", os.getData());
+        }
+        {
+            string tfn = sprintf("%s%s%s", tmp_location(), DirSep, get_random_string());
+            sc.retrieveFile(fn, tfn);
+            on_exit
+                unlink(tfn);
+            assertEq(0, hstat(tfn).size);
+        }
+
         # # test alive
-        testAssertionValue("SFTPClient:isAlive()", sc.isAlive(), 1);
+        testAssertionValue("SFTPClient:isAlive()", sc.isAlive(), True);
         # # check reconnect on demand
         sc.disconnect(timeout);
 
         # # test alive
-        testAssertionValue("SFTPClient:isAlive()", sc.isAlive(), 0);
+        testAssertionValue("SFTPClient:isAlive()", sc.isAlive(), False);
     }
 
     private usageIntern() {

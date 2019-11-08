@@ -102,11 +102,31 @@ stdout.printf("exit status: %d\n", chan.getExitStatus());@endcode
 
     @section ssh2releasenotes Release Notes
 
+    @subsection ssh2v14 Version 1.4
+    - added support for the data provider API
+
+    @subsection ssh2v13 Version 1.3
+    - added support for complex types in public APIs
+      (<a href="https://github.com/qorelanguage/qore/issues/3540">issue 3540</a>)
+    - added the following base class APIs:
+      - @ref Qore::SSH2::SSH2Base::getAuthenticatedWith() "SSH2Base::getAuthenticatedWith()"
+      - @ref Qore::SSH2::SSH2Base::getHost() "SSH2Base::getHost()"
+      - @ref Qore::SSH2::SSH2Base::getKeyPriv() "SSH2Base::getKeyPriv()"
+      - @ref Qore::SSH2::SSH2Base::getKeyPub() "SSH2Base::getKeyPub()"
+      - @ref Qore::SSH2::SSH2Base::getPassword() "SSH2Base::getPassword()"
+      - @ref Qore::SSH2::SSH2Base::getPort() "SSH2Base::getPort()"
+      - @ref Qore::SSH2::SSH2Base::getUser() "SSH2Base::getUser()"
+      (<a href="https://github.com/qorelanguage/qore/issues/3445">issue 3445</a>)
+    - updated the <a href="../../Ssh2Connections/html/index.html">Ssh2Connections</a> module to support the updated
+      abstract connection API (<a href="https://github.com/qorelanguage/qore/issues/2628">issue 2628</a>)
+
     @subsection ssh2v12 Version 1.2
     - added the <a href="../../Ssh2Connections/html/index.html">Ssh2Connections</a> user module
     - added the following @ref Qore::SSH2::SFTPClient "SFTPClient" methods supporting streams:
       - @ref Qore::SSH2::SFTPClient::get() "SFTPClient::get()"
       - @ref Qore::SSH2::SFTPClient::put() "SFTPClient::put()"
+    - fixed bugs retrieving zero-length text files with @ref Qore::SSH2::SFTPClient::getFile() "SFTPClient::getFile()", @ref Qore::SSH2::SFTPClient::getTextFile() "SFTPClient::getTextFile()", @ref Qore::SSH2::SFTPClient::get() "SFTPClient::get()", and @ref Qore::SSH2::SFTPClient::retrieveFile() "SFTPClient::retrieveFile()" (<a href="https://github.com/qorelanguage/qore/issues/2549">issue 2549</a>)
+    - fixed bugs streaming data with @ref Qore::SSH2::SFTPClient::transferFile() "SFTPClient::transferFile()" and @ref Qore::SSH2::SFTPClient::put() "SFTPClient::put()" (<a href="https://github.com/qorelanguage/qore/issues/2633">issue 2633</a>)
 
     @subsection ssh2v11 Version 1.1
     - argument error in @ref Qore::SSH2::SFTPClient "SFTPClient" disconnection with socket errors causes a crash (<a href="https://github.com/qorelanguage/qore/issues/714">issue 765</a>)

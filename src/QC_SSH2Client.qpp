@@ -1,32 +1,90 @@
 /* -*- mode: c++; indent-tabs-mode: nil -*- */
 /** @file SSH2Client.qpp defines the SSH2Client class */
 /*
-  QC_SSH2Client.qpp
+    QC_SSH2Client.qpp
 
-  libssh2 ssh2 client integration into qore
+    libssh2 ssh2 client integration into qore
 
-  Copyright 2009 Wolfgang Ritzinger
-  Copyright 2010 - 2017 Qore Technologies, s.r.o.
+    Copyright 2009 Wolfgang Ritzinger
+    Copyright 2010 - 2019 Qore Technologies, s.r.o.
 
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
 
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
 
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include "SSH2Client.h"
 
 extern QoreClass* QC_SSH2BASE;
 extern QoreClass* QC_SSH2CHANNEL;
+
+//! SSH2 connection info hash
+/**
+*/
+hashdecl Ssh2ConnectionInfo {
+    //! the host name of the remote server
+    string ssh2host;
+
+    //! the port number of the remote server
+    int ssh2port;
+
+    //! the user name used for the connection
+    string ssh2user;
+
+    //! the filename of the local private key file used
+    string keyfile_priv;
+
+    //! the filename of the local public key file used
+    string keyfile_pub;
+
+    //! The fingerprint of the public host key of the remote server as a string of hex digit pairs separated by colons (:), ex: \c "AC:AA:DF:3F:49:82:5A:1A:DE:C9:ED:14:00:7D:65:9E" or \c NOTHING if not connected
+    *string fingerprint;
+
+    //! a string giving the authentication mechanism used: \c "publickey", \c "password", \c "keyboard-interactive" or \c NOTHING if not connected
+    *string authenticated;
+
+    //! tells if the connection is currently active or not
+    bool connected;
+
+    //! a hash of strings giving the crytographic methods used for the connection
+    hash<string, string> methods;
+}
+
+//! SSH2 file stat info hash
+/**
+*/
+hashdecl Ssh2StatInfo {
+    //! the permissions / mode of the file
+    int mode;
+
+    //! a string giving UNIX-style permissions for the file (ex: "-rwxr-xr-x")
+    string permissions;
+
+    //! file size in bytes
+    int size;
+
+    //! the last accessed date/time of the file
+    date atime;
+
+    //! the last modified date/time of the file
+    date mtime;
+
+    //! the uid of the user owning the file
+    int uid;
+
+    //! the gid of the group owning the file
+    int gid;
+}
 
 //! allows Qore programs to establish an ssh2 connection to a remote server
 /**
@@ -44,33 +102,33 @@ qclass SSH2Client [arg=SSH2Client* c; ns=Qore::SSH2; dom=NETWORK; vparent=SSH2Ba
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
 SSH2Client::constructor(string url, softint port = 0) {
-   QoreURL qurl(url);
+    QoreURL qurl(url);
 
-   if (!qurl.getHost()) {
-      xsink->raiseException("SSH2CLIENT-PARAMETER-ERROR", "no hostname found in URL '%s'", url->getBuffer());
-      return;
-   }
+    if (!qurl.getHost()) {
+        xsink->raiseException("SSH2CLIENT-PARAMETER-ERROR", "no hostname found in URL '%s'", url->getBuffer());
+        return;
+    }
 
-   if (qurl.getProtocol() && strcasecmp("ssh", qurl.getProtocol()->getBuffer()) && strcasecmp("ssh2", qurl.getProtocol()->getBuffer())) {
-      xsink->raiseException("SSH2CLIENT-PARAMETER-ERROR", "URL given in the first argument to SSH2Client::constructor() specifies invalid protocol '%s' (expecting 'ssh' or 'ssh2')", qurl.getProtocol()->getBuffer());
-      return;
-   }
+    if (qurl.getProtocol() && strcasecmp("ssh", qurl.getProtocol()->getBuffer()) && strcasecmp("ssh2", qurl.getProtocol()->getBuffer())) {
+        xsink->raiseException("SSH2CLIENT-PARAMETER-ERROR", "URL given in the first argument to SSH2Client::constructor() specifies invalid protocol '%s' (expecting 'ssh' or 'ssh2')", qurl.getProtocol()->getBuffer());
+        return;
+    }
 
-   // create private data object
-   SSH2Client* mySSH2Client = new SSH2Client(qurl, (int)port);
-   self->setPrivate(CID_SSH2CLIENT, mySSH2Client);
+    // create private data object
+    SSH2Client* mySSH2Client = new SSH2Client(qurl, (int)port);
+    self->setPrivate(CID_SSH2CLIENT, mySSH2Client);
 }
 
 //! throws an exception; currently SSH2Client objects cannot be copied
 /** @throw SSH2CLIENT-COPY-ERROR copying SSH2Client objects is not currently implemented
  */
 SSH2Client::copy() {
-   xsink->raiseException("SSH2CLIENT-COPY-ERROR", "copying ssh2 connection objects is not allowed");
+    xsink->raiseException("SSH2CLIENT-COPY-ERROR", "copying ssh2 connection objects is not allowed");
 }
 
 //! returns a hash with information about the current connection status
 /** @par Example:
-    @code{.py} hash h = ssh2client.info(); @endcode
+    @code{.py} hash<Ssh2ConnectionInfo> h = ssh2client.info(); @endcode
 
     this method is safe to call when not connected
 
@@ -85,8 +143,8 @@ SSH2Client::copy() {
     - \c connected: (bool) tells if the connection is currently active or not
     - \c methods: (hash) a hash of strings giving the crytographic methods used for the connection
  */
-hash SSH2Client::info() [flags=CONSTANT] {
-   return c->sshInfo();
+hash<Ssh2ConnectionInfo> SSH2Client::info() [flags=CONSTANT] {
+    return c->sshInfo(hashdeclSsh2ConnectionInfo, xsink);
 }
 
 //! Opens a login session and returns a SSH2Channel object for the session
@@ -100,7 +158,7 @@ hash SSH2Client::info() [flags=CONSTANT] {
     @throw SSH2-ERROR error opening channel
  */
 SSH2Channel SSH2Client::openSessionChannel(timeout timeout = 60s) {
-   return c->openSessionChannel(xsink, timeout);
+    return c->openSessionChannel(xsink, timeout);
 }
 
 //! Opens a port forwarding channel and returns the corresponding SSH2Channel object for the new forwarded connection
@@ -119,30 +177,30 @@ SSH2Channel SSH2Client::openSessionChannel(timeout timeout = 60s) {
     @throw SSH2-ERROR error opening channel
  */
 SSH2Channel SSH2Client::openDirectTcpipChannel(string host, softint port, string source_host = "127.0.0.1", softint source_port = 22, timeout timeout = 60s) {
-   static const char *SSH2CLIENT_OPENDIRECTTCPIPCHANNEL_ERR = "SSH2CLIENT-OPENDIRECTTCPIPCHANNEL-ERROR";
+    static const char *SSH2CLIENT_OPENDIRECTTCPIPCHANNEL_ERR = "SSH2CLIENT-OPENDIRECTTCPIPCHANNEL-ERROR";
 
-   if (!port) {
-      xsink->raiseException(SSH2CLIENT_OPENDIRECTTCPIPCHANNEL_ERR, "port number for forwarded channel as second argument to SSH2Client::openDirectTcpipChannel() cannot be zero");
-      return 0;
-   }
+    if (!port) {
+        xsink->raiseException(SSH2CLIENT_OPENDIRECTTCPIPCHANNEL_ERR, "port number for forwarded channel as second argument to SSH2Client::openDirectTcpipChannel() cannot be zero");
+        return QoreValue();
+    }
 
-   if (!source_port) {
-      xsink->raiseException(SSH2CLIENT_OPENDIRECTTCPIPCHANNEL_ERR, "source port number as fourth argument to SSH2Client::openDirectTcpipChannel() cannot be zero");
-      return 0;
-   }
+    if (!source_port) {
+        xsink->raiseException(SSH2CLIENT_OPENDIRECTTCPIPCHANNEL_ERR, "source port number as fourth argument to SSH2Client::openDirectTcpipChannel() cannot be zero");
+        return QoreValue();
+    }
 
-   return c->openDirectTcpipChannel(xsink, host->getBuffer(), port, source_host->getBuffer(), source_port, timeout);
+    return c->openDirectTcpipChannel(xsink, host->getBuffer(), port, source_host->getBuffer(), source_port, timeout);
 }
 
 //! opens a channel for retrieving a remote file with an optional timeout value and an optional reference for returning file status information
 /** @par Example:
     @code{.py}
-hash info;
+hash<Ssh2StatInfo> info;
 SS2Channel chan = ssh2client.scpGet("/tmp/file.txt", 30s, \info); @endcode
 
     @param path the path of the remote file to get
     @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
-    @param statinfo an optional reference to a hash for file status info with the following keys:
+    @param statinfo an optional reference to an Ssh2StatInfo hash for file status info with the following keys:
     - \c "mode": the file's mode
     - \c "permissions": a string of the file's mode (ex: \c "drwxr-xr-x")
     - \c "size": the size of the file in bytes
@@ -155,17 +213,17 @@ SS2Channel chan = ssh2client.scpGet("/tmp/file.txt", 30s, \info); @endcode
     @throw SSH2CLIENT-TIMEOUT timeout opening channel
     @throw SSH2-ERROR error opening channel
  */
-SSH2Channel SSH2Client::scpGet(string path, timeout timeout = 60s, *reference statinfo) {
-   ReferenceHolder<QoreHashNode> ref(statinfo ? new QoreHashNode : 0, xsink);
+SSH2Channel SSH2Client::scpGet(string path, timeout timeout = 60s, *reference<hash<Ssh2StatInfo>> statinfo) {
+    ReferenceHolder<QoreHashNode> ref(statinfo ? new QoreHashNode(hashdeclSsh2StatInfo, xsink) : nullptr, xsink);
 
-   ReferenceHolder<QoreObject> o(c->scpGet(xsink, path->getBuffer(), timeout, *ref), xsink);
-   if (o && statinfo) {
-      QoreTypeSafeReferenceHelper rh(statinfo, xsink);
-      // a deadlock exception occurred accessing the reference's value pointer
-      if (!rh || rh.assign(ref.release()))
-	 return 0;
-   }
-   return o.release();
+    ReferenceHolder<QoreObject> o(c->scpGet(xsink, path->c_str(), timeout, *ref), xsink);
+    if (o && statinfo) {
+        QoreTypeSafeReferenceHelper rh(statinfo, xsink);
+        // a deadlock exception occurred accessing the reference's value pointer
+        if (!rh || rh.assign(ref.release()))
+            return QoreValue();
+    }
+    return o.release();
 }
 
 //! Retrieves a remote file and writes its content to an @ref OutputStream
@@ -183,8 +241,8 @@ SSH2Channel SSH2Client::scpGet(string path, timeout timeout = 60s, *reference st
     @since ssh2 1.1
  */
 nothing SSH2Client::scpGet(string path, Qore::OutputStream[OutputStream] os, timeout timeout = 60s) {
-   SimpleRefHolder<OutputStream> osHolder(os);
-   c->scpGet(xsink, path->getBuffer(), os, timeout);
+    SimpleRefHolder<OutputStream> osHolder(os);
+    c->scpGet(xsink, path->getBuffer(), os, timeout);
 }
 
 //! Opens a channel for sending a file to the remote server; an SSH2Channel object is returned to use to send the file's data
@@ -205,14 +263,14 @@ nothing SSH2Client::scpGet(string path, Qore::OutputStream[OutputStream] os, tim
     @throw SSH2-ERROR error opening channel
  */
 SSH2Channel SSH2Client::scpPut(string remote_path, softint size, softint mode = 0644, *date mtime, *date atime, timeout timeout = 60s) {
-   static const char *SSH2CLIENT_SCPPUT_ERR = "SSH2CLIENT-SCPPUT-ERROR";
+    static const char *SSH2CLIENT_SCPPUT_ERR = "SSH2CLIENT-SCPPUT-ERROR";
 
-   if (size <= 0) {
-      xsink->raiseException(SSH2CLIENT_SCPPUT_ERR, "invalid file size as second argument to SSH2Client::scpPut() (got invalid size " QLLD ")", size);
-      return 0;
-   }
+    if (size <= 0) {
+        xsink->raiseException(SSH2CLIENT_SCPPUT_ERR, "invalid file size as second argument to SSH2Client::scpPut() (got invalid size " QLLD ")", size);
+        return QoreValue();
+    }
 
-   return c->scpPut(xsink, remote_path->getBuffer(), size, (int)mode, mtime ? mtime->getEpochSeconds() : 0, atime ? atime->getEpochSeconds() : 0, timeout);
+    return c->scpPut(xsink, remote_path->getBuffer(), size, (int)mode, mtime ? mtime->getEpochSeconds() : 0, atime ? atime->getEpochSeconds() : 0, timeout);
 }
 
 //! Sends a file to the remote server; the content of the file is read from an @ref InputStream
@@ -234,13 +292,13 @@ SSH2Channel SSH2Client::scpPut(string remote_path, softint size, softint mode = 
     @since ssh2 1.1
  */
 nothing SSH2Client::scpPut(string remote_path, Qore::InputStream[InputStream] is, softint size, softint mode = 0644, *date mtime, *date atime, timeout timeout = 60s) {
-   SimpleRefHolder<InputStream> isHolder(is);
-   static const char *SSH2CLIENT_SCPPUT_ERR = "SSH2CLIENT-SCPPUT-ERROR";
+    SimpleRefHolder<InputStream> isHolder(is);
+    static const char *SSH2CLIENT_SCPPUT_ERR = "SSH2CLIENT-SCPPUT-ERROR";
 
-   if (size <= 0) {
-      xsink->raiseException(SSH2CLIENT_SCPPUT_ERR, "invalid file size as third argument to SSH2Client::scpPut() (got invalid size " QLLD ")", size);
-      return 0;
-   }
+    if (size <= 0) {
+        xsink->raiseException(SSH2CLIENT_SCPPUT_ERR, "invalid file size as third argument to SSH2Client::scpPut() (got invalid size " QLLD ")", size);
+        return QoreValue();
+    }
 
-   c->scpPut(xsink, remote_path->getBuffer(), is, size, (int)mode, mtime ? mtime->getEpochSeconds() : 0, atime ? atime->getEpochSeconds() : 0, timeout);
+    c->scpPut(xsink, remote_path->getBuffer(), is, size, (int)mode, mtime ? mtime->getEpochSeconds() : 0, atime ? atime->getEpochSeconds() : 0, timeout);
 }

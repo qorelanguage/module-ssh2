@@ -1,7 +1,7 @@
 # Process this file with autoconf to produce a configure script.
 
 # AC_PREREQ(2.59)
-AC_INIT([qore-ssh2-module], [1.2],
+AC_INIT([qore-ssh2-module], [1.4],
         [David Nichols <david(a)qore(dot)org>, Wolfgang Ritzinger <aargon(a)rat(dot)at>],
         [qore-ssh2-module])
 AM_INIT_AUTOMAKE([no-dist-gzip dist-bzip2])
@@ -683,8 +683,8 @@ else
       AC_DEFINE_UNQUOTED([QORE_VERSION_CODE], $qvc, [define when missing in Qore headers])
    fi
 
-   if test $qvc -lt 813; then
-      AC_MSG_ERROR([found $qore_version; this module requires at least version 0.8.13])
+   if test $qvc -lt 900; then
+      AC_MSG_ERROR([found $qore_version; this module requires at least version 0.9])
    fi
 
    AC_MSG_RESULT([${qore_version} OK])
@@ -720,6 +720,8 @@ else
    fi
 fi
 AC_SUBST([userlibdir])
+usermoddir="`echo ${userlibdir}|sed s/-modules.*//`"
+AC_SUBST([usermoddir])
 
 AC_ARG_ENABLE([profile],
      [AS_HELP_STRING([--enable-profile],
@@ -798,7 +800,7 @@ AC_HEADER_TIME
 AC_STRUCT_TM
 AC_C_VOLATILE
 
-AC_CHECK_HEADERS([stdint.h sys/select.h poll.h])
+AC_CHECK_HEADERS([stdint.h sys/select.h poll.h pwd.h])
 
 # turn on optimizations if we know how
 if test "$enable_optimization" = "yes"; then

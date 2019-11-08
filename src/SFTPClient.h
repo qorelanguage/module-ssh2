@@ -1,27 +1,27 @@
 /* -*- mode: c++; indent-tabs-mode: nil -*- */
 /*
-  SFTPClient.h
+    SFTPClient.h
 
-  libssh2 SFTP client integration in Qore
+    libssh2 SFTP client integration in Qore
 
-  Qore Programming Language
+    Qore Programming Language
 
-  Copyright (C) 2009 Wolfgang Ritzinger
-  Copyright (C) 2010 - 2017 Qore Technologies, s.r.o.
+    Copyright (C) 2009 Wolfgang Ritzinger
+    Copyright (C) 2010 - 2019 Qore Technologies, s.r.o.
 
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
 
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
 
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #ifndef _QORE_SFTPCLIENT_H
@@ -52,137 +52,153 @@ class SFTPClient;
 
 class QSftpHelper : public AbstractDisconnectionHelper {
 private:
-   LIBSSH2_SFTP_HANDLE* sftp_handle;
-   SFTPClient* client;
-   const char* errstr;
-   const char* meth;
-   int timeout_ms;
-   ExceptionSink* xsink;
+    LIBSSH2_SFTP_HANDLE* sftp_handle = nullptr;
+    SFTPClient* client;
+    const char* errstr;
+    const char* meth;
+    int timeout_ms;
+    ExceptionSink* xsink;
 
-   DLLLOCAL int closeIntern();
+    DLLLOCAL int closeIntern();
 
 public:
-   DLLLOCAL QSftpHelper(SFTPClient* c, const char* e, const char* m, int to, ExceptionSink* xs) : sftp_handle(0), client(c), errstr(e), meth(m), timeout_ms(to), xsink(xs) {
-   }
+    DLLLOCAL QSftpHelper(SFTPClient* c, const char* e, const char* m, int to, ExceptionSink* xs) :
+        client(c), errstr(e), meth(m), timeout_ms(to), xsink(xs) {
+        assert(xsink);
+    }
 
-   DLLLOCAL ~QSftpHelper() {
-      if (sftp_handle)
-         closeIntern();
-   }
+    DLLLOCAL ~QSftpHelper() {
+        if (sftp_handle)
+            closeIntern();
+    }
 
-   DLLLOCAL int waitSocket();
+    DLLLOCAL int waitSocket();
 
-   DLLLOCAL operator bool() const {
-      return (bool)sftp_handle;
-   }
+    DLLLOCAL operator bool() const {
+        return (bool)sftp_handle;
+    }
 
-   DLLLOCAL LIBSSH2_SFTP_HANDLE* operator*() const {
-      return sftp_handle;
-   }
+    DLLLOCAL LIBSSH2_SFTP_HANDLE* operator*() const {
+        return sftp_handle;
+    }
 
-   DLLLOCAL void assign(LIBSSH2_SFTP_HANDLE* h) {
-      assert(!sftp_handle);
-      sftp_handle = h;
-   }
+    DLLLOCAL void assign(LIBSSH2_SFTP_HANDLE* h) {
+        assert(!sftp_handle);
+        sftp_handle = h;
+    }
 
-   DLLLOCAL void tryClose() {
-      if (sftp_handle)
-         closeIntern();
-   }
+    DLLLOCAL void tryClose() {
+        if (sftp_handle)
+            closeIntern();
+    }
 
-   DLLLOCAL int close() {
-      return closeIntern();
-   }
+    DLLLOCAL int close() {
+        return closeIntern();
+    }
 
-   DLLLOCAL void err(const char* fmt, ...);
+    DLLLOCAL void err(const char* fmt, ...);
 
-   DLLLOCAL virtual void preDisconnect() {
-      if (sftp_handle)
-         closeIntern();
-   }
+    DLLLOCAL virtual void preDisconnect() {
+        if (sftp_handle)
+            closeIntern();
+    }
 };
 
 class SFTPClient : public SSH2Client {
-   friend class QSftpHelper;
-private:
+    friend class QSftpHelper;
 
 protected:
-   DLLLOCAL virtual ~SFTPClient();
-   DLLLOCAL virtual void deref(ExceptionSink*);
+    DLLLOCAL virtual ~SFTPClient();
+    DLLLOCAL virtual void deref(ExceptionSink*);
 
-   DLLLOCAL int sftpConnectedUnlocked();
-   DLLLOCAL QoreStringNode *sftpPathUnlocked();
-   DLLLOCAL int sftpConnectUnlocked(int timeout_ms, ExceptionSink* xsink);
+    DLLLOCAL bool sftpConnectedUnlocked(ExceptionSink* xsink);
 
-   DLLLOCAL void doSessionErrUnlocked(ExceptionSink* xsink, QoreStringNode* desc);
-   DLLLOCAL void doShutdown(int timeout_ms = DEFAULT_TIMEOUT_MS, ExceptionSink* xsink = 0);
+    DLLLOCAL bool sftpConnectedUnlocked() {
+        ExceptionSink xsink;
+        bool rv = sftpConnectedUnlocked(&xsink);
+        xsink.clear();
+        return rv;
+    }
 
-   DLLLOCAL virtual int disconnectUnlocked(bool force, int timeout_ms = DEFAULT_TIMEOUT_MS, AbstractDisconnectionHelper* adh = 0, ExceptionSink* xsink = 0);
+    DLLLOCAL QoreStringNode* sftpPathUnlocked();
+    DLLLOCAL int sftpConnectUnlocked(int timeout_ms, ExceptionSink* xsink);
+
+    DLLLOCAL void doSessionErrUnlocked(ExceptionSink* xsink, QoreStringNode* desc);
+    DLLLOCAL void doShutdown(int timeout_ms = DEFAULT_TIMEOUT_MS, ExceptionSink* xsink = nullptr);
+
+    DLLLOCAL virtual int disconnectUnlocked(bool force, int timeout_ms = DEFAULT_TIMEOUT_MS, AbstractDisconnectionHelper* adh = nullptr, ExceptionSink* xsink = nullptr);
+    DLLLOCAL bool sftpIsAliveUnlocked(int timeout_ms, ExceptionSink* xsink);
 
 public:
-   // session props
-   std::string sftppath;
+    // session props
+    std::string sftppath;
 
-   LIBSSH2_SFTP* sftp_session;
+    LIBSSH2_SFTP* sftp_session;
 
-   DLLLOCAL SFTPClient(const char*, const uint32_t);
-   DLLLOCAL SFTPClient(QoreURL& url, const uint32_t = 0);
+    DLLLOCAL SFTPClient(const char*, const uint32_t);
+    DLLLOCAL SFTPClient(QoreURL& url, const uint32_t = 0);
 
-   DLLLOCAL virtual int connect(int timeout_ms, ExceptionSink* xsink) {
-      return sftpConnect(timeout_ms, xsink);
-   }
+    DLLLOCAL virtual int connect(int timeout_ms, ExceptionSink* xsink) {
+        return sftpConnect(timeout_ms, xsink);
+    }
 
-   DLLLOCAL int sftpConnect(int timeout_ms, ExceptionSink* xsink = 0);
+    DLLLOCAL int sftpConnect(int timeout_ms, ExceptionSink* xsink);
 
-   DLLLOCAL int sftpConnected();
+    DLLLOCAL bool sftpConnected(ExceptionSink* xsink);
 
-   DLLLOCAL int sftpIsAliveUnlocked(int timeout_ms, ExceptionSink* xsink = 0);
-   DLLLOCAL int sftpIsAlive(int timeout_ms, ExceptionSink* xsink = 0);
+    DLLLOCAL bool sftpIsAliveEx(int timeout_ms, ExceptionSink* xsink);
 
-   //DLLLOCAL QoreStringNode *sftpPath(ExceptionSink* xsink);
-   DLLLOCAL QoreStringNode *sftpPath();
-   DLLLOCAL QoreStringNode *sftpChdir(const char* nwd, int timeout_ms, ExceptionSink* xsink);
-   DLLLOCAL QoreHashNode *sftpList(const char* path, int timeout_ms, ExceptionSink* xsink);
-   DLLLOCAL QoreListNode *sftpListFull(const char* path, int timeout_ms, ExceptionSink* xsink);
-   DLLLOCAL int sftpMkdir(const char* dir, const int mode, int timeout_ms, ExceptionSink* xsink);
-   DLLLOCAL int sftpRmdir(const char* dir, int timeout_ms, ExceptionSink* xsink);
-   DLLLOCAL int sftpRename(const char* from, const char* to, int timeout_ms, ExceptionSink* xsink);
-   DLLLOCAL int sftpUnlink(const char* file, int timeout_ms, ExceptionSink* xsink);
-   DLLLOCAL int sftpChmod(const char* file, const int mode, int timeout_ms, ExceptionSink* xsink);
+    DLLLOCAL bool sftpIsAlive(int timeout_ms) {
+        ExceptionSink xsink;
+        bool rv = sftpIsAliveEx(timeout_ms, &xsink);
+        xsink.clear();
+        return rv;
+    }
 
-   DLLLOCAL BinaryNode *sftpGetFile(const char* file, int timeout_ms, ExceptionSink* xsink);
-   DLLLOCAL QoreStringNode *sftpGetTextFile(const char* file, int timeout_ms, const QoreEncoding *encoding, ExceptionSink* xsink);
-   DLLLOCAL size_t sftpPutFile(const char* data, size_t len, const char* fname, int mode, int timeout_ms, ExceptionSink* xsink);
+    //DLLLOCAL QoreStringNode* sftpPath(ExceptionSink* xsink);
+    DLLLOCAL QoreStringNode* sftpPath();
+    DLLLOCAL QoreStringNode* sftpChdir(const char* nwd, int timeout_ms, ExceptionSink* xsink);
+    DLLLOCAL QoreHashNode* sftpList(const char* path, int timeout_ms, ExceptionSink* xsink);
+    DLLLOCAL QoreListNode* sftpListFull(const char* path, int timeout_ms, ExceptionSink* xsink);
+    DLLLOCAL int sftpMkdir(const char* dir, const int mode, int timeout_ms, ExceptionSink* xsink);
+    DLLLOCAL int sftpRmdir(const char* dir, int timeout_ms, ExceptionSink* xsink);
+    DLLLOCAL int sftpRename(const char* from, const char* to, int timeout_ms, ExceptionSink* xsink);
+    DLLLOCAL int sftpUnlink(const char* file, int timeout_ms, ExceptionSink* xsink);
+    DLLLOCAL int sftpChmod(const char* file, const int mode, int timeout_ms, ExceptionSink* xsink);
 
-   // returns the number of bytes transferred or -1 if an error occurred
-   DLLLOCAL int64 sftpRetrieveFile(const char* remote_file, const char* local_file, int timeout_ms, int mode, ExceptionSink* xsink);
-   // returns the number of bytes transferred or -1 if an error occurred
-   DLLLOCAL int64 sftpGet(const char* remote_file, OutputStream *os, int timeout_ms, ExceptionSink* xsink);
-   // returns the number of bytes transferred or -1 if an error occurred
-   DLLLOCAL int64 sftpTransferFile(const char* local_path, const char* remote_path, int mode, int timeout_ms, ExceptionSink* xsink);
-   // returns the number of bytes transferred or -1 if an error occurred
-   DLLLOCAL int64 sftpPut(InputStream *is, const char* remote_path, int mode, int timeout_ms, ExceptionSink* xsink);
+    DLLLOCAL BinaryNode* sftpGetFile(const char* file, int timeout_ms, ExceptionSink* xsink);
+    DLLLOCAL QoreStringNode* sftpGetTextFile(const char* file, int timeout_ms, const QoreEncoding *encoding, ExceptionSink* xsink);
+    DLLLOCAL size_t sftpPutFile(const char* data, size_t len, const char* fname, int mode, int timeout_ms, ExceptionSink* xsink);
 
-   DLLLOCAL int sftpGetAttributes(const char* fname, LIBSSH2_SFTP_ATTRIBUTES *attrs, int timeout_ms, ExceptionSink* xsink);
+    // returns the number of bytes transferred or -1 if an error occurred
+    DLLLOCAL int64 sftpRetrieveFile(const char* remote_file, const char* local_file, int timeout_ms, int mode, ExceptionSink* xsink);
+    // returns the number of bytes transferred or -1 if an error occurred
+    DLLLOCAL int64 sftpGet(const char* remote_file, OutputStream* os, int timeout_ms, ExceptionSink* xsink);
+    // returns the number of bytes transferred or -1 if an error occurred
+    DLLLOCAL int64 sftpTransferFile(const char* local_path, const char* remote_path, int mode, int timeout_ms, ExceptionSink* xsink);
+    // returns the number of bytes transferred or -1 if an error occurred
+    DLLLOCAL int64 sftpPut(InputStream* is, const char* remote_path, int mode, int timeout_ms, ExceptionSink* xsink);
 
-   DLLLOCAL QoreHashNode *sftpInfo();
+    DLLLOCAL int sftpGetAttributes(const char* fname, LIBSSH2_SFTP_ATTRIBUTES* attrs, int timeout_ms, ExceptionSink* xsink);
+
+    DLLLOCAL QoreHashNode* sftpInfo(ExceptionSink* xsink);
 };
 
 // maybe this should go to ssh2-module.h?
-extern AbstractQoreNode *SSH2C_setUser(QoreObject*, SSH2Client*, const QoreListNode*, ExceptionSink*);
-extern AbstractQoreNode *SSH2C_setPassword(QoreObject*, SSH2Client*, const QoreListNode*, ExceptionSink*);
-extern AbstractQoreNode *SSH2C_setKeys(QoreObject*, SSH2Client*, const QoreListNode*, ExceptionSink*);
+extern AbstractQoreNode* SSH2C_setUser(QoreObject*, SSH2Client*, const QoreListNode*, ExceptionSink*);
+extern AbstractQoreNode* SSH2C_setPassword(QoreObject*, SSH2Client*, const QoreListNode*, ExceptionSink*);
+extern AbstractQoreNode* SSH2C_setKeys(QoreObject*, SSH2Client*, const QoreListNode*, ExceptionSink*);
 
 static inline std::string absolute_filename(const SFTPClient* me, const char* f) {
-   if (!f)
-      return std::string();
+    if (!f)
+        return std::string();
 
-   // absolute path
-   if (f[0] == '/')
-      return std::string(f);
+    // absolute path
+    if (f[0] == '/')
+        return std::string(f);
 
-   // all other cases: put the sftppath in front
-   return me->sftppath + "/" + f;
+    // all other cases: put the sftppath in front
+    return me->sftppath + "/" + f;
 }
 
 #endif // _QORE_SFTPCLIENT_H
