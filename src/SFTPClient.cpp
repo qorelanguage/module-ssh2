@@ -1276,10 +1276,10 @@ int64 SFTPClient::sftpTransferFile(const char* local_path, const char* remote_pa
                 qh.err("libssh2_sftp_write(" QLLD ") failed while writing '%s', total written: " QLLD ", total to write: " QLLD, towrite - size, file.c_str(), size, towrite);
                 return -1;
             }
-            assert(rc <= (buf->size() - total));
+            assert((size_t)rc <= (buf->size() - total));
             total += rc;
-            assert(total <= buf->size());
-            if (total == buf->size())
+            assert((size_t)total <= buf->size());
+            if ((size_t)total == buf->size())
                 break;
         }
         size += total;
