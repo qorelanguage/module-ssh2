@@ -1,7 +1,7 @@
 # -*- mode: qore; indent-tabs-mode: nil -*-
 #! @file Ssh2Connections.qm SSH2 module connection implementations
 
-/*  Ssh2Connections.qm Copyright 2013 - 2018 Qore Technologies, s.r.o.
+/*  Ssh2Connections.qm Copyright 2013 - 2019 Qore Technologies, s.r.o.
 
     Permission is hereby granted, free of charge, to any person obtaining a
     copy of this software and associated documentation files (the "Software"),
@@ -23,7 +23,7 @@
 */
 
 # minimum required Qore version
-%requires qore >= 0.9
+%requires qore >= 0.9.4
 
 # require type definitions everywhere
 %require-types
@@ -35,12 +35,12 @@
 
 %requires(reexport) ssh2
 #%requires Util >= 1.0
-%requires(reexport) ConnectionProvider >= 1.2
+%requires(reexport) ConnectionProvider >= 1.3
 
 %new-style
 
 module Ssh2Connections {
-    version = "1.2";
+    version = "1.3";
     desc = "user module for providing SSH2 connections";
     author = "David Nichols <david@qore.org>";
     url = "http://qore.org";
@@ -69,6 +69,11 @@ module Ssh2Connections {
     - @ref Ssh2Connections::Ssh2ClientConnection "Ssh2ClientConnection"
 
     @section ssh2connections_relnotes Ssh2Connections Module Release History
+
+    @subsection ssh2connections_v1_3 Ssh2Connections v1.3
+    - removed the obsolete \c Ssh2ClientConnection::getConstructorInfo() and \c SftpConnection::getConstructorInfo()
+      methods as connection serialization is a much more elegant and maintainable solution
+      (<a href="https://github.com/qorelanguage/qore/issues/3696">issue 3696</a>)
 
     @subsection ssh2connections_v1_2 Ssh2Connections v1.2
     - new AbstractConnection infrastructure
@@ -114,14 +119,14 @@ public namespace Ssh2Connections {
 
             See @ref AbstractConnection::constructor() for \c attributes and \c options reference.
          */
-        constructor(string name, string description, string url, hash attributes = {}, hash options = {})
+        constructor(string name, string description, string url, hash<auto> attributes = {}, hash<auto> options = {})
             : AbstractConnection(name, description, url, attributes, options) {
         }
 
         #! returns valid options
         /** @return a hash with a single key: \c "keyfile"
         */
-        hash getOptions() {
+        hash<auto> getOptions() {
             return {
                 "keyfile": True,
             };
@@ -157,7 +162,7 @@ public namespace Ssh2Connections {
 
             See @ref AbstractConnection::constructor() for \c attributes and \c options reference.
          */
-        constructor(string name, string description, string url, hash attributes = {}, hash options = {})
+        constructor(string name, string description, string url, hash<auto> attributes = {}, hash<auto> options = {})
             : AbstractSsh2Connection(name, description, url, attributes, options) {
         }
 
@@ -172,7 +177,7 @@ public namespace Ssh2Connections {
 
             @return a @ref Qore::SSH2::SSH2Client object
         */
-        private Qore::SSH2::SSH2Client getImpl(bool connect = True, *hash rtopts) {
+        private Qore::SSH2::SSH2Client getImpl(bool connect = True, *hash<auto> rtopts) {
             SSH2Client sc(url);
             if (opts.keyfile)
                 sc.setKeys(opts.keyfile);
@@ -180,23 +185,6 @@ public namespace Ssh2Connections {
                 sc.connect();
             }
             return sc;
-        }
-
-        #! returns a hash that can be used to contruct the object dynamically
-        /** @since %Ssh2Connections 1.1
-        */
-        private hash<ConnectionConstructorInfo> getConstructorInfoImpl() {
-            string my_code;
-            if (opts.keyfile)
-                my_code = sprintf("obj.setKeys(%y); ", opts.keyfile);
-            my_code += "if (connect) {obj.connect();}";
-
-            return new hash<ConnectionConstructorInfo>((
-                "module": "ssh2",
-                "class_name": "Qore::SSH2::SSH2Client",
-                "args": url,
-                "post_processing": my_code,
-            ));
         }
 
         #! DEPRECATED: static constructor
@@ -241,7 +229,7 @@ public namespace Ssh2Connections {
 
             See @ref AbstractConnection::constructor() for \c attributes and \c options reference.
          */
-        constructor(string name, string description, string url, hash attributes = {}, hash options = {})
+        constructor(string name, string description, string url, hash<auto> attributes = {}, hash<auto> options = {})
             : AbstractSsh2Connection(name, description, url, attributes, options) {
         }
 
@@ -255,11 +243,11 @@ public namespace Ssh2Connections {
             - \c "path": overrides the path component in the URL at runtime
             - \c "path_add": appends the given string to the path component of the URL at runtime
         */
-        *hash getRuntimeOptions() {
-            return (
+        *hash<auto> getRuntimeOptions() {
+            return {
                 "path": True,
                 "path_add": True,
-                );
+            };
         }
 
         #! returns a @ref Qore::SSH2::SFTPClient object
@@ -270,7 +258,7 @@ public namespace Ssh2Connections {
 
             @return a @ref Qore::SSH2::SFTPClient object
         */
-        private Qore::SSH2::SFTPClient getImpl(bool connect = True, *hash rtopts) {
+        private Qore::SSH2::SFTPClient getImpl(bool connect = True, *hash<auto> rtopts) {
             *string rtpath = getRuntimePath(rtopts);
             SFTPClient sc(url);
             if (opts.keyfile)
@@ -283,25 +271,7 @@ public namespace Ssh2Connections {
             return sc;
         }
 
-        #! returns a hash that can be used to contruct the object dynamically
-        /** @since %Ssh2Connections 1.1
-        */
-        private hash<ConnectionConstructorInfo> getConstructorInfoImpl() {
-            string my_code;
-            if (opts.keyfile)
-                my_code = sprintf("obj.setKeys(%y); ", opts.keyfile);
-
-             my_code += sprintf("if (connect) {obj.connect(); *string rtpath = rtopts.path ?* %s; if (rtpath.path_add.val()) {if (rtpath !~ /\\/$/ && rtopts.path_add !~ /^\\//) {rtpath += \"/\";} rtpath += rtopts.path_add;} if (rtpath.val()) {obj.chdir(rtpath);}}", urlh.path.val() ? sprintf("%y", urlh.path) : "NOTHING");
-
-            return new hash<ConnectionConstructorInfo>((
-                "module": "ssh2",
-                "class_name": "Qore::SSH2::SFTPClient",
-                "args": url,
-                "post_processing": my_code,
-            ));
-        }
-
-        private *string getRuntimePath(*hash rtopts) {
+        private *string getRuntimePath(*hash<auto> rtopts) {
             *string rtpath = rtopts.path ?* urlh.path;
             if (rtopts.path_add.val()) {
                 if (rtpath !~ /\/$/ && rtopts.path_add !~ /^\//)
