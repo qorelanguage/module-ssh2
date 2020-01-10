@@ -6,7 +6,7 @@
     libssh2 ssh2 client integration into qore
 
     Copyright 2009 Wolfgang Ritzinger
-    Copyright 2010 - 2019 Qore Technologies, s.r.o.
+    Copyright 2010 - 2020 Qore Technologies, s.r.o.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -31,7 +31,7 @@ extern QoreClass* QC_SSH2CHANNEL;
 //! SSH2 connection info hash
 /**
 */
-hashdecl Ssh2ConnectionInfo {
+hashdecl Qore::SSH2::Ssh2ConnectionInfo {
     //! the host name of the remote server
     string ssh2host;
 
@@ -63,7 +63,7 @@ hashdecl Ssh2ConnectionInfo {
 //! SSH2 file stat info hash
 /**
 */
-hashdecl Ssh2StatInfo {
+hashdecl Qore::SSH2::Ssh2StatInfo {
     //! the permissions / mode of the file
     int mode;
 
