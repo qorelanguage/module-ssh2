@@ -24,9 +24,8 @@
 
 # make sure we have the required qore version
 %requires qore >= 0.9.4
-
-# requires ssh2 functionality
-%requires (reexport) ssh2
+%requires(reexport) SftpPollerUtil
+%requires(reexport) ssh2
 
 # assume local vars and do not allow $ chars
 %new-style
@@ -113,807 +112,740 @@ poller.waitStop();
 
 #! main SftpPoller namespace
 public namespace SftpPoller {
-    #! Single file event data description
-    public class SftpPollerFileEventInfoDataType inherits HashDataType {
-        public {
-            #! Markdown descriptions for hashdecl members
-            const FieldDescriptions = {
-                "name": "the name of the file, link, or directory",
-                "size": "the size of the file in bytes",
-                "uid": "the UID of the owner of the file",
-                "gid": "the GID of the owner of the file",
-                "mode": "the permissions / mode of the file",
-                "atime": "the last accessed date/time of the file",
-                "mtime": "the last modified date/time of the file",
-                "type": "the type of file; one of:\n- `REGULAR`\n- `DIRECTORY`\n- `SYMBOLIC-LINK`\n"
-                    "- `BLOCK-DEVICE`\n- `CHARACTER-DEVICE`\n- `FIFO`\n- `SYMBOLIC-LINK`\n- `SOCKET`\n"
-                    "- `UNKNOWN`",
-                "perm": "a string giving UNIX-style permissions for the file (ex: `-rwxr-xr-x`)",
-                "data": "the file's data; this will be a string unless the `binary` option is set to `True`, in "
-                    "which case this key is assigned to the files binary data; this hash key is only present if "
-                    "`skip_file_content_retrieval` was `False` in the `SftpPoller::constructor()` option hash",
-                "filepath": "the remote filepath relative to SFTP root directory",
-            };
-        }
+#! SftpPoller client class implementation
+public class SftpPoller {
+    public {
+        #! ascending sort order
+        const OrderAsc = 0;
+        #! descending sort order
+        const OrderDesc = 1;
 
-        #! Creates the type
-        constructor() {
-            # add members for base hashdecl
-            map addField(new QoreDataField($1.getName(), FieldDescriptions{$1.getName()}, $1.getType(),
-                $1.getDefaultValue())), TypedHash::forName("SftpPoller::SftpPollerFileEventInfo").getMembers();
-        }
-    }
+        #! no sorting
+        const SortNone = 0;
+        #! sort by name
+        const SortName = 1;
+        #const SortDate = 2;
 
-    #! SftpPoller file event hash
-    public hashdecl SftpPollerFileEventInfo {
-        #! the name of the file, link, or directory
-        string name;
-
-        #! the size of the file in bytes
-        int size;
-
-        #! the UID of the owner of the file
-        int uid;
-
-        #! the GID of the owner of the file
-        int gid;
-
-        #! the permissions / mode of the file
-        int mode;
-
-        #! the last accessed date/time of the file
-        date atime;
-
-        #! the last modified date/time of the file
-        date mtime;
-
-        #! the type of file; one of: \c "REGULAR", \c "DIRECTORY", \c "SYMBOLIC-LINK", \c "BLOCK-DEVICE", \c "CHARACTER-DEVICE", \c "FIFO", \c "SYMBOLIC-LINK", \c "SOCKET", \c "UNKNOWN"
-        string type;
-
-        #! a string giving UNIX-style permissions for the file (ex: "-rwxr-xr-x")
-        string perm;
-
-        #! the file's data; this will be a string unless the \a "binary" option is set to @ref Qore::True "True", in which case this key is assigned to the files binary data; this hash key is only present if \c skip_file_content_retrieval was @ref Qore::False "False" in the @ref SftpPoller::SftpPoller::constructor options
-        data data;
-
-        #! the remote filepath relative to SFTP root directory
-        string filepath;
-    }
-
-    #! SftpPoller client class implementation
-    public class SftpPoller {
-        public {
-            #! ascending sort order
-            const OrderAsc = 0;
-            #! descending sort order
-            const OrderDesc = 1;
-
-            #! no sorting
-            const SortNone = 0;
-            #! sort by name
-            const SortName = 1;
-            #const SortDate = 2;
-
-            #! minimum required keys for all constructors
-            const RequiredKeys = (
+        #! minimum required keys for all constructors
+        const RequiredKeys = (
 %ifdef PO_NO_PROCESS_CONTROL
-                "sleep",
+            "sleep",
 %endif
 %ifdef PO_NO_THREAD_CONTROL
-                "start_thread",
+            "start_thread",
 %endif
-            );
+        );
 
-            #! RequiredKeys for the constructor(hash) without an @ref Qore::SSH2::SFTPClient argument
-            const RequiredKeysWithHost = RequiredKeys + "host";
+        #! RequiredKeys for the constructor(hash) without an @ref Qore::SSH2::SFTPClient argument
+        const RequiredKeysWithHost = RequiredKeys + "host";
 
-            #! default values for constructor hash argument
-            const Defaults = {
-                "port": 22,
-                "mask": "*",
-                "poll_interval": 10,
-                "reopts": 0,
-                "timeout": 30s,
-                "binary": False,
-                "writable": False,
-                "check_file": "qore-sftp-check-file",
-            };
+        #! default values for constructor hash argument
+        const Defaults = {
+            "port": 22,
+            "mask": "*",
+            "poll_interval": 10,
+            "reopts": 0,
+            "timeout": 30s,
+            "binary": False,
+            "writable": False,
+            "check_file": "qore-sftp-check-file",
+        };
 
-            #! optional constructor hash keys
-            const OptionalKeys = (
-                "path", "user", "pass", "keyfile", "regex_mask", "minage",
-                "encoding", "log_info", "log_detail", "log_debug", "binary",
+        #! optional constructor hash keys
+        const OptionalKeys = (
+            "path", "user", "pass", "keyfile", "regex_mask", "minage",
+            "encoding", "log_info", "log_detail", "log_debug", "binary",
 %ifndef PO_NO_PROCESS_CONTROL
-                "sleep",
+            "sleep",
 %endif
 %ifndef PO_NO_THREAD_CONTROL
-                "start_thread",
+            "start_thread",
 %endif
-                "skip_file_content_retrieval",
-            );
+            "skip_file_content_retrieval",
+        );
 
-            #! all keys
-            const AllKeys = RequiredKeysWithHost + Defaults.keys() + OptionalKeys;
+        #! all keys
+        const AllKeys = RequiredKeysWithHost + Defaults.keys() + OptionalKeys;
 
-            #! pause when SFTP errors are detected
-            const ErrorDelay = 1m;
+        #! pause when SFTP errors are detected
+        const ErrorDelay = 1m;
+    }
+
+    private {
+        #! host or address name
+        string host;
+
+        #! port
+        int port;
+
+        #! user
+        string user;
+
+        #! url
+        string url;
+
+        #! password; one of \c "pass" or \c "keyfile" *must* be set
+        *string pass;
+
+        #! path to the ssh private key in PEM format; one of \c "pass" or \c "keyfile" *must* be set
+        *string keyfile;
+
+        #! path(s) to poll
+        softlist<string> path = ".";
+
+        #! path after connect to SFTP server
+        string rootSftpPath;
+
+        #! file glob name mask (ignored if \c "regex_mask" also set)
+        *string mask;
+
+        #! poll interval in seconds
+        int poll_interval;
+
+        #! run flag
+        bool runflag = False;
+
+        #! internal "get files" flag
+        bool get_files;
+
+        #! internal fatal error flag
+        bool fatal = False;
+
+        #! internal poll counter
+        int pollcnt = 0;
+
+        #! start mutex
+        Mutex m();
+
+        #! polling tid
+        int tid;
+
+        #! timeout in ms
+        timeout timeout;
+
+        #! stop counter
+        Counter sc();
+
+        #! SFTPClient object
+        Qore::SSH2::SFTPClient sftp;
+
+        #! file matching regex options
+        int reopts = 0;
+
+        #! minimum file age
+        *softint minage;
+
+        #! file encoding for text files
+        *string encoding;
+
+        #! optional info log closure
+        *code log_info;
+
+        #! optional detail log closure
+        *code log_detail;
+
+        #! optional debug log closure
+        *code log_debug;
+
+        #! optional start thread closure
+        *code start_thread;
+
+        #! optional sleep closure
+        *code sleep;
+
+        #! binary transfer flag (for singleFileEvent())
+        bool binary;
+
+        #! chech if path is writable for others in constructor
+        bool writable;
+
+        #! name of check writable file
+        string check_file;
+
+        #! whether or not to skip the file content retrieval in runOnce()
+        *bool skip_file_content_retrieval;
+    }
+
+    #! creates the SftpPoller object from the @ref Qore::SSH2::SFTPClient "SFTPClient" argument and configuration hash argument passed
+    /** @param n_sftp the new @ref Qore::SSH2::SFTPClient "SFTPClient" object
+        @param nconf a hash with the following optional keys:
+        - \c poll_interval: the integer polling interval in seconds (default: 10 seconds; must be > 0 if given)
+        - \c mask: the file glob mask to use (default: \c "*", ignored if \c "regex_mask" is also present)
+        - \c path: the remote path(s) for retrieving the files; if a list of strings is given then each path will be polled for matching files according to the \c "mask" or \c "regex_mask" option
+        - \c regex_mask: a regular expression to use as a mask (overrides any \c "mask" value)
+        - \c reopts: regular expression match options (ex RE_Caseless for case-insensitive matches)
+        - \c timeout: connection timeout (default \c 30s)
+        - \c minage: the minimum file age in seconds before a file will be acquired (default: 0)
+        - \c encoding: the encoding for any text files received
+        - \c binary: if set to @ref Qore::True "True" then files are transferred in binary mode by default (with singleFileEvent() usage only), otherwise file data is returned in text format
+        - \c log_info: a @ref closure "closure" or @ref call_reference "call reference" for logging important information; must accept a single string giving the log message
+        - \c log_detail: a @ref closure "closure" or @ref call_reference "call reference" for logging detailed information; must accept a single string giving the log message
+        - \c log_debug: a @ref closure "closure" or @ref call_reference "call reference" for logging verbose debgugging information; must accept a single string giving the log message
+        - \c start_thread: (required when imported into a context where @ref Qore::PO_NO_THREAD_CONTROL is set) a @ref closure "closure" or @ref call_reference "call reference" for starting threads; must return the integer thread ID (if not set then @ref background will be used)
+        - \c sleep: (required when imported into a context where @ref Qore::PO_NO_PROCESS_CONTROL is set) a @ref closure "closure" or @ref call_reference "call reference" to use instead of @ref Qore::sleep() (if not set then @ref Qore::sleep() will be used)
+        - \c writable: check if path(s) is/are writable  (default: False see also the \c "check_file" option)
+        - \c check_file: name of a check file. The file will be created and deleted in the path to test if path is writable. If the file alrady exists, it will be deleted. (default: \c "qore-sftp-check-file")
+
+        @throw SFTPPOLLER-CONSTRUCTOR-ERROR missing required key, invalid port or poll_interval given
+        @throw SFTPCLIENT-PARAMETER-ERROR empty hostname passed
+        @throw SOCKET-CONNECT-ERROR error establishing socket connection (no listener, port blocked, etc); timeout establishing socket connection
+        @throw SSH2CLIENT-CONNECT-ERROR no user name set; ssh2 or libssh2 error
+        @throw SSH2-ERROR error initializing or establishing ssh2 session
+        @throw SSH2CLIENT-AUTH-ERROR no proper authentication method found
+        @throw SFTPCLIENT-CONNECT-ERROR error initializing sftp session or getting remote path
+        */
+    constructor(Qore::SSH2::SFTPClient n_sftp, hash<auto> nconf) {
+        # create hash of keys with only valid options in argument hash
+        hash<auto> conf = Defaults + nconf{AllKeys};
+
+        foreach string k in (RequiredKeys) {
+            if (!exists conf{k})
+                throw "SFTPPOLLER-CONSTRUCTOR-ERROR", sprintf("required key %y missing from constructor hash argument)", k);
         }
 
-        private {
-            #! host or address name
-            string host;
+        conf.poll_interval = int(conf.poll_interval);
 
-            #! port
-            int port;
+        if (conf.poll_interval <= 0)
+            throw "SFTPPOLLER-CONSTRUCTOR-ERROR", sprintf("poll_interval cannot be <= 0 (val: %d)", conf.poll_interval);
 
-            #! user
-            string user;
-
-            #! url
-            string url;
-
-            #! password; one of \c "pass" or \c "keyfile" *must* be set
-            *string pass;
-
-            #! path to the ssh private key in PEM format; one of \c "pass" or \c "keyfile" *must* be set
-            *string keyfile;
-
-            #! path(s) to poll
-            softlist<string> path = ".";
-
-            #! path after connect to SFTP server
-            string rootSftpPath;
-
-            #! file glob name mask (ignored if \c "regex_mask" also set)
-            *string mask;
-
-            #! poll interval in seconds
-            int poll_interval;
-
-            #! run flag
-            bool runflag = False;
-
-            #! internal "get files" flag
-            bool get_files;
-
-            #! internal fatal error flag
-            bool fatal = False;
-
-            #! internal poll counter
-            int pollcnt = 0;
-
-            #! start mutex
-            Mutex m();
-
-            #! polling tid
-            int tid;
-
-            #! timeout in ms
-            timeout timeout;
-
-            #! stop counter
-            Counter sc();
-
-            #! SFTPClient object
-            Qore::SSH2::SFTPClient sftp;
-
-            #! file matching regex options
-            int reopts = 0;
-
-            #! minimum file age
-            *softint minage;
-
-            #! file encoding for text files
-            *string encoding;
-
-            #! optional info log closure
-            *code log_info;
-
-            #! optional detail log closure
-            *code log_detail;
-
-            #! optional debug log closure
-            *code log_debug;
-
-            #! optional start thread closure
-            *code start_thread;
-
-            #! optional sleep closure
-            *code sleep;
-
-            #! binary transfer flag (for singleFileEvent())
-            bool binary;
-
-            #! chech if path is writable for others in constructor
-            bool writable;
-
-            #! name of check writable file
-            string check_file;
-
-            #! whether or not to skip the file content retrieval in runOnce()
-            *bool skip_file_content_retrieval;
+        bool re = False;
+        if (conf.regex_mask) {
+            mask = remove conf.regex_mask;
+            re = True;
+            conf -= "mask";
         }
 
-        #! creates the SftpPoller object from the @ref Qore::SSH2::SFTPClient "SFTPClient" argument and configuration hash argument passed
-        /** @param n_sftp the new @ref Qore::SSH2::SFTPClient "SFTPClient" object
-            @param nconf a hash with the following optional keys:
-            - \c poll_interval: the integer polling interval in seconds (default: 10 seconds; must be > 0 if given)
-            - \c mask: the file glob mask to use (default: \c "*", ignored if \c "regex_mask" is also present)
-            - \c path: the remote path(s) for retrieving the files; if a list of strings is given then each path will be polled for matching files according to the \c "mask" or \c "regex_mask" option
-            - \c regex_mask: a regular expression to use as a mask (overrides any \c "mask" value)
-            - \c reopts: regular expression match options (ex RE_Caseless for case-insensitive matches)
-            - \c timeout: connection timeout (default \c 30s)
-            - \c minage: the minimum file age in seconds before a file will be acquired (default: 0)
-            - \c encoding: the encoding for any text files received
-            - \c binary: if set to @ref Qore::True "True" then files are transferred in binary mode by default (with singleFileEvent() usage only), otherwise file data is returned in text format
-            - \c log_info: a @ref closure "closure" or @ref call_reference "call reference" for logging important information; must accept a single string giving the log message
-            - \c log_detail: a @ref closure "closure" or @ref call_reference "call reference" for logging detailed information; must accept a single string giving the log message
-            - \c log_debug: a @ref closure "closure" or @ref call_reference "call reference" for logging verbose debgugging information; must accept a single string giving the log message
-            - \c start_thread: (required when imported into a context where @ref Qore::PO_NO_THREAD_CONTROL is set) a @ref closure "closure" or @ref call_reference "call reference" for starting threads; must return the integer thread ID (if not set then @ref background will be used)
-            - \c sleep: (required when imported into a context where @ref Qore::PO_NO_PROCESS_CONTROL is set) a @ref closure "closure" or @ref call_reference "call reference" to use instead of @ref Qore::sleep() (if not set then @ref Qore::sleep() will be used)
-            - \c writable: check if path(s) is/are writable  (default: False see also the \c "check_file" option)
-            - \c check_file: name of a check file. The file will be created and deleted in the path to test if path is writable. If the file alrady exists, it will be deleted. (default: \c "qore-sftp-check-file")
+        # set options
+        self += conf;
 
-            @throw SFTPPOLLER-CONSTRUCTOR-ERROR missing required key, invalid port or poll_interval given
-            @throw SFTPCLIENT-PARAMETER-ERROR empty hostname passed
-            @throw SOCKET-CONNECT-ERROR error establishing socket connection (no listener, port blocked, etc); timeout establishing socket connection
-            @throw SSH2CLIENT-CONNECT-ERROR no user name set; ssh2 or libssh2 error
-            @throw SSH2-ERROR error initializing or establishing ssh2 session
-            @throw SSH2CLIENT-AUTH-ERROR no proper authentication method found
-            @throw SFTPCLIENT-CONNECT-ERROR error initializing sftp session or getting remote path
-            */
-        constructor(Qore::SSH2::SFTPClient n_sftp, hash<auto> nconf) {
-            # create hash of keys with only valid options in argument hash
-            hash<auto> conf = Defaults + nconf{AllKeys};
+        # set regex for mask if regex_mask was not already used
+        if (!re)
+            setMask();
 
-            foreach string k in (RequiredKeys) {
-                if (!exists conf{k})
-                    throw "SFTPPOLLER-CONSTRUCTOR-ERROR", sprintf("required key %y missing from constructor hash argument)", k);
-            }
+        # assign SFTPClient object
+        sftp = n_sftp;
+        rootSftpPath = sftp.path();
 
-            conf.poll_interval = int(conf.poll_interval);
+        hash ih = sftp.info();
+        url = sprintf("%s@%s:%d", ih.ssh2user ? ih.ssh2user : "<none>", ih.ssh2host, ih.ssh2port);
 
-            if (conf.poll_interval <= 0)
-                throw "SFTPPOLLER-CONSTRUCTOR-ERROR", sprintf("poll_interval cannot be <= 0 (val: %d)", conf.poll_interval);
+        if (mask)
+            logDetail("%s: file regex mask: %s", url, mask);
 
-            bool re = False;
-            if (conf.regex_mask) {
-                mask = remove conf.regex_mask;
-                re = True;
-                conf -= "mask";
-            }
-
-            # set options
-            self += conf;
-
-            # set regex for mask if regex_mask was not already used
-            if (!re)
-                setMask();
-
-            # assign SFTPClient object
-            sftp = n_sftp;
-            rootSftpPath = sftp.path();
-
-            hash ih = sftp.info();
-            url = sprintf("%s@%s:%d", ih.ssh2user ? ih.ssh2user : "<none>", ih.ssh2host, ih.ssh2port);
-
-            if (mask)
-                logDetail("%s: file regex mask: %s", url, mask);
-
-            if (!ih.connected) {
-                logDetail("%s: logging in (timeout %y)", url, timeout);
-                # connect to the remote system
-                sftp.connect(timeout);
-            }
-            else
-                logDetail("%s: already connected: %y", url, ih);
-            if (path && path.size() == 1 && path[0] != ".") {
-                logInfo("path is %n", path);
-                logInfo("%s: connected; changing directory to %s", url, path[0]);
-                # change to the target directory
-                sftp.chdir(path[0], timeout);
-            }
-            else
-                logInfo("%s: connected", url);
-
-            map checkRemotePath($1, writable), path;
-        }
-
-        #! creates the SftpPoller object from the configuration hash argument passed
-        /** @param nconf a hash with the following keys:
-            - \c host: (required) the hostname or address to connect to
-            - \c port: the integer port number to connect to (default 22; must be > 0 if given)
-            - \c user: the username to use for the connection
-            - \c pass: the password to use for the connection
-            - \c keyfile: the SSH key (file and path to it)
-            - \c path: the remote path(s) for retrieving the files
-            - \c poll_interval: the integer polling interval in seconds (default: 10 seconds; must be > 0 if given)
-            - \c mask: the file glob mask to use (default: \c "*", ignored if \c "regex_mask" is also present)
-            - \c regex_mask: a regular expression to use as a mask (overrides any \c "mask" value)
-            - \c reopts: regular expression match options (ex RE_Caseless for case-insensitive matches)
-            - \c timeout: connection timeout (default \c 30s)
-            - \c minage: the minimum file age in seconds before a file will be acquired (default: 0)
-            - \c encoding: the encoding for any text files received
-            - \c log_info: a @ref closure "closure" or @ref call_reference "call reference" for logging important information; must accept a single string giving the log message
-            - \c log_detail: a @ref closure "closure" or @ref call_reference "call reference" for logging detailed information; must accept a single string giving the log message
-            - \c log_debug: a @ref closure "closure" or @ref call_reference "call reference" for logging verbose debgugging information; must accept a single string giving the log message
-            - \c start_thread: (required when imported into a context where @ref Qore::PO_NO_THREAD_CONTROL is set) a @ref closure "closure" or @ref call_reference "call reference" for starting threads; must return the integer thread ID (if not set then @ref background will be used)
-            - \c sleep: (required when imported into a context where @ref Qore::PO_NO_PROCESS_CONTROL is set) a @ref closure "closure" or @ref call_reference "call reference" to use instead of @ref Qore::sleep() (if not set then @ref Qore::sleep() will be used)
-            - \c writable: check if path(s) is/are writable  (default: False see also the \c "check_file" option)
-            - \c check_file: name of a check file. The file will be created and deleted in the path to test if path is writable. If the file alrady exists, it will be deleted. (default: \c "qore-sftp-check-file")
-            - \c skip_file_content_retrieval: if True then @ref SftpPoller::SftpPoller::singleFileEvent and @ref SftpPoller::SftpPoller::postSingleFileEvent methods won't get 'data' member of the input hash, i.e. the file content won't be read by the SftpPoller class, opening a space for child classes to implement their own file retrieval in @ref SftpPoller::SftpPoller::singleFileEvent or @ref SftpPoller::SftpPoller::postSingleFileEvent (default: False); (since ssh2 1.1)
-
-            @throw SFTPPOLLER-CONSTRUCTOR-ERROR missing required key, invalid port or poll_interval given
-            @throw SFTPCLIENT-PARAMETER-ERROR empty hostname passed
-            @throw SOCKET-CONNECT-ERROR error establishing socket connection (no listener, port blocked, etc); timeout establishing socket connection
-            @throw SSH2CLIENT-CONNECT-ERROR no user name set; ssh2 or libssh2 error
-            @throw SSH2-ERROR error initializing or establishing ssh2 session
-            @throw SSH2CLIENT-AUTH-ERROR no proper authentication method found
-            @throw SFTPCLIENT-CONNECT-ERROR error initializing sftp session or getting remote path
-            */
-        constructor(hash<auto> nconf) {
-            # create hash of keys with only valid options in argument hash
-            hash<auto> conf = Defaults + nconf{AllKeys};
-
-            foreach string k in (RequiredKeysWithHost) {
-                if (!exists conf{k})
-                    throw "SFTPPOLLER-CONSTRUCTOR-ERROR", sprintf("required key %y missing from constructor hash argument)", k);
-            }
-
-            conf.poll_interval = int(conf.poll_interval);
-            conf.port = int(conf.port);
-
-            if (conf.poll_interval <= 0)
-                throw "SFTPPOLLER-CONSTRUCTOR-ERROR", sprintf("poll_interval cannot be <= 0 (val: %d)", conf.poll_interval);
-            if (conf.port <= 0)
-                throw "SFTPPOLLER-CONSTRUCTOR-ERROR", sprintf("port cannot be <= 0 (val: %d)", conf.port);
-
-            bool re = False;
-            if (conf.regex_mask) {
-                mask = remove conf.regex_mask;
-                re = True;
-                conf -= "mask";
-            }
-
-            # set options
-            self += conf;
-
-            # set regex for mask if regex_mask was not already used
-            if (!re)
-                setMask();
-
-            # create SFTPClient object
-            sftp = new SFTPClient(host, port);
-            if (user)
-                sftp.setUser(user);
-            if (pass)
-                sftp.setPassword(pass);
-            if (keyfile)
-                sftp.setKeys(keyfile);
-
-            url = sprintf("%s@%s:%d", user ? user : "<none>", host, port);
-
-            if (mask)
-                logDetail("%s: file regex mask: %s", url, mask);
-
+        if (!ih.connected) {
             logDetail("%s: logging in (timeout %y)", url, timeout);
             # connect to the remote system
             sftp.connect(timeout);
-            rootSftpPath = sftp.path();
-
-            if (path && path.size() == 1 && path[0] != ".") {
-                logInfo("%s: connected; changing directory to %s", url, path[0]);
-                # change to the target directory
-                sftp.chdir(path[0], timeout);
-            }
-            else
-                logInfo("%s: connected", url);
-
-            map checkRemotePath($1, writable), path;
         }
-
-        #! stops the polling operation if in progress and destroys the object
-        destructor() {
-            stop();
+        else
+            logDetail("%s: already connected: %y", url, ih);
+        if (path && path.size() == 1 && path[0] != ".") {
+            logInfo("path is %n", path);
+            logInfo("%s: connected; changing directory to %s", url, path[0]);
+            # change to the target directory
+            sftp.chdir(path[0], timeout);
         }
+        else
+            logInfo("%s: connected", url);
 
-        #! returns the current poll count
-        int getPollCount() {
-            return pollcnt;
-        }
+        map checkRemotePath($1, writable), path;
+    }
 
-        #! calls the \c "log_info" @ref closure "closure" or @ref call_reference "call reference" with important information
-        private logInfo(string fmt) {
-            if (log_info)
-                call_function(log_info, vsprintf(fmt, argv));
-        }
+    #! creates the SftpPoller object from the configuration hash argument passed
+    /** @param nconf a hash with the following keys:
+        - \c host: (required) the hostname or address to connect to
+        - \c port: the integer port number to connect to (default 22; must be > 0 if given)
+        - \c user: the username to use for the connection
+        - \c pass: the password to use for the connection
+        - \c keyfile: the SSH key (file and path to it)
+        - \c path: the remote path(s) for retrieving the files
+        - \c poll_interval: the integer polling interval in seconds (default: 10 seconds; must be > 0 if given)
+        - \c mask: the file glob mask to use (default: \c "*", ignored if \c "regex_mask" is also present)
+        - \c regex_mask: a regular expression to use as a mask (overrides any \c "mask" value)
+        - \c reopts: regular expression match options (ex RE_Caseless for case-insensitive matches)
+        - \c timeout: connection timeout (default \c 30s)
+        - \c minage: the minimum file age in seconds before a file will be acquired (default: 0)
+        - \c encoding: the encoding for any text files received
+        - \c log_info: a @ref closure "closure" or @ref call_reference "call reference" for logging important information; must accept a single string giving the log message
+        - \c log_detail: a @ref closure "closure" or @ref call_reference "call reference" for logging detailed information; must accept a single string giving the log message
+        - \c log_debug: a @ref closure "closure" or @ref call_reference "call reference" for logging verbose debgugging information; must accept a single string giving the log message
+        - \c start_thread: (required when imported into a context where @ref Qore::PO_NO_THREAD_CONTROL is set) a @ref closure "closure" or @ref call_reference "call reference" for starting threads; must return the integer thread ID (if not set then @ref background will be used)
+        - \c sleep: (required when imported into a context where @ref Qore::PO_NO_PROCESS_CONTROL is set) a @ref closure "closure" or @ref call_reference "call reference" to use instead of @ref Qore::sleep() (if not set then @ref Qore::sleep() will be used)
+        - \c writable: check if path(s) is/are writable  (default: False see also the \c "check_file" option)
+        - \c check_file: name of a check file. The file will be created and deleted in the path to test if path is writable. If the file alrady exists, it will be deleted. (default: \c "qore-sftp-check-file")
+        - \c skip_file_content_retrieval: if True then @ref SftpPoller::SftpPoller::singleFileEvent and @ref SftpPoller::SftpPoller::postSingleFileEvent methods won't get 'data' member of the input hash, i.e. the file content won't be read by the SftpPoller class, opening a space for child classes to implement their own file retrieval in @ref SftpPoller::SftpPoller::singleFileEvent or @ref SftpPoller::SftpPoller::postSingleFileEvent (default: False); (since ssh2 1.1)
 
-        #! calls the \c "log_detail" @ref closure "closure" or @ref call_reference "call reference" with detail information
-        private logDetail(string fmt) {
-            if (log_detail)
-                call_function(log_detail, vsprintf(fmt, argv));
-        }
-
-        #! calls the \c "log_debug" @ref closure "closure" or @ref call_reference "call reference" with verbose debugging information
-        private logDebug(string fmt) {
-            if (log_debug)
-                call_function(log_debug, vsprintf(fmt, argv));
-        }
-
-        #! converts a glob mask into a regex
-        private setMask() {
-            if (mask == "*") {
-                delete mask;
-                return;
-            }
-
-            # replace . -> \.
-            mask =~ s/\./\./g;
-            # replace ? -> .
-            mask =~ s/\?/./g;
-            # replace * -> .*
-            mask =~ s/\*/.*/g; #//; # previous comment needed only for broken emacs qore-mode syntax highlighting
-            mask = sprintf("^%s$", mask); #");
-        }
-
-        #! retrieves a remote file and stores it to a local path
-        /** @param remote_path the remote file path
-            @param local_path the local file path
-            @param n_timeout a timeout in milliseconds
-
-            @return the number of bytes transferred
+        @throw SFTPPOLLER-CONSTRUCTOR-ERROR missing required key, invalid port or poll_interval given
+        @throw SFTPCLIENT-PARAMETER-ERROR empty hostname passed
+        @throw SOCKET-CONNECT-ERROR error establishing socket connection (no listener, port blocked, etc); timeout establishing socket connection
+        @throw SSH2CLIENT-CONNECT-ERROR no user name set; ssh2 or libssh2 error
+        @throw SSH2-ERROR error initializing or establishing ssh2 session
+        @throw SSH2CLIENT-AUTH-ERROR no proper authentication method found
+        @throw SFTPCLIENT-CONNECT-ERROR error initializing sftp session or getting remote path
         */
-        int getStoreFile(string remote_path, string local_path, *timeout n_timeout) {
-            return sftp.retrieveFile(remote_path, local_path, n_timeout ?? timeout);
+    constructor(hash<auto> nconf) {
+        # create hash of keys with only valid options in argument hash
+        hash<auto> conf = Defaults + nconf{AllKeys};
+
+        foreach string k in (RequiredKeysWithHost) {
+            if (!exists conf{k})
+                throw "SFTPPOLLER-CONSTRUCTOR-ERROR", sprintf("required key %y missing from constructor hash argument)", k);
         }
 
-        #! retrieves a text file and returns the file's contents
-        string getTextFile(string path, *timeout n_timeout, *string n_encoding) {
-            return sftp.getTextFile(path, n_timeout ?? timeout, n_encoding ?? encoding);
+        conf.poll_interval = int(conf.poll_interval);
+        conf.port = int(conf.port);
+
+        if (conf.poll_interval <= 0)
+            throw "SFTPPOLLER-CONSTRUCTOR-ERROR", sprintf("poll_interval cannot be <= 0 (val: %d)", conf.poll_interval);
+        if (conf.port <= 0)
+            throw "SFTPPOLLER-CONSTRUCTOR-ERROR", sprintf("port cannot be <= 0 (val: %d)", conf.port);
+
+        bool re = False;
+        if (conf.regex_mask) {
+            mask = remove conf.regex_mask;
+            re = True;
+            conf -= "mask";
         }
 
-        #! retrieves a binary file and returns the file's contents
-        binary getFile(string path, *timeout n_timeout) {
-            return sftp.getFile(path, n_timeout ?? timeout);
+        # set options
+        self += conf;
+
+        # set regex for mask if regex_mask was not already used
+        if (!re)
+            setMask();
+
+        # create SFTPClient object
+        sftp = new SFTPClient(host, port);
+        if (user)
+            sftp.setUser(user);
+        if (pass)
+            sftp.setPassword(pass);
+        if (keyfile)
+            sftp.setKeys(keyfile);
+
+        url = sprintf("%s@%s:%d", user ? user : "<none>", host, port);
+
+        if (mask)
+            logDetail("%s: file regex mask: %s", url, mask);
+
+        logDetail("%s: logging in (timeout %y)", url, timeout);
+        # connect to the remote system
+        sftp.connect(timeout);
+        rootSftpPath = sftp.path();
+
+        if (path && path.size() == 1 && path[0] != ".") {
+            logInfo("%s: connected; changing directory to %s", url, path[0]);
+            # change to the target directory
+            sftp.chdir(path[0], timeout);
+        }
+        else
+            logInfo("%s: connected", url);
+
+        map checkRemotePath($1, writable), path;
+    }
+
+    #! stops the polling operation if in progress and destroys the object
+    destructor() {
+        stop();
+    }
+
+    #! returns the current poll count
+    int getPollCount() {
+        return pollcnt;
+    }
+
+    #! calls the \c "log_info" @ref closure "closure" or @ref call_reference "call reference" with important information
+    private logInfo(string fmt) {
+        if (log_info)
+            call_function(log_info, vsprintf(fmt, argv));
+    }
+
+    #! calls the \c "log_detail" @ref closure "closure" or @ref call_reference "call reference" with detail information
+    private logDetail(string fmt) {
+        if (log_detail)
+            call_function(log_detail, vsprintf(fmt, argv));
+    }
+
+    #! calls the \c "log_debug" @ref closure "closure" or @ref call_reference "call reference" with verbose debugging information
+    private logDebug(string fmt) {
+        if (log_debug)
+            call_function(log_debug, vsprintf(fmt, argv));
+    }
+
+    #! converts a glob mask into a regex
+    private setMask() {
+        if (mask == "*") {
+            delete mask;
+            return;
         }
 
-        #! renames a file on the server
-        rename(string old, string nnew, *timeout n_timeout) {
-            sftp.rename(old, nnew, n_timeout ?? timeout);
-        }
+        # replace . -> \.
+        mask =~ s/\./\./g;
+        # replace ? -> .
+        mask =~ s/\?/./g;
+        # replace * -> .*
+        mask =~ s/\*/.*/g; #//; # previous comment needed only for broken emacs qore-mode syntax highlighting
+        mask = sprintf("^%s$", mask); #");
+    }
 
-        #! deletes a file on the server
-        removeFile(string fn, *timeout n_timeout) {
-            sftp.removeFile(fn, n_timeout ?? timeout);
-        }
+    #! retrieves a remote file and stores it to a local path
+    /** @param remote_path the remote file path
+        @param local_path the local file path
+        @param n_timeout a timeout in milliseconds
 
-        #! returns information about a remote file (see @ref Qore::SSH2::SFTPClient::stat() for a description of the return format)
-        *hash stat(string path, *timeout n_timeout) {
-            return sftp.stat(path, n_timeout ?? timeout);
-        }
+        @return the number of bytes transferred
+    */
+    int getStoreFile(string remote_path, string local_path, *timeout n_timeout) {
+        return sftp.retrieveFile(remote_path, local_path, n_timeout ?? timeout);
+    }
 
-        #! check if a remote path is writable
-        /**
-            @throw "REMOTE-DIR-ERROR" this exception is thrown if the remote path does not exist, is not a directory, or is not not writable
-        */
-        checkRemotePath(string path, bool write = False, *timeout n_timeout) {
-            string apath = rootSftpPath + "/" + path;
-            *hash h = stat(apath, n_timeout);
-            if (!h)
-                throw "REMOTE-DIR-ERROR", sprintf("%s: path does not exist", apath);
-            string perms = h.permissions;
-            if (perms[0] != "d")
-                throw "REMOTE-DIR-ERROR", sprintf("%s: path is not a directory", apath);
+    #! retrieves a text file and returns the file's contents
+    string getTextFile(string path, *timeout n_timeout, *string n_encoding) {
+        return sftp.getTextFile(path, n_timeout ?? timeout, n_encoding ?? encoding);
+    }
 
-            # don't check if the path is writable
-            if (!write)
-                return;
+    #! retrieves a binary file and returns the file's contents
+    binary getFile(string path, *timeout n_timeout) {
+        return sftp.getFile(path, n_timeout ?? timeout);
+    }
 
-            try {
-                string f = apath + "/" + check_file;
-                if (!stat(f, n_timeout)) {
-                    string content = "This is a qore test file for checking whether the sftp path is writable. This file can be deleted with no worries.";
-                    sftp.putFile(content, f, 0644, n_timeout);
-                }
-                sftp.removeFile(f, n_timeout);
-            } catch (hash<ExceptionInfo> ex) {
-                throw "REMOTE-DIR-ERROR", sprintf("%y: path is not writable. %s: %s", apath, ex.err, ex.desc);
+    #! renames a file on the server
+    rename(string old, string nnew, *timeout n_timeout) {
+        sftp.rename(old, nnew, n_timeout ?? timeout);
+    }
+
+    #! deletes a file on the server
+    removeFile(string fn, *timeout n_timeout) {
+        sftp.removeFile(fn, n_timeout ?? timeout);
+    }
+
+    #! returns information about a remote file (see @ref Qore::SSH2::SFTPClient::stat() for a description of the return format)
+    *hash<Qore::SSH2::Ssh2StatInfo> stat(string path, *timeout n_timeout) {
+        return sftp.stat(path, n_timeout ?? timeout);
+    }
+
+    #! check if a remote path is writable
+    /**
+        @throw "REMOTE-DIR-ERROR" this exception is thrown if the remote path does not exist, is not a directory, or is not not writable
+    */
+    checkRemotePath(string path, bool write = False, *timeout n_timeout) {
+        string apath = rootSftpPath + "/" + path;
+        *hash h = stat(apath, n_timeout);
+        if (!h)
+            throw "REMOTE-DIR-ERROR", sprintf("%s: path does not exist", apath);
+        string perms = h.permissions;
+        if (perms[0] != "d")
+            throw "REMOTE-DIR-ERROR", sprintf("%s: path is not a directory", apath);
+
+        # don't check if the path is writable
+        if (!write)
+            return;
+
+        try {
+            string f = apath + "/" + check_file;
+            if (!stat(f, n_timeout)) {
+                string content = "This is a qore test file for checking whether the sftp path is writable. This file can be deleted with no worries.";
+                sftp.putFile(content, f, 0644, n_timeout);
             }
+            sftp.removeFile(f, n_timeout);
+        } catch (hash<ExceptionInfo> ex) {
+            throw "REMOTE-DIR-ERROR", sprintf("%y: path is not writable. %s: %s", apath, ex.err, ex.desc);
         }
+    }
 
-        #! returns a list of regular file hashes matching any file name mask set for the object
-        /** @param sort the sort option for the list returned
-            @param order the ordering of sorted data returned
+    #! returns a list of regular file hashes matching any file name mask set for the object
+    /** @param sort the sort option for the list returned
+        @param order the ordering of sorted data returned
 
-            @return a list of regular file hashes with the following keys in each list element:
-            - \c name: the name of the file, link, or directory
-            - \c size: the size of the file in bytes
-            - \c uid: the UID of the owner of the file
-            - \c gid: the GID of the owner of the file
-            - \c mode: the permissions / mode of the file
-            - \c atime: the last accessed date/time of the file
-            - \c mtime: the last modified date/time of the file
-            - \c type: the type of file is always \c "REGULAR"
-            - \c perm: a string giving UNIX-style permissions for the file (ex: "-rwxr-xr-x")
-        */
-        list<hash<SftpPollerFileEventInfo>> getFiles(int sort = SftpPoller::SortNone, int order = SftpPoller::OrderAsc) {
-            list<hash<SftpPollerFileEventInfo>> l =
-                map cast<hash<SftpPollerFileEventInfo>>($1),
-                    sftp.listFull(NOTHING, timeout),
-                    $1.type == "REGULAR";
+        @return a list of regular file hashes with the following keys in each list element:
+        - \c name: the name of the file, link, or directory
+        - \c size: the size of the file in bytes
+        - \c uid: the UID of the owner of the file
+        - \c gid: the GID of the owner of the file
+        - \c mode: the permissions / mode of the file
+        - \c atime: the last accessed date/time of the file
+        - \c mtime: the last modified date/time of the file
+        - \c type: the type of file is always \c "REGULAR"
+        - \c perm: a string giving UNIX-style permissions for the file (ex: "-rwxr-xr-x")
+    */
+    list<hash<SftpPollerFileEventInfo>> getFiles(int sort = SftpPoller::SortNone, int order = SftpPoller::OrderAsc) {
+        list<hash<SftpPollerFileEventInfo>> l =
+            map cast<hash<SftpPollerFileEventInfo>>($1),
+                sftp.listFull(NOTHING, timeout),
+                $1.type == "REGULAR";
 
-            # remove all files that don't fit the mask
-            if (mask) {
-                list<hash<SftpPollerFileEventInfo>> n = ();
-                foreach hash<SftpPollerFileEventInfo> h in (l) {
-                    if (regex(h.name, mask, reopts)) {
-                        n += h;
-                    }
-                }
-                l = n;
-            }
-
-            # remove all files that aren't old enough
-            if (minage) {
-                date now = Qore::now();
-                list<hash<SftpPollerFileEventInfo>> n = ();
-                foreach hash<SftpPollerFileEventInfo> h in (l) {
-                    if ((now - h.mtime).durationSeconds() < minage) {
-                        logDebug("file %y is not old enough (minage: %d, current age: %d)", h.name, minage, (now - h.mtime).durationSeconds());
-                        continue;
-                    }
+        # remove all files that don't fit the mask
+        if (mask) {
+            list<hash<SftpPollerFileEventInfo>> n = ();
+            foreach hash<SftpPollerFileEventInfo> h in (l) {
+                if (regex(h.name, mask, reopts)) {
                     n += h;
                 }
-                l = n;
             }
-
-            # return list of files
-            switch (sort) {
-                case SftpPoller::SortNone: {
-                    break;
-                }
-
-                # sort by file name
-                case SftpPoller::SortName: {
-                    # sort closure
-                    code sort = int sub (hash<SftpPollerFileEventInfo> l, hash<SftpPollerFileEventInfo> r) {
-                        return l.name <=> r.name;
-                    };
-                    l = (order == SftpPoller::OrderAsc ? sort(l, sort) : sort_descending(l, sort));
-                    break;
-                }
-
-                # it *never* should get here
-                default: throw "SFTPPOLLER-GETFILES", sprintf("Unknown sort mode %y", sort);
-            }
-
-            logDetail("%s: polled %d matching file%s", url, l.size(), l.size() == 1 ? "" : "s");
-            return l;
+            l = n;
         }
 
-        #! starts polling in the background; returns the thread ID of the polling thread
-        /** if polling had already been started, then the thread ID of the polling thread is
-            returned immediately
-        */
-        int start() {
+        # remove all files that aren't old enough
+        if (minage) {
+            date now = Qore::now();
+            list<hash<SftpPollerFileEventInfo>> n = ();
+            foreach hash<SftpPollerFileEventInfo> h in (l) {
+                if ((now - h.mtime).durationSeconds() < minage) {
+                    logDebug("file %y is not old enough (minage: %d, current age: %d)", h.name, minage, (now - h.mtime).durationSeconds());
+                    continue;
+                }
+                n += h;
+            }
+            l = n;
+        }
+
+        # return list of files
+        switch (sort) {
+            case SftpPoller::SortNone: {
+                break;
+            }
+
+            # sort by file name
+            case SftpPoller::SortName: {
+                # sort closure
+                code sort = int sub (hash<SftpPollerFileEventInfo> l, hash<SftpPollerFileEventInfo> r) {
+                    return l.name <=> r.name;
+                };
+                l = (order == SftpPoller::OrderAsc ? sort(l, sort) : sort_descending(l, sort));
+                break;
+            }
+
+            # it *never* should get here
+            default: throw "SFTPPOLLER-GETFILES", sprintf("Unknown sort mode %y", sort);
+        }
+
+        logDetail("%s: polled %d matching file%s", url, l.size(), l.size() == 1 ? "" : "s");
+        return l;
+    }
+
+    #! starts polling in the background; returns the thread ID of the polling thread
+    /** if polling had already been started, then the thread ID of the polling thread is
+        returned immediately
+    */
+    int start() {
+        m.lock();
+        on_exit m.unlock();
+
+        if (runflag)
+            return tid;
+
+        sc.waitForZero();
+
+        runflag = True;
+        sc.inc();
+
+%ifdef PO_NO_THREAD_CONTROL
+        return call_function(start_thread, \run());
+%else
+        return start_thread ? call_function(start_thread, \run()) : background run();
+%endif
+    }
+
+    #! stops the polling operation, returns immediately
+    /** @see stop()
+    */
+    stopNoWait() {
+        m.lock();
+        on_exit m.unlock();
+
+        runflag = False;
+    }
+
+    #! stops the polling operation, returns when the polling operation has been stopped
+    /** if polling was not in progress then this method returns immediately
+
+        @throw THREAD-ERROR this exception is thrown if this method is called from the event thread since it would result in a deadlock
+
+        @see stopNoWait()
+    */
+    stop() {
+        if (gettid() == tid && sc.getCount())
+            throw "THREAD-ERROR", sprintf("cannot call SftpPoller::stop() from the event thread (%d)", tid);
+        m.lock();
+        on_exit m.unlock();
+
+        runflag = False;
+
+        sc.waitForZero();
+    }
+
+    #! waits indefinitely for the polling operation to stop; if polling was not in progress then this method returns immediately
+    /**
+        @throw THREAD-ERROR this exception is thrown if this method is called from the event thread since it would result in a deadlock
+    */
+    waitStop() {
+        if (gettid() == tid)
+            throw "THREAD-ERROR", sprintf("cannot call SftpPoller::waitStop() from the event thread (%d)", tid);
+        sc.waitForZero();
+    }
+
+    #! starts the polling operation inline (not in a background thread)
+    /**
+        @throw SFTPPOLLER-ERROR this exception is thrown if polling is already in progress
+    */
+    startInline() {
+        {
             m.lock();
             on_exit m.unlock();
 
             if (runflag)
-                return tid;
-
-            sc.waitForZero();
+                throw "SFTPPOLLER-ERROR", sprintf("the polling thread is already running in TID %d", tid);
 
             runflag = True;
-            sc.inc();
-
-%ifdef PO_NO_THREAD_CONTROL
-            return call_function(start_thread, \run());
-%else
-            return start_thread ? call_function(start_thread, \run()) : background run();
-%endif
+            tid = gettid();
         }
+        sc.inc();
+        run();
+    }
 
-        #! stops the polling operation, returns immediately
-        /** @see stop()
-        */
-        stopNoWait() {
-            m.lock();
-            on_exit m.unlock();
-
-            runflag = False;
-        }
-
-        #! stops the polling operation, returns when the polling operation has been stopped
-        /** if polling was not in progress then this method returns immediately
-
-            @throw THREAD-ERROR this exception is thrown if this method is called from the event thread since it would result in a deadlock
-
-            @see stopNoWait()
-        */
-        stop() {
-            if (gettid() == tid && sc.getCount())
-                throw "THREAD-ERROR", sprintf("cannot call SftpPoller::stop() from the event thread (%d)", tid);
-            m.lock();
-            on_exit m.unlock();
-
-            runflag = False;
-
-            sc.waitForZero();
-        }
-
-        #! waits indefinitely for the polling operation to stop; if polling was not in progress then this method returns immediately
-        /**
-            @throw THREAD-ERROR this exception is thrown if this method is called from the event thread since it would result in a deadlock
-        */
-        waitStop() {
-            if (gettid() == tid)
-                throw "THREAD-ERROR", sprintf("cannot call SftpPoller::waitStop() from the event thread (%d)", tid);
-            sc.waitForZero();
-        }
-
-        #! starts the polling operation inline (not in a background thread)
-        /**
-            @throw SFTPPOLLER-ERROR this exception is thrown if polling is already in progress
-        */
-        startInline() {
-            {
-                m.lock();
-                on_exit m.unlock();
-
-                if (runflag)
-                    throw "SFTPPOLLER-ERROR", sprintf("the polling thread is already running in TID %d", tid);
-
-                runflag = True;
-                tid = gettid();
+    #! runs a single poll (useful for checking for errors inline before starting a background thread)
+    bool runOnce() {
+        ++pollcnt;
+        bool ret = False;
+        foreach string subdir in (path) {
+            get_files = True;
+            if (path.size() != 1) {
+                sftp.chdir(rootSftpPath);
+                sftp.chdir(subdir);
+                logInfo("Current SFTPClient path is %s", sftp.path());
             }
-            sc.inc();
-            run();
-        }
+            list<hash<SftpPollerFileEventInfo>> files = getFiles();
 
-        #! runs a single poll (useful for checking for errors inline before starting a background thread)
-        bool runOnce() {
-            ++pollcnt;
-            bool ret = False;
-            foreach string subdir in (path) {
-                get_files = True;
-                if (path.size() != 1) {
-                    sftp.chdir(rootSftpPath);
-                    sftp.chdir(subdir);
-                    logInfo("Current SFTPClient path is %s", sftp.path());
-                }
-                list<hash<SftpPollerFileEventInfo>> files = getFiles();
+            if (files) {
+                logDetail("got new files in %y: %y", path, files);
 
-                if (files) {
-                    logDetail("got new files in %y: %y", path, files);
+                if (fileEvent(files)) {
+                    foreach hash<SftpPollerFileEventInfo> fh in (files) {
+                        if (skip_file_content_retrieval) {
+                            logInfo("%y: skipping retrieval of file data based on the poller configuration", fh.name);
+                        } else {
+                            # transfer file from server
+                            logInfo("%y: retrieving %s file data", fh.name, binary ? "binary" : "text");
+                            date t1 = now_us();
 
-                    if (fileEvent(files)) {
-                        foreach hash<SftpPollerFileEventInfo> fh in (files) {
-                            if (skip_file_content_retrieval) {
-                                logInfo("%y: skipping retrieval of file data based on the poller configuration", fh.name);
-                            } else {
-                                # transfer file from server
-                                logInfo("%y: retrieving %s file data", fh.name, binary ? "binary" : "text");
-                                date t1 = now_us();
+                            get_files = True;
+                            fh.data = binary ? getFile(fh.name) : getTextFile(fh.name);
+                            logInfo("%y: retrieved %d bytes in %y", fh.name, fh.data.size(), now_us() - t1);
+                        }
 
-                                get_files = True;
-                                fh.data = binary ? getFile(fh.name) : getTextFile(fh.name);
-                                logInfo("%y: retrieved %d bytes in %y", fh.name, fh.data.size(), now_us() - t1);
-                            }
+                        # make sure any errors after this point cause the polling operation to stop
+                        get_files = False;
+                        fh.filepath = subdir == "." ? fh.name : (subdir + "/" + fh.name);
+                        singleFileEvent(fh);
 
-                            # make sure any errors after this point cause the polling operation to stop
-                            get_files = False;
-                            fh.filepath = subdir == "." ? fh.name : (subdir + "/" + fh.name);
-                            singleFileEvent(fh);
-
-                            try {
-                                postSingleFileEvent(fh);
-                            } catch (hash<ExceptionInfo> ex) {
-                                fatal = True;
-                                rethrow;
-                            }
+                        try {
+                            postSingleFileEvent(fh);
+                        } catch (hash<ExceptionInfo> ex) {
+                            fatal = True;
+                            rethrow;
                         }
                     }
-                    ret = True;
                 }
+                ret = True;
             }
-            return ret;
         }
-
-        #! sleeps for the specificed number of seconds
-        private sftpSleep(softint secs) {
-%ifdef PO_NO_PROCESS_CONTROL
-            call_function(sleep, secs);
-%else
-            sleep ? call_function(sleep, secs) : Qore::sleep(secs);
-%endif
-        }
-
-        #! starts the polling operation
-        private run() {
-            on_exit
-                sc.dec();
-
-            while (runflag) {
-                try {
-                    runOnce();
-                    if (runflag)
-                        sftpSleep(poll_interval);
-                } catch (hash<ExceptionInfo> ex) {
-                    if (get_files) {
-                        logInfo("SFTP error in %y: %s: %s; waiting %y for next try", path, ex.err, ex.desc, ErrorDelay);
-                        if (runflag)
-                            sftpSleep(ErrorDelay);
-                    } else {
-                        # error thrown in "post transfer" code
-                        logInfo("error in post transfer code; polling terminated: %s: %s", ex.err, ex.desc);
-                        rethrow;
-                    }
-                }
-            }
-
-            logInfo("polling finished");
-        }
-
-        #! called for each poll with a list of all files matched before transfer; if this method returns False or @ref nothing, then the singleFileEvent method is not called
-        *bool fileEvent(list<hash<SftpPollerFileEventInfo>> l) {
-            return True;
-        }
-
-        #! called for each matching file individually whenever matching files are polled with the list of matching file names; if any error occurs here, the error is logged and the polling operation is retried
-        /** @param fih a hash of file data and information with the following keys:
-            - \c name: the name of the file, link, or directory
-            - \c size: the size of the file in bytes
-            - \c uid: the UID of the owner of the file
-            - \c gid: the GID of the owner of the file
-            - \c mode: the permissions / mode of the file
-            - \c atime: the last accessed date/time of the file
-            - \c mtime: the last modified date/time of the file
-            - \c type: the type of file; one of: \c "REGULAR", \c "DIRECTORY", \c "SYMBOLIC-LINK", \c "BLOCK-DEVICE", \c "CHARACTER-DEVICE", \c "FIFO", \c "SYMBOLIC-LINK", \c "SOCKET", or \c "UNKNOWN"
-            - \c perm: a string giving UNIX-style permissions for the file (ex: "-rwxr-xr-x")
-            - \c data: the file's data; this will be a string unless the \a "binary" option is set to @ref Qore::True "True", in which case this key is assigned to the files binary data; this hash key is only present if \c skip_file_content_retrieval was @ref Qore::False "False" in the @ref SftpPoller::SftpPoller::constructor options
-            - \c filepath: the remote filepath relative to SFTP root directory
-        */
-        abstract singleFileEvent(hash<SftpPollerFileEventInfo> fih);
-
-        #! called after singleFileEvent() for each matching file individually whenever matching files are polled with the list of matching file names; if any error occurs here, the polling operation stops
-        /** This method would normally delete / rename / move files processed by singleFileEvent() so that they would not be polled a second time.
-            If an error occurs in this operation, then the polling event will stop since continuing after failing to delete, rename, or move a file already processed
-            would cause the file to be processed more than once.
-
-            @param fih a hash of file data and information with the following keys:
-            - \c name: the name of the file, link, or directory
-            - \c size: the size of the file in bytes
-            - \c uid: the UID of the owner of the file
-            - \c gid: the GID of the owner of the file
-            - \c mode: the permissions / mode of the file
-            - \c atime: the last accessed date/time of the file
-            - \c mtime: the last modified date/time of the file
-            - \c type: the type of file; one of: \c "REGULAR", \c "DIRECTORY", \c "SYMBOLIC-LINK", \c "BLOCK-DEVICE", \c "CHARACTER-DEVICE", \c "FIFO", \c "SYMBOLIC-LINK", \c "SOCKET", or \c "UNKNOWN"
-            - \c perm: a string giving UNIX-style permissions for the file (ex: "-rwxr-xr-x")
-            - \c data: the file's data; this will be a string unless the \a "binary" option is set to @ref Qore::True "True", in which case this key is assigned to the files binary data; this hash key is only present if \c skip_file_content_retrieval was @ref Qore::False "False" in the @ref SftpPoller::SftpPoller::constructor options
-            - \c filepath: the remote filepath relative to SFTP root directory
-        */
-        abstract postSingleFileEvent(hash<SftpPollerFileEventInfo> fih);
-
-        #! checks a path on the local file system
-        /**
-            @throw DIR-ERROR this exception is thrown if the local path does not exist, is not readable, is not a directory, or should be writable and is not
-        */
-        static checkPath(string path, string type, bool write = False) {
-            *hash h = hstat(path);
-            if (!h)
-                throw "DIR-ERROR", sprintf("%y: %s path does not exist", path, type);
-            if (h.type != "DIRECTORY")
-                throw "DIR-ERROR", sprintf("%y: %s path is not a directory (%s)", path, type, h.type);
-
-            # check if the directory is readable
-            if (!is_readable(path))
-                throw "DIR-ERROR", sprintf("%y: %s path is not readable", path, type);
-
-            # check if the directory is writable
-            if (write && !is_writable(path))
-                throw "DIR-ERROR", sprintf("%y: %s path is not writable", path, type);
-        }
+        return ret;
     }
+
+    #! sleeps for the specificed number of seconds
+    private sftpSleep(softint secs) {
+%ifdef PO_NO_PROCESS_CONTROL
+        call_function(sleep, secs);
+%else
+        sleep ? call_function(sleep, secs) : Qore::sleep(secs);
+%endif
+    }
+
+    #! starts the polling operation
+    private run() {
+        on_exit
+            sc.dec();
+
+        while (runflag) {
+            try {
+                runOnce();
+                if (runflag)
+                    sftpSleep(poll_interval);
+            } catch (hash<ExceptionInfo> ex) {
+                if (get_files) {
+                    logInfo("SFTP error in %y: %s: %s; waiting %y for next try", path, ex.err, ex.desc, ErrorDelay);
+                    if (runflag)
+                        sftpSleep(ErrorDelay);
+                } else {
+                    # error thrown in "post transfer" code
+                    logInfo("error in post transfer code; polling terminated: %s: %s", ex.err, ex.desc);
+                    rethrow;
+                }
+            }
+        }
+
+        logInfo("polling finished");
+    }
+
+    #! called for each poll with a list of all files matched before transfer; if this method returns False or @ref nothing, then the singleFileEvent method is not called
+    *bool fileEvent(list<hash<SftpPollerFileEventInfo>> l) {
+        return True;
+    }
+
+    #! called for each matching file individually whenever matching files are polled with the list of matching file names; if any error occurs here, the error is logged and the polling operation is retried
+    /** @param fih a hash of file data and information with the following keys:
+        - \c name: the name of the file, link, or directory
+        - \c size: the size of the file in bytes
+        - \c uid: the UID of the owner of the file
+        - \c gid: the GID of the owner of the file
+        - \c mode: the permissions / mode of the file
+        - \c atime: the last accessed date/time of the file
+        - \c mtime: the last modified date/time of the file
+        - \c type: the type of file; one of: \c "REGULAR", \c "DIRECTORY", \c "SYMBOLIC-LINK", \c "BLOCK-DEVICE", \c "CHARACTER-DEVICE", \c "FIFO", \c "SYMBOLIC-LINK", \c "SOCKET", or \c "UNKNOWN"
+        - \c perm: a string giving UNIX-style permissions for the file (ex: "-rwxr-xr-x")
+        - \c data: the file's data; this will be a string unless the \a "binary" option is set to @ref Qore::True "True", in which case this key is assigned to the files binary data; this hash key is only present if \c skip_file_content_retrieval was @ref Qore::False "False" in the @ref SftpPoller::SftpPoller::constructor options
+        - \c filepath: the remote filepath relative to SFTP root directory
+    */
+    abstract singleFileEvent(hash<SftpPollerFileEventInfo> fih);
+
+    #! called after singleFileEvent() for each matching file individually whenever matching files are polled with the list of matching file names; if any error occurs here, the polling operation stops
+    /** This method would normally delete / rename / move files processed by singleFileEvent() so that they would not be polled a second time.
+        If an error occurs in this operation, then the polling event will stop since continuing after failing to delete, rename, or move a file already processed
+        would cause the file to be processed more than once.
+
+        @param fih a hash of file data and information with the following keys:
+        - \c name: the name of the file, link, or directory
+        - \c size: the size of the file in bytes
+        - \c uid: the UID of the owner of the file
+        - \c gid: the GID of the owner of the file
+        - \c mode: the permissions / mode of the file
+        - \c atime: the last accessed date/time of the file
+        - \c mtime: the last modified date/time of the file
+        - \c type: the type of file; one of: \c "REGULAR", \c "DIRECTORY", \c "SYMBOLIC-LINK", \c "BLOCK-DEVICE", \c "CHARACTER-DEVICE", \c "FIFO", \c "SYMBOLIC-LINK", \c "SOCKET", or \c "UNKNOWN"
+        - \c perm: a string giving UNIX-style permissions for the file (ex: "-rwxr-xr-x")
+        - \c data: the file's data; this will be a string unless the \a "binary" option is set to @ref Qore::True "True", in which case this key is assigned to the files binary data; this hash key is only present if \c skip_file_content_retrieval was @ref Qore::False "False" in the @ref SftpPoller::SftpPoller::constructor options
+        - \c filepath: the remote filepath relative to SFTP root directory
+    */
+    abstract postSingleFileEvent(hash<SftpPollerFileEventInfo> fih);
+
+    #! checks a path on the local file system
+    /**
+        @throw DIR-ERROR this exception is thrown if the local path does not exist, is not readable, is not a directory, or should be writable and is not
+    */
+    static checkPath(string path, string type, bool write = False) {
+        *hash h = hstat(path);
+        if (!h)
+            throw "DIR-ERROR", sprintf("%y: %s path does not exist", path, type);
+        if (h.type != "DIRECTORY")
+            throw "DIR-ERROR", sprintf("%y: %s path is not a directory (%s)", path, type, h.type);
+
+        # check if the directory is readable
+        if (!is_readable(path))
+            throw "DIR-ERROR", sprintf("%y: %s path is not readable", path, type);
+
+        # check if the directory is writable
+        if (write && !is_writable(path))
+            throw "DIR-ERROR", sprintf("%y: %s path is not writable", path, type);
+    }
+}
 }

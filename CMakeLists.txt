@@ -73,11 +73,6 @@ set(CPP_SRC
     src/ssh2-module.cpp
 )
 
-set(QMOD
-    qlib/SftpPoller.qm
-    qlib/Ssh2Connections.qm
-)
-
 qore_wrap_qpp_value(QPP_SOURCES ${QPP_SRC})
 
 set(module_name "ssh2")
@@ -88,8 +83,13 @@ set(QORE_DOX_TMPL_SRC
 
 add_library(${module_name} SHARED ${CPP_SRC} ${QPP_SOURCES})
 
-qore_binary_module(${module_name} ${PROJECT_VERSION} ${LIBSSH2_LDFLAGS} Threads::Threads)
-qore_user_modules("${QMOD}")
+qore_binary_module_new(${module_name} ${PROJECT_VERSION} ${LIBSSH2_LDFLAGS} Threads::Threads)
+
+add_custom_target(docs-ssh2)
+
+qore_module_user_module("qlib/SftpPollerUtil.qm" "")
+qore_module_user_module("qlib/SftpPoller.qm" "SftpPollerUtil;ssh2")
+qore_module_user_module("qlib/Ssh2Connections.qm" "ssh2")
 
 qore_dist(${PROJECT_VERSION})
 
