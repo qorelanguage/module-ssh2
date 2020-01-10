@@ -10,6 +10,7 @@ include(CheckCXXSymbolExists)
 include(CheckIncludeFileCXX)
 
 find_package(Qore 0.9 REQUIRED)
+find_package(OpenSSL REQUIRED)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBSSH2 REQUIRED libssh2>=1.1)
@@ -25,6 +26,7 @@ message(FATAL_ERROR "POSIX threads do not seem to be supported on this platform,
 endif()
 
 include_directories(${LIBSSH2_INCLUDE_DIRS})
+include_directories(${OPENSSL_INCLUDE_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/src)
 
 check_include_file_cxx(arpa/inet.h HAVE_ARPA_INET_H)
@@ -81,9 +83,9 @@ set(QORE_DOX_TMPL_SRC
   docs/mainpage.doxygen.tmpl
 )
 
+link_directories(${_OPENSSL_LIBDIR})
 add_library(${module_name} SHARED ${CPP_SRC} ${QPP_SOURCES})
-
-qore_binary_module_new(${module_name} ${PROJECT_VERSION} ${LIBSSH2_LDFLAGS} Threads::Threads)
+qore_binary_module_new(${module_name} ${PROJECT_VERSION} "" ${LIBSSH2_LDFLAGS} Threads::Threads)
 
 add_custom_target(docs-ssh2)
 
