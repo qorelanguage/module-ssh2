@@ -1,7 +1,7 @@
 # -*- mode: qore; indent-tabs-mode: nil -*-
 #! @file SftpPoller.qm SftpPoller module implementation for polling for files with the SFTP protocol
 
-/*  SftpPoller.qm Copyright (C) 2014 - 2019 Qore Technologies, s.r.o.
+/*  SftpPoller.qm Copyright (C) 2014 - 2020 Qore Technologies, s.r.o.
 
     Permission is hereby granted, free of charge, to any person obtaining a
     copy of this software and associated documentation files (the "Software"),
@@ -41,7 +41,7 @@ module SftpPoller {
     license = "MIT";
     init = sub () {
         # register the event data type
-        DataProvider::registerType("qore:sftp:event", new SftpPollerFileEventInfoDataType());
+        DataProvider::registerType("qore/sftp/event", new SftpPollerFileEventInfoDataType());
     };
 }
 
