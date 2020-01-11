@@ -113,13 +113,28 @@ public hashdecl SftpPollerFileEventInfo {
     #! the last modified date/time of the file
     date mtime;
 
-    #! the type of file; one of: \c "REGULAR", \c "DIRECTORY", \c "SYMBOLIC-LINK", \c "BLOCK-DEVICE", \c "CHARACTER-DEVICE", \c "FIFO", \c "SYMBOLIC-LINK", \c "SOCKET", \c "UNKNOWN"
+    #! the type of file
+    /** one of:
+        - \c "REGULAR"
+        - \c "DIRECTORY"
+        - \c "SYMBOLIC-LINK"
+        - \c "BLOCK-DEVICE"
+        - \c "CHARACTER-DEVICE"
+        - \c "FIFO"
+        - \c "SYMBOLIC-LINK"
+        - \c "SOCKET"
+        - \c "UNKNOWN"
+    */
     string type;
 
     #! a string giving UNIX-style permissions for the file (ex: "-rwxr-xr-x")
     string perm;
 
-    #! the file's data; this will be a string unless the \a "binary" option is set to @ref Qore::True "True", in which case this key is assigned to the files binary data; this hash key is only present if \c skip_file_content_retrieval was @ref Qore::False "False" in the @ref SftpPoller::SftpPoller::constructor options
+    #! the file's data
+    /** @note This will be a string unless the \a "binary" option is set to @ref Qore::True "True", in which case this
+        key is assigned to the files binary data; this hash key is only present if \c skip_file_content_retrieval was
+        @ref False in the options to \c SftpPoller::constructor()
+    */
     data data;
 
     #! the remote filepath relative to SFTP root directory

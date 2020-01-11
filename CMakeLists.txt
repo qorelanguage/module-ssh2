@@ -75,7 +75,7 @@ set(CPP_SRC
     src/ssh2-module.cpp
 )
 
-qore_wrap_qpp_value(QPP_SOURCES ${QPP_SRC})
+qore_wrap_qpp_value(QPP_SOURCES DOXLIST _dox_src ${QPP_SRC})
 
 set(module_name "ssh2")
 
@@ -83,15 +83,13 @@ set(QORE_DOX_TMPL_SRC
   docs/mainpage.doxygen.tmpl
 )
 
-link_directories(${_OPENSSL_LIBDIR})
 add_library(${module_name} SHARED ${CPP_SRC} ${QPP_SOURCES})
-qore_binary_module_new(${module_name} ${PROJECT_VERSION} "" ${LIBSSH2_LDFLAGS} Threads::Threads)
+set(MODULE_DOX_INPUT ${CMAKE_BINARY_DIR}/mainpage.dox ${_dox_src})
+qore_external_binary_module(${module_name} ${PROJECT_VERSION} ${LIBSSH2_LDFLAGS})
 
-add_custom_target(docs-ssh2)
-
-qore_module_user_module("qlib/SftpPollerUtil.qm" "")
-qore_module_user_module("qlib/SftpPoller.qm" "SftpPollerUtil;ssh2")
-qore_module_user_module("qlib/Ssh2Connections.qm" "ssh2")
+qore_external_user_module("qlib/SftpPollerUtil.qm" "")
+qore_external_user_module("qlib/SftpPoller.qm" "SftpPollerUtil")
+qore_external_user_module("qlib/Ssh2Connections.qm" "")
 
 qore_dist(${PROJECT_VERSION})
 
@@ -101,5 +99,5 @@ FIND_PACKAGE(Doxygen)
 if (DOXYGEN_FOUND)
     qore_wrap_dox(QORE_DOX_SRC ${QORE_DOX_TMPL_SRC})
     add_custom_target(QORE_MOD_DOX_FILES DEPENDS ${QORE_DOX_SRC})
-    add_dependencies(docs QORE_MOD_DOX_FILES)
+    add_dependencies(docs-module QORE_MOD_DOX_FILES)
 endif()
