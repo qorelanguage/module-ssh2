@@ -6,7 +6,7 @@
     libssh2 ssh2 channel integration into qore
 
     Copyright 2010 Wolfgang Ritzinger
-    Copyright 2010 - 2018 Qore Technologies, s.r.o.
+    Copyright 2010 - 2020 Qore Technologies, s.r.o.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -35,22 +35,22 @@ qclass SSH2Channel [arg=SSH2Channel* c; ns=Qore::SSH2; dom=NETWORK];
     @throw SSH2CHANNEL-CONSTRUCTOR-ERROR this class cannot be directly constructed but is created from methods in the SSH2Client class
  */
 SSH2Channel::constructor() {
-   xsink->raiseException("SSH2CHANNEL-CONSTRUCTOR-ERROR", "this class cannot be directly constructed but is created from methods in the SSH2Client class (ex: SSH2Client::openSessionChannel())");
+    xsink->raiseException("SSH2CHANNEL-CONSTRUCTOR-ERROR", "this class cannot be directly constructed but is created from methods in the SSH2Client class (ex: SSH2Client::openSessionChannel())");
 }
 
 //! Throws an exception; currently SSH2Channel objects cannot be copied
 /** @throw SSH2CHANNEL-COPY-ERROR copying SSH2Channel objects is not supported
  */
 SSH2Channel::copy() {
-  xsink->raiseException("SSH2CHANNEL-COPY-ERROR", "copying SSH2Channel objects is not supported");
+    xsink->raiseException("SSH2CHANNEL-COPY-ERROR", "copying SSH2Channel objects is not supported");
 }
 
 //! destroys the object by disconnecting the channel and deregistering with the parent object
 /**
  */
 SSH2Channel::destructor() {
-   c->destructor();
-   c->deref();
+    c->destructor();
+    c->deref();
 }
 
 //! Sets an environment variable on the channel

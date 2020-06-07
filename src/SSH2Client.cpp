@@ -5,7 +5,7 @@
     libssh2 ssh2 client integration into qore
 
     Copyright 2009 Wolfgang Ritzinger
-    Copyright (C) 2010 - 2019 Qore Technologies, s.r.o.
+    Copyright (C) 2010 - 2020 Qore Technologies, s.r.o.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -46,52 +46,52 @@ const char *SSH2_ERROR = "SSH2-ERROR";
 const char *SSH2_CONNECTED = "SSH2-CONNECTED";
 
 std::string mode2str(const int mode) {
-   std::string ret=std::string("----------");
-   int tmode=mode;
-   for(int i=2; i>=0; i--) {
-      if (tmode & 001) {
-         ret[1+2+i*3]='x';
-      }
-      if (tmode & 002) {
-         ret[1+1+i*3]='w';
-      }
-      if (tmode & 004) {
-         ret[1+0+i*3]='r';
-      }
-      tmode>>=3;
-   }
+    std::string ret=std::string("----------");
+    int tmode=mode;
+    for(int i=2; i>=0; i--) {
+        if (tmode & 001) {
+            ret[1+2+i*3]='x';
+        }
+        if (tmode & 002) {
+            ret[1+1+i*3]='w';
+        }
+        if (tmode & 004) {
+            ret[1+0+i*3]='r';
+        }
+        tmode>>=3;
+    }
 #ifdef S_ISDIR
-   if (S_ISDIR(mode)) {
-      ret[0]='d';
-   }
+    if (S_ISDIR(mode)) {
+        ret[0]='d';
+    }
 #endif
 #ifdef S_ISBLK
-   if (S_ISBLK(mode)) {
-      ret[0]='b';
-   }
+    if (S_ISBLK(mode)) {
+        ret[0]='b';
+    }
 #endif
 #ifdef S_ISCHR
-   if (S_ISCHR(mode)) {
-      ret[0]='c';
-   }
+    if (S_ISCHR(mode)) {
+        ret[0]='c';
+    }
 #endif
 #ifdef S_ISFIFO
-   if (S_ISFIFO(mode)) {
-      ret[0]='p';
-   }
+    if (S_ISFIFO(mode)) {
+        ret[0]='p';
+    }
 #endif
 #ifdef S_ISLNK
-   if (S_ISLNK(mode)) {
-      ret[0]='l';
-   }
+    if (S_ISLNK(mode)) {
+        ret[0]='l';
+    }
 #endif
 #ifdef S_ISSOCK
-   if (S_ISSOCK(mode)) {
-      ret[0]='s';
-   }
+    if (S_ISSOCK(mode)) {
+        ret[0]='s';
+    }
 #endif
 
-   return ret;
+    return ret;
 }
 
 static void map_ssh2_sbuf_to_hash(QoreHashNode *h, struct stat *sbuf, ExceptionSink* xsink) {
@@ -136,14 +136,6 @@ SSH2Client::SSH2Client(QoreURL &url, const uint32_t port) :
 SSH2Client::~SSH2Client() {
     QORE_TRACE("SSH2Client::~SSH2Client()");
     printd(5, "SSH2Client::~SSH2Client() this: %p\n", this);
-
-    // first close all open channels
-    {
-        AutoLocker al(m);
-        for (channel_set_t::iterator i = channel_set.begin(), e = channel_set.end(); i != e; ++i) {
-            (*i)->closeUnlocked();
-        }
-    }
 
     // disconnect
     disconnectUnlocked(true);
@@ -194,13 +186,17 @@ void SSH2Client::setKeysIntern() {
  * sets errno
  */
 int SSH2Client::disconnectUnlocked(bool force, int timeout_ms, AbstractDisconnectionHelper* adh, ExceptionSink *xsink) {
+    // first close all open channels
+    for (channel_set_t::iterator i = channel_set.begin(), e = channel_set.end(); i != e; ++i) {
+        (*i)->closeUnlocked();
+    }
+
     if (!ssh_session) {
         if (!force) {
             errno = EINVAL;
             xsink && xsink->raiseException(SSH2CLIENT_NOT_CONNECTED, "disconnect(): %s", strerror(errno));
         }
-    }
-    else {
+    } else {
         if (adh)
             adh->preDisconnect();
 
@@ -242,14 +238,14 @@ int SSH2Client::sshConnected() {
    return sshConnectedUnlocked();
 }
 
-QoreObject *SSH2Client::registerChannelUnlocked(LIBSSH2_CHANNEL *channel) {
-   return new QoreObject(QC_SSH2CHANNEL, getProgram(), registerChannelUnlockedRaw(channel));
+QoreObject* SSH2Client::registerChannelUnlocked(LIBSSH2_CHANNEL *channel) {
+    return new QoreObject(QC_SSH2CHANNEL, getProgram(), registerChannelUnlockedRaw(channel));
 }
 
-SSH2Channel *SSH2Client::registerChannelUnlockedRaw(LIBSSH2_CHANNEL *channel) {
-   SSH2Channel *chan = new SSH2Channel(channel, this);
-   channel_set.insert(chan);
-   return chan;
+SSH2Channel* SSH2Client::registerChannelUnlockedRaw(LIBSSH2_CHANNEL *channel) {
+    SSH2Channel* chan = new SSH2Channel(channel, this);
+    channel_set.insert(chan);
+    return chan;
 }
 
 const char *SSH2Client::getHost() {
@@ -767,7 +763,7 @@ QoreObject *SSH2Client::scpGet(ExceptionSink *xsink, const char *path, int timeo
 }
 
 void SSH2Client::scpGet(ExceptionSink *xsink, const char *path, OutputStream *os, int timeout_ms) {
-    SSH2Channel *c = registerChannelUnlockedRaw(scpGetRaw(xsink, path, timeout_ms, 0));
+    std::unique_ptr<SSH2Channel> c(registerChannelUnlockedRaw(scpGetRaw(xsink, path, timeout_ms, 0)));
     if (!c->sendEof(xsink, timeout_ms)) {
         qore_offset_t rc;
         char buffer[4096];
@@ -782,8 +778,6 @@ void SSH2Client::scpGet(ExceptionSink *xsink, const char *path, OutputStream *os
         }
     }
     c->waitClosed(xsink, timeout_ms);
-    c->destructor();
-    delete c;
 }
 
 LIBSSH2_CHANNEL *SSH2Client::scpPutRaw(ExceptionSink *xsink, const char *path, size_t size, int mode, long mtime, long atime, int timeout_ms) {
@@ -820,35 +814,32 @@ QoreObject *SSH2Client::scpPut(ExceptionSink *xsink, const char *path, size_t si
 }
 
 void SSH2Client::scpPut(ExceptionSink *xsink, const char *path, InputStream *is, size_t size, int mode, long mtime, long atime, int timeout_ms) {
-   static const char *SSH2CLIENT_SCPPUT_ERROR = "SSH2CLIENT-SCPPUT-ERROR";
+    static const char *SSH2CLIENT_SCPPUT_ERROR = "SSH2CLIENT-SCPPUT-ERROR";
 
-   SSH2Channel *c = registerChannelUnlockedRaw(scpPutRaw(xsink, path, size, mode, mtime, atime, timeout_ms));
+    std::unique_ptr<SSH2Channel> c(registerChannelUnlockedRaw(scpPutRaw(xsink, path, size, mode, mtime, atime, timeout_ms)));
 
-   char buffer[4096];
-   while (size > 0) {
-      int64 r = is->read(buffer, QORE_MIN(sizeof(buffer), size), xsink);
-      if (*xsink) {
-         break;
-      }
-      if (r == 0) {
-         xsink->raiseException(SSH2CLIENT_SCPPUT_ERROR, "Unexpected end of stream");
-         break;
-      }
-      c->write(xsink, buffer, r, 0, timeout_ms);
-      if (*xsink) {
-         break;
-      }
-      size -= r;
-   }
+    char buffer[4096];
+    while (size > 0) {
+        int64 r = is->read(buffer, QORE_MIN(sizeof(buffer), size), xsink);
+        if (*xsink) {
+            break;
+        }
+        if (r == 0) {
+            xsink->raiseException(SSH2CLIENT_SCPPUT_ERROR, "Unexpected end of stream");
+            break;
+        }
+        c->write(xsink, buffer, r, 0, timeout_ms);
+        if (*xsink) {
+            break;
+        }
+        size -= r;
+    }
 
-   if (!c->sendEof(xsink, timeout_ms)) {
-      if (!c->waitEof(xsink, timeout_ms)) {
-         c->waitClosed(xsink, timeout_ms);
-      }
-   }
-
-   c->destructor();
-   delete c;
+    if (!c->sendEof(xsink, timeout_ms)) {
+        if (!c->waitEof(xsink, timeout_ms)) {
+            c->waitClosed(xsink, timeout_ms);
+        }
+    }
 }
 
 #ifdef _QORE_HAS_SOCKET_PERF_API

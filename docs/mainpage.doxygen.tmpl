@@ -105,6 +105,9 @@ stdout.printf("exit status: %d\n", chan.getExitStatus());@endcode
 
     @subsection ssh2v14 Version 1.4
     - added support for the data provider API
+    - fixed a core dump when a @ref Qore::SSH2::SFTPClient "SFTPClient" disconnection occurs with open
+      @ref Qore::SSH2::SSH2Channel "SSH2Channel" objects
+      (<a href="https://github.com/qorelanguage/qore/issues/3943">issue 3943</a>)
     - implemented support for serializing connection objects
       (<a href="https://github.com/qorelanguage/qore/issues/3696">issue 3696</a>)
     - implemented support for auto-reconnecting lost connections in the
