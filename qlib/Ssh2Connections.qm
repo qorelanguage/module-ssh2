@@ -1,7 +1,7 @@
 # -*- mode: qore; indent-tabs-mode: nil -*-
 #! @file Ssh2Connections.qm SSH2 module connection implementations
 
-/*  Ssh2Connections.qm Copyright 2013 - 2019 Qore Technologies, s.r.o.
+/*  Ssh2Connections.qm Copyright 2013 - 2020 Qore Technologies, s.r.o.
 
     Permission is hereby granted, free of charge, to any person obtaining a
     copy of this software and associated documentation files (the "Software"),
@@ -23,7 +23,7 @@
 */
 
 # minimum required Qore version
-%requires qore >= 0.9.4
+%requires qore >= 0.9.5
 
 # require type definitions everywhere
 %require-types
@@ -34,17 +34,20 @@
 %strict-args
 
 %requires(reexport) ssh2
-#%requires Util >= 1.0
-%requires(reexport) ConnectionProvider >= 1.3
+%requires(reexport) ConnectionProvider >= 1.4
 
 %new-style
 
 module Ssh2Connections {
-    version = "1.3";
+    version = "1.4";
     desc = "user module for providing SSH2 connections";
     author = "David Nichols <david@qore.org>";
     url = "http://qore.org";
     license = "MIT";
+    init = sub () {
+        ConnectionSchemeCache::registerScheme("ssh", Ssh2ClientConnection::ConnectionScheme);
+        ConnectionSchemeCache::registerScheme("sftp", SftpConnection::ConnectionScheme);
+    };
 }
 
 /** @mainpage Ssh2Connections Module
@@ -70,6 +73,10 @@ module Ssh2Connections {
 
     @section ssh2connections_relnotes Ssh2Connections Module Release History
 
+    @subsection ssh2connections_v1_4 Ssh2Connections v1.4
+    - implemented support for a data provider scheme cache and rich option information for connections
+      (<a href="https://github.com/qorelanguage/qore/issues/4025">issue 4025</a>)
+
     @subsection ssh2connections_v1_3 Ssh2Connections v1.3
     - removed the obsolete \c Ssh2ClientConnection::getConstructorInfo() and \c SftpConnection::getConstructorInfo()
       methods as connection serialization is a much more elegant and maintainable solution
@@ -90,203 +97,169 @@ module Ssh2Connections {
 
 #! the Ssh2Connections namespace contains all the definitions in the Ssh2Connections module
 public namespace Ssh2Connections {
-    #! abstract base class for \c ssh module connections
-    /** supports the following option:
-        - \c "keyfile": a path to a private key file in PEM format to use for key-based authentication
+#! abstract base class for \c ssh module connections
+/** supports the following option:
+    - \c "keyfile": a path to a private key file in PEM format to use for key-based authentication
+*/
+public class AbstractSsh2Connection inherits ConnectionProvider::AbstractConnectionWithInfo {
+    #! creates the AbstractSsh2Connection object
+    /** @param name the name of the connection
+        @param description connection description
+        @param url connection URL (potentially with password info)
+        @param attributes various attributes. See below
+        @param options connection options
+
+        See @ref AbstractConnection::constructor() for \c attributes and \c options reference.
     */
-    public class AbstractSsh2Connection inherits ConnectionProvider::AbstractConnection {
-        #! DEPRECATED: creates the AbstractSsh2Connection object
-        /** @param name the name of the connection
-            @param desc connection description
-            @param url connection URL
-            @param monitor monitoring flag
-            @param opts connection options
-            @param urlh broken down URL hash (as returned by @ref Qore::parse_url())
+    constructor(string name, string description, string url, hash<auto> attributes = {}, hash<auto> options = {})
+        : AbstractConnectionWithInfo(name, description, url, attributes, options) {
+    }
+}
 
-            @deprecated since Qore 0.9
-        */
-        deprecated
-        constructor(string name, string desc, string url, bool monitor, *hash opts, hash urlh)
-            : AbstractConnection(name, desc, url, {"monitor": monitor}, opts ?? {}) {
-        }
-
-        #! creates the AbstractSsh2Connection object
-        /** @param name the name of the connection
-            @param description connection description
-            @param url connection URL (potentially with password info)
-            @param attributes various attributes. See below
-            @param options connection options
-
-            See @ref AbstractConnection::constructor() for \c attributes and \c options reference.
-         */
-        constructor(string name, string description, string url, hash<auto> attributes = {}, hash<auto> options = {})
-            : AbstractConnection(name, description, url, attributes, options) {
-        }
-
-        #! returns valid options
-        /** @return a hash with a single key: \c "keyfile"
-        */
-        hash<auto> getOptions() {
-            return {
-                "keyfile": True,
-            };
-        }
+#! class for SSH2 client session connections; returns an object of class @ref Qore::SSH2::SSH2Client
+/** supports the following option:
+    - \c "keyfile": a path to a private key file in PEM format to use for key-based authentication (environment variables can be prefixed with \c "$" in the path (or optionally enclosed in curly brackets as in \c "${var}") and will be substituted with the value of the environment variable)
+*/
+public class Ssh2ClientConnection inherits AbstractSsh2Connection {
+    public {
+        #! Connection entry info
+        const ConnectionScheme = <ConnectionSchemeInfo>{
+            "cls": Class::forName("Ssh2ClientConnection"),
+            "options": HttpConnection::ConnectionScheme.options + {
+                "keyfile": <ConnectionOptionInfo>{
+                    "type": "string",
+                    "desc": "a path to a private key file in PEM format to use for key-based authentication",
+                },
+            },
+        };
     }
 
-    #! class for SSH2 client session connections; returns an object of class @ref Qore::SSH2::SSH2Client
-    /** supports the following option:
-        - \c "keyfile": a path to a private key file in PEM format to use for key-based authentication (environment variables can be prefixed with \c "$" in the path (or optionally enclosed in curly brackets as in \c "${var}") and will be substituted with the value of the environment variable)
+    #! creates the Ssh2ClientConnection object
+    /** @param name the name of the connection
+        @param description connection description
+        @param url connection URL (potentially with password info)
+        @param attributes various attributes. See below
+        @param options connection options
+
+        See @ref AbstractConnection::constructor() for \c attributes and \c options reference.
     */
-    public class Ssh2ClientConnection inherits AbstractSsh2Connection {
-        #! DEPRECATED: creates the Ssh2ClientConnection object
-        /** @param name the name of the connection
-            @param desc connection description
-            @param url connection URL
-            @param monitor monitoring flag
-            @param opts connection options
-            @param urlh broken down URL hash (as returned by @ref Qore::parse_url())
-
-            @deprecated since Qore 0.9
-        */
-        deprecated
-        constructor(string name, string desc, string url, bool monitor, *hash opts, hash urlh)
-            : AbstractSsh2Connection(name, desc, url, {"monitor": monitor}, opts ?? {}) {
-        }
-
-        #! creates the Ssh2ClientConnection object
-        /** @param name the name of the connection
-            @param description connection description
-            @param url connection URL (potentially with password info)
-            @param attributes various attributes. See below
-            @param options connection options
-
-            See @ref AbstractConnection::constructor() for \c attributes and \c options reference.
-         */
-        constructor(string name, string description, string url, hash<auto> attributes = {}, hash<auto> options = {})
-            : AbstractSsh2Connection(name, description, url, attributes, options) {
-        }
-
-        #! returns \c "ssh2"
-        string getType() {
-            return "ssh2";
-        }
-
-        #! returns a @ref Qore::SSH2::SSH2Client object
-        /** @param connect if @ref Qore::True "True", then @ref Qore::SSH2::SSH2Client::connect() is called
-            @param rtopts this connection type does not accept any runtime options, so this parameter is ignored
-
-            @return a @ref Qore::SSH2::SSH2Client object
-        */
-        private Qore::SSH2::SSH2Client getImpl(bool connect = True, *hash<auto> rtopts) {
-            SSH2Client sc(url);
-            if (opts.keyfile)
-                sc.setKeys(opts.keyfile);
-            if (connect) {
-                sc.connect();
-            }
-            return sc;
-        }
-
-        #! DEPRECATED: static constructor
-        /** @deprecated since Qore 0.9 in favor of new constructor and Qore::Reflection
-         */
-        deprecated
-        static SftpConnection make(string name, string desc, string url, bool monitor, *hash opts, hash urlh) {
-            return new SftpConnection(name, desc, url, {"monitor": monitor}, opts ?? {});
-        }
+    constructor(string name, string description, string url, hash<auto> attributes = {}, hash<auto> options = {})
+        : AbstractSsh2Connection(name, description, url, attributes, options) {
     }
 
-    #! class for SFTP connections; returns an object of class @ref Qore::SSH2::SFTPClient for acquiring files from or posting files to SFTP servers
-    /** supports the following option:
-        - \c "keyfile": a path to a private key file in PEM format to use for key-based authentication (environment variables can be prefixed with \c "$" in the path (or optionally enclosed in curly brackets as in \c "${var}") and will be substituted with the value of the environment variable)
+    #! returns \c "ssh2"
+    string getType() {
+        return "ssh2";
+    }
 
-        additionally, the following runtime options are supported in getImpl():
+    #! returns a @ref Qore::SSH2::SSH2Client object
+    /** @param connect if @ref Qore::True "True", then @ref Qore::SSH2::SSH2Client::connect() is called
+        @param rtopts this connection type does not accept any runtime options, so this parameter is ignored
+
+        @return a @ref Qore::SSH2::SSH2Client object
+    */
+    private Qore::SSH2::SSH2Client getImpl(bool connect = True, *hash<auto> rtopts) {
+        SSH2Client sc(url);
+        if (opts.keyfile)
+            sc.setKeys(opts.keyfile);
+        if (connect) {
+            sc.connect();
+        }
+        return sc;
+    }
+
+    #! Returns the ConnectionSchemeInfo hash for this object
+    private hash<ConnectionSchemeInfo> getConnectionSchemeInfoImpl() {
+        return ConnectionScheme;
+    }
+}
+
+#! class for SFTP connections; returns an object of class @ref Qore::SSH2::SFTPClient for acquiring files from or posting files to SFTP servers
+/** supports the following option:
+    - \c "keyfile": a path to a private key file in PEM format to use for key-based authentication (environment variables can be prefixed with \c "$" in the path (or optionally enclosed in curly brackets as in \c "${var}") and will be substituted with the value of the environment variable)
+
+    additionally, the following runtime options are supported in getImpl():
+    - \c "path": overrides the path component in the URL at runtime
+    - \c "path_add": appends the given string to the path component of the URL at runtime
+*/
+public class SftpConnection inherits AbstractSsh2Connection {
+    public {
+        #! Connection entry info
+        const ConnectionScheme = <ConnectionSchemeInfo>{
+            "cls": Class::forName("Ssh2ClientConnection"),
+            "options": HttpConnection::ConnectionScheme.options + {
+                "keyfile": <ConnectionOptionInfo>{
+                    "type": "string",
+                    "desc": "a path to a private key file in PEM format to use for key-based authentication",
+                },
+            },
+        };
+    }
+
+    #! creates the SftpConnection object
+    /** @param name the name of the connection
+        @param description connection description
+        @param url connection URL (potentially with password info)
+        @param attributes various attributes. See below
+        @param options connection options
+
+        See @ref AbstractConnection::constructor() for \c attributes and \c options reference.
+    */
+    constructor(string name, string description, string url, hash<auto> attributes = {}, hash<auto> options = {})
+        : AbstractSsh2Connection(name, description, url, attributes, options) {
+    }
+
+    #! returns \c "sftp"
+    string getType() {
+        return "sftp";
+    }
+
+    #! returns runtime options
+    /** return a hash with the following keys reflecting support for the corresponding runtime options in getImpl():
         - \c "path": overrides the path component in the URL at runtime
         - \c "path_add": appends the given string to the path component of the URL at runtime
     */
-    public class SftpConnection inherits AbstractSsh2Connection {
-        #! DEPRECATED: creates the SftpConnection object
-        /** @param name the name of the connection
-            @param desc connection description
-            @param url connection URL
-            @param monitor monitoring flag
-            @param opts connection options
-            @param urlh broken down URL hash (as returned by @ref Qore::parse_url())
-
-            @deprecated since Qore 0.9
-        */
-        deprecated
-        constructor(string name, string desc, string url, bool monitor, *hash opts, hash urlh)
-            : AbstractSsh2Connection(name, desc, url, {"monitor": monitor}, opts ?? {}) {
-        }
-
-        #! creates the SftpConnection object
-        /** @param name the name of the connection
-            @param description connection description
-            @param url connection URL (potentially with password info)
-            @param attributes various attributes. See below
-            @param options connection options
-
-            See @ref AbstractConnection::constructor() for \c attributes and \c options reference.
-         */
-        constructor(string name, string description, string url, hash<auto> attributes = {}, hash<auto> options = {})
-            : AbstractSsh2Connection(name, description, url, attributes, options) {
-        }
-
-        #! returns \c "sftp"
-        string getType() {
-            return "sftp";
-        }
-
-        #! returns runtime options
-        /** return a hash with the following keys reflecting support for the corresponding runtime options in getImpl():
-            - \c "path": overrides the path component in the URL at runtime
-            - \c "path_add": appends the given string to the path component of the URL at runtime
-        */
-        *hash<auto> getRuntimeOptions() {
-            return {
-                "path": True,
-                "path_add": True,
-            };
-        }
-
-        #! returns a @ref Qore::SSH2::SFTPClient object
-        /** @param connect if @ref Qore::True "True", then @ref Qore::SSH2::SFTPClient::connect() is called and also if there is any path in the URL then @ref Qore::SSH2::SFTPClient::chdir() is called on that path
-            @param rtopts this object takes the following runtime options:
-            - \c "path": overrides the path component in the URL at runtime
-            - \c "path_add": appends the given string to the path component of the URL at runtime
-
-            @return a @ref Qore::SSH2::SFTPClient object
-        */
-        private Qore::SSH2::SFTPClient getImpl(bool connect = True, *hash<auto> rtopts) {
-            *string rtpath = getRuntimePath(rtopts);
-            SFTPClient sc(url);
-            if (opts.keyfile)
-                sc.setKeys(opts.keyfile);
-            if (connect) {
-                sc.connect();
-                if (rtpath.val())
-                    sc.chdir(rtpath);
-            }
-            return sc;
-        }
-
-        private *string getRuntimePath(*hash<auto> rtopts) {
-            *string rtpath = rtopts.path ?* urlh.path;
-            if (rtopts.path_add.val()) {
-                if (rtpath !~ /\/$/ && rtopts.path_add !~ /^\//)
-                    rtpath += "/";
-                rtpath += rtopts.path_add;
-            }
-            return rtpath;
-        }
-
-        #! DEPRECATED: static constructor
-        /** @deprecated since Qore 0.9 in favor of new constructor and Qore::Reflection
-         */
-        deprecated
-        static SftpConnection make(string name, string desc, string url, bool monitor, *hash opts, hash urlh) {
-            return new SftpConnection(name, desc, url, {"monitor": monitor}, opts ?? {});
-        }
+    *hash<auto> getRuntimeOptions() {
+        return {
+            "path": True,
+            "path_add": True,
+        };
     }
+
+    #! returns a @ref Qore::SSH2::SFTPClient object
+    /** @param connect if @ref Qore::True "True", then @ref Qore::SSH2::SFTPClient::connect() is called and also if there is any path in the URL then @ref Qore::SSH2::SFTPClient::chdir() is called on that path
+        @param rtopts this object takes the following runtime options:
+        - \c "path": overrides the path component in the URL at runtime
+        - \c "path_add": appends the given string to the path component of the URL at runtime
+
+        @return a @ref Qore::SSH2::SFTPClient object
+    */
+    private Qore::SSH2::SFTPClient getImpl(bool connect = True, *hash<auto> rtopts) {
+        *string rtpath = getRuntimePath(rtopts);
+        SFTPClient sc(url);
+        if (opts.keyfile)
+            sc.setKeys(opts.keyfile);
+        if (connect) {
+            sc.connect();
+            if (rtpath.val())
+                sc.chdir(rtpath);
+        }
+        return sc;
+    }
+
+    private *string getRuntimePath(*hash<auto> rtopts) {
+        *string rtpath = rtopts.path ?* urlh.path;
+        if (rtopts.path_add.val()) {
+            if (rtpath !~ /\/$/ && rtopts.path_add !~ /^\//)
+                rtpath += "/";
+            rtpath += rtopts.path_add;
+        }
+        return rtpath;
+    }
+
+    #! Returns the ConnectionSchemeInfo hash for this object
+    private hash<ConnectionSchemeInfo> getConnectionSchemeInfoImpl() {
+        return ConnectionScheme;
+    }
+}
 }
