@@ -44,7 +44,7 @@ gosu qore:qore cp /home/qore/.ssh/id_rsa.pub /home/qore/.ssh/authorized_keys
 chmod 600 /home/qore/.ssh/authorized_keys
 
 # turn on sshd debugging output
-#echo LogLevel DEBUG3 >> /etc/ssh/sshd_config
+echo LogLevel DEBUG3 >> /etc/ssh/sshd_config
 
 # own everything by the qore user
 chown -R qore:qore ${MODULE_SRC_DIR} /home/qore
