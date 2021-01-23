@@ -83,7 +83,7 @@ set(QORE_DOX_TMPL_SRC
   docs/mainpage.doxygen.tmpl
 )
 
-add_library(${module_name} SHARED ${CPP_SRC} ${QPP_SOURCES})
+add_library(${module_name} MODULE ${CPP_SRC} ${QPP_SOURCES})
 set(MODULE_DOX_INPUT ${CMAKE_BINARY_DIR}/mainpage.dox ${_dox_src})
 qore_external_binary_module(${module_name} ${PROJECT_VERSION} ${LIBSSH2_LDFLAGS})
 
