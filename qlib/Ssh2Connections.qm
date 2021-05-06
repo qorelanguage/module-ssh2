@@ -1,7 +1,7 @@
 # -*- mode: qore; indent-tabs-mode: nil -*-
 #! @file Ssh2Connections.qm SSH2 module connection implementations
 
-/*  Ssh2Connections.qm Copyright 2013 - 2020 Qore Technologies, s.r.o.
+/*  Ssh2Connections.qm Copyright 2013 - 2021 Qore Technologies, s.r.o.
 
     Permission is hereby granted, free of charge, to any person obtaining a
     copy of this software and associated documentation files (the "Software"),
@@ -125,7 +125,7 @@ public class Ssh2ClientConnection inherits AbstractSsh2Connection {
         #! Connection entry info
         const ConnectionScheme = <ConnectionSchemeInfo>{
             "cls": Class::forName("Ssh2ClientConnection"),
-            "options": HttpConnection::ConnectionScheme.options + {
+            "options": {
                 "keyfile": <ConnectionOptionInfo>{
                     "type": "string",
                     "desc": "a path to a private key file in PEM format to use for key-based authentication",
