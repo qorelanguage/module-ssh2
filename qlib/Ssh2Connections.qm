@@ -187,7 +187,7 @@ public class SftpConnection inherits AbstractSsh2Connection {
         #! Connection entry info
         const ConnectionScheme = <ConnectionSchemeInfo>{
             "cls": Class::forName("Ssh2ClientConnection"),
-            "options": HttpConnection::ConnectionScheme.options + {
+            "options": {
                 "keyfile": <ConnectionOptionInfo>{
                     "type": "string",
                     "desc": "a path to a private key file in PEM format to use for key-based authentication",
