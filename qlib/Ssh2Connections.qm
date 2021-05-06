@@ -161,7 +161,7 @@ public class Ssh2ClientConnection inherits AbstractSsh2Connection {
     private Qore::SSH2::SSH2Client getImpl(bool connect = True, *hash<auto> rtopts) {
         SSH2Client sc(url);
         if (opts.keyfile)
-            sc.setKeys(opts.keyfile);
+            sc.setKeys(substitute_env_vars(opts.keyfile));
         if (connect) {
             sc.connect();
         }
@@ -238,7 +238,7 @@ public class SftpConnection inherits AbstractSsh2Connection {
         *string rtpath = getRuntimePath(rtopts);
         SFTPClient sc(url);
         if (opts.keyfile)
-            sc.setKeys(opts.keyfile);
+            sc.setKeys(substitute_env_vars(opts.keyfile));
         if (connect) {
             sc.connect();
             if (rtpath.val())
