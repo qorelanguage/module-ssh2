@@ -6,7 +6,7 @@
     Qore Programming Language
 
     Copyright (C) 2009 Wolfgang Ritzinger
-    Copyright (C) 2010 - 2019 Qore Technologies, s.r.o.
+    Copyright (C) 2010 - 2021 Qore Technologies, s.r.o.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -36,7 +36,7 @@
 // thread-local storage for password for faked keyboard-interactive authentication
 TLKeyboardPassword keyboardPassword;
 
-static QoreNamespace ssh2ns("SSH2"); // namespace
+static QoreNamespace ssh2ns("Qore::SSH2"); // namespace
 
 // for verifying the minimum required version of the library
 static const char *qore_libssh2_version = 0;
