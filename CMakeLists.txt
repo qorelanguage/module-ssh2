@@ -84,6 +84,7 @@ set(QORE_DOX_TMPL_SRC
 )
 
 add_library(${module_name} MODULE ${CPP_SRC} ${QPP_SOURCES})
+target_link_libraries(${module_name} ${CMAKE_THREAD_LIBS_INIT})
 set(MODULE_DOX_INPUT ${CMAKE_BINARY_DIR}/mainpage.dox ${_dox_src})
 qore_external_binary_module(${module_name} ${PROJECT_VERSION} ${LIBSSH2_LDFLAGS})
 
