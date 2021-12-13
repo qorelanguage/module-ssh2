@@ -6,7 +6,7 @@
     libssh2 SFTP client integration into qore
 
     Copyright 2009 Wolfgang Ritzinger
-    Copyright 2010 - 2019 Qore Technologies, s.r.o.
+    Copyright 2010 - 2021 Qore Technologies, s.r.o.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -26,7 +26,7 @@
 #include "SFTPClient.h"
 #include "QC_SSH2Base.h"
 
-static QoreHashNode *attr2hash(const LIBSSH2_SFTP_ATTRIBUTES &attr, ExceptionSink* xsink) {
+static QoreHashNode* attr2hash(const LIBSSH2_SFTP_ATTRIBUTES& attr, ExceptionSink* xsink) {
     ReferenceHolder<QoreHashNode> ret(new QoreHashNode(hashdeclSsh2StatInfo, xsink), xsink);
 
     if (attr.flags & LIBSSH2_SFTP_ATTR_SIZE)
@@ -228,7 +228,7 @@ hash<SftpDirInfo> SFTPClient::list(*string path, timeout timeout = 60s) [flags=R
 
 //! Returns a list of directory information with detailed information for files, links, and directories; throws an exception if any errors occur
 /** @par Example:
-    @code{.py} listlist<hash<SftpFileInfo>> l = sftpclient.listFull(path); @endcode
+    @code{.py} list<hash<SftpFileInfo>> l = sftpclient.listFull(path); @endcode
 
     If a connection has not yet been established, it is implicitly attempted here before executing the method.
 
