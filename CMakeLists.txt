@@ -1,9 +1,6 @@
-# TODO: Add defines for solaris and hp-ux.
-# TODO: Maybe not depend on cmake 3 but the project command is nice in cmake 3.
-
 cmake_minimum_required(VERSION 3.0.0)
 
-project(qore-ssh2-module VERSION 1.3.0)
+project(qore-ssh2-module VERSION 1.4.0)
 
 include(CheckCXXCompilerFlag)
 include(CheckCXXSymbolExists)
