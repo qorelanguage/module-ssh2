@@ -1,7 +1,7 @@
 # -*- mode: qore; indent-tabs-mode: nil -*-
 #! @file SftpPoller.qm SftpPoller module implementation for polling for files with the SFTP protocol
 
-/*  SftpPoller.qm Copyright (C) 2014 - 2020 Qore Technologies, s.r.o.
+/*  SftpPoller.qm Copyright (C) 2014 - 2022 Qore Technologies, s.r.o.
 
     Permission is hereby granted, free of charge, to any person obtaining a
     copy of this software and associated documentation files (the "Software"),
@@ -23,7 +23,7 @@
 */
 
 # make sure we have the required qore version
-%requires qore >= 0.9.4
+%requires qore >= 1.0
 %requires(reexport) SftpPollerUtil
 %requires(reexport) ssh2
 
@@ -33,15 +33,11 @@
 %requires DataProvider
 
 module SftpPoller {
-    version = "1.3";
+    version = "1.4.1";
     desc = "SftpPoller module";
     author = "David Nichols <david@qore.org>";
     url = "http://qore.org";
     license = "MIT";
-    init = sub () {
-        # register the event data type
-        DataProvider::registerType("qore/sftp/event", new SftpPollerFileEventInfoDataType());
-    };
 }
 
 /** @mainpage SftpPoller Module
@@ -83,11 +79,8 @@ hash opts = (
     "log_info": info,
     "log_detail": detail,
     "log_debug": debug,
-    );
+    );    @section sftppollerutilv1_3_1 Version 1.3.1
 
-SFTPClient sc("sftp://user@pass:localhost");
-SftpPoller poller(sc, opts);
-poller.waitStop();
     @endcode
 
     Note that @ref SftpPoller::SftpPoller::stopNoWait() "SftpPoller::stopNoWait()" was called in the event thread because calling
@@ -103,7 +96,11 @@ poller.waitStop();
 
     @section sftppollerrelnotes SftpPoller Module Release Notes
 
-    @section sftppollerv1_3 Version 1.3
+    @section sftppollerv1_4_1 Version 1.4.1
+    - fixed a bug registering the sftp event type
+      (<a href="https://github.com/qorelanguage/qore/issues/4389">issue 4389</a>)
+
+    @section sftppollerv1_3_0 Version 1.3.0
     - added support for data provider APIs
 
     @section sftppollerv1_0 Version 1.0

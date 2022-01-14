@@ -1,7 +1,7 @@
 # -*- mode: qore; indent-tabs-mode: nil -*-
 #! @file SftpPollerUtil.qm provides definitions for the SftpPoller module
 
-/*  SftpPollerUtil.qm Copyright (C) 2014 - 2020 Qore Technologies, s.r.o.
+/*  SftpPollerUtil.qm Copyright (C) 2014 - 2022 Qore Technologies, s.r.o.
 
     Permission is hereby granted, free of charge, to any person obtaining a
     copy of this software and associated documentation files (the "Software"),
@@ -23,7 +23,7 @@
 */
 
 # make sure we have the required qore version
-%requires qore >= 0.9.4
+%requires qore >= 1.0
 
 # requires ssh2 functionality
 %requires (reexport) ssh2
@@ -34,7 +34,7 @@
 %requires DataProvider
 
 module SftpPollerUtil {
-    version = "1.3";
+    version = "1.4.1";
     desc = "SftpPollerUtil module";
     author = "David Nichols <david@qore.org>";
     url = "http://qore.org";
@@ -52,6 +52,13 @@ module SftpPollerUtil {
     The SftpPollerUtil module defines types for the <a href="../../SftpPoller/html/index.html">SftpPoller</a> module.
 
     @section sftppollerutilrelnotes SftpPollerUtil Module Release Notes
+
+    @section sftppollerv1_4_1 Version 1.4.1
+    - fixed a bug registering the sftp event type
+      (<a href="https://github.com/qorelanguage/qore/issues/4389">issue 4389</a>)
+
+    @section sftppollerv1_3_0 Version 1.3.0
+    - added support for data provider APIs
 
     @section sftppollerutilv1_0 Version 1.0
     - initial release

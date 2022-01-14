@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.0.0)
 
-project(qore-ssh2-module VERSION 1.4.0)
+project(qore-ssh2-module VERSION 1.4.1)
 
 include(CheckCXXCompilerFlag)
 include(CheckCXXSymbolExists)
