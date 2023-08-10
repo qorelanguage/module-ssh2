@@ -103,6 +103,10 @@ stdout.printf("exit status: %d\n", chan.getExitStatus());@endcode
 
     @section ssh2releasenotes Release Notes
 
+    @subsection ssh2v142 Version 1.4.2
+    - fixed a bug where the \c sftp connection scheme was unusable
+      (<a href="https://github.com/qorelanguage/qore/issues/4755">issue 4755</a>)
+
     @subsection ssh2v141 Version 1.4.1
     - fixed a bug where the sftp event type was registered twice
       (<a href="https://github.com/qorelanguage/qore/issues/4389">issue 4389</a>)
