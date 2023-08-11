@@ -103,15 +103,15 @@ stdout.printf("exit status: %d\n", chan.getExitStatus());@endcode
 
     @section ssh2releasenotes Release Notes
 
-    @subsection ssh2v142 Version 1.4.2
+    @subsection ssh2v142 ssh Module Version 1.4.2
     - fixed a bug where the \c sftp connection scheme was unusable
       (<a href="https://github.com/qorelanguage/qore/issues/4755">issue 4755</a>)
 
-    @subsection ssh2v141 Version 1.4.1
+    @subsection ssh2v141 ssh Module Version 1.4.1
     - fixed a bug where the sftp event type was registered twice
       (<a href="https://github.com/qorelanguage/qore/issues/4389">issue 4389</a>)
 
-    @subsection ssh2v14 Version 1.4
+    @subsection ssh2v14 ssh Module Version 1.4
     - added support for the data provider API
     - fixed a core dump when a @ref Qore::SSH2::SFTPClient "SFTPClient" disconnection occurs with open
       @ref Qore::SSH2::SSH2Channel "SSH2Channel" objects
@@ -122,7 +122,7 @@ stdout.printf("exit status: %d\n", chan.getExitStatus());@endcode
       <a href="../../SftpPoller/html/index.html">SftpPoller</a> module
       (<a href="https://github.com/qorelanguage/qore/issues/1846">issue 1846</a>)
 
-    @subsection ssh2v13 Version 1.3
+    @subsection ssh2v13 ssh Module Version 1.3
     - added support for complex types in public APIs
       (<a href="https://github.com/qorelanguage/qore/issues/3540">issue 3540</a>)
     - added the following base class APIs:
@@ -137,7 +137,7 @@ stdout.printf("exit status: %d\n", chan.getExitStatus());@endcode
     - updated the <a href="../../Ssh2Connections/html/index.html">Ssh2Connections</a> module to support the updated
       abstract connection API (<a href="https://github.com/qorelanguage/qore/issues/2628">issue 2628</a>)
 
-    @subsection ssh2v12 Version 1.2
+    @subsection ssh2v12 ssh Module Version 1.2
     - added the <a href="../../Ssh2Connections/html/index.html">Ssh2Connections</a> user module
     - added the following @ref Qore::SSH2::SFTPClient "SFTPClient" methods supporting streams:
       - @ref Qore::SSH2::SFTPClient::get() "SFTPClient::get()"
@@ -145,7 +145,7 @@ stdout.printf("exit status: %d\n", chan.getExitStatus());@endcode
     - fixed bugs retrieving zero-length text files with @ref Qore::SSH2::SFTPClient::getFile() "SFTPClient::getFile()", @ref Qore::SSH2::SFTPClient::getTextFile() "SFTPClient::getTextFile()", @ref Qore::SSH2::SFTPClient::get() "SFTPClient::get()", and @ref Qore::SSH2::SFTPClient::retrieveFile() "SFTPClient::retrieveFile()" (<a href="https://github.com/qorelanguage/qore/issues/2549">issue 2549</a>)
     - fixed bugs streaming data with @ref Qore::SSH2::SFTPClient::transferFile() "SFTPClient::transferFile()" and @ref Qore::SSH2::SFTPClient::put() "SFTPClient::put()" (<a href="https://github.com/qorelanguage/qore/issues/2633">issue 2633</a>)
 
-    @subsection ssh2v11 Version 1.1
+    @subsection ssh2v11 ssh Module Version 1.1
     - argument error in @ref Qore::SSH2::SFTPClient "SFTPClient" disconnection with socket errors causes a crash (<a href="https://github.com/qorelanguage/qore/issues/714">issue 765</a>)
     - infinite loop in <a href="../../SftpPoller/html/index.html">SftpPoller</a> polling when PO_NO_PROCESS_CONTROL is not set and no sleep option is given (<a href="https://github.com/qorelanguage/qore/issues/773">issue 773</a>)
     - implement support for additional directories in <a href="../../SftpPoller/html/index.html">SftpPoller</a> (<a href="https://github.com/qorelanguage/qore/issues/753">issue 753</a>)
@@ -156,7 +156,7 @@ stdout.printf("exit status: %d\n", chan.getExitStatus());@endcode
     - streaming from SFTP server impossible without user re-implementing <a href="../../SftpPoller/html/index.html">SftpPoller</a> methods (<a href="https://github.com/qorelanguage/qore/issues/1557">issue 1557</a>)
     - fixed a bug in libssh2 library initialization error reporting (<a href="https://github.com/qorelanguage/qore/issues/1696">issue 1696</a>)
 
-    @subsection ssh2v10 Version 1.0
+    @subsection ssh2v10 ssh Module Version 1.0
     - fixed crashing bugs handling errors and handle scope in the @ref Qore::SSH2::SFTPClient "SFTPClient" class
     - added the <a href="../../SftpPoller/html/index.html">SftpPoller</a> user module
     - force socket disconnect in case of a timeout error when trying to close a file descriptor
