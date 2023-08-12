@@ -102,7 +102,7 @@ This RPM provides API documentation, test and example programs
 
 %files doc
 %defattr(-,root,root,-)
-%doc docs/ssh2/ docs/SftpPoller/ docs/SftpPollerUtil docs/Ssh2Connection test/
+%doc docs/ssh2/ docs/SftpPoller/ docs/SftpPollerUtil/ docs/Ssh2Connections/ test/
 
 %changelog
 * Sat Aug 12 2023 David Nichols <david@qore.org> - 1.4.2
