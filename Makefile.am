@@ -26,7 +26,7 @@ EXTRA_DIST = COPYING.LGPL COPYING.MIT AUTHORS README \
 	test/SFTPClient.qtest \
 	test/SftpPollerMultiDirs.qtest \
 	test/SftpPoller.qtest \
-        $(USER_MODULES) \
+	$(USER_MODULES) \
 	qore-ssh2-module.spec
 
 ACLOCAL_AMFLAGS=-I m4

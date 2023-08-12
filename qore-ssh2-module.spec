@@ -48,9 +48,10 @@ URL: http://www.qoretechnologies.com/qore
 Source: http://prdownloads.sourceforge.net/qore/%{name}-%{version}.tar.bz2
 #Source0: %{name}-%{version}.tar.bz2
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
+BuildRequires: cmake >= 3.5
 BuildRequires: gcc-c++
-BuildRequires: qore-devel >= 0.9
-BuildRequires: qore
+BuildRequires: qore-devel >= 1.18
+BuildRequires: qore >= 1.18
 BuildRequires: libssh2-devel >= 1.1
 BuildRequires: openssl-devel
 Requires: /usr/bin/env
@@ -66,17 +67,19 @@ SSH2 module for the Qore Programming Language.
 
 %prep
 %setup -q
-./configure RPM_OPT_FLAGS="$RPM_OPT_FLAGS" --prefix=/usr --disable-debug
 
 %build
-%{__make}
+%if 0%{?el7}
+# enable devtoolset7
+. /opt/rh/devtoolset-7/enable
+%endif
+export CXXFLAGS="%{?optflags}"
+cmake -DCMAKE_INSTALL_PREFIX=%{_prefix} -DCMAKE_BUILD_TYPE=RELWITHDEBINFO -DCMAKE_SKIP_RPATH=1 -DCMAKE_SKIP_INSTALL_RPATH=1 -DCMAKE_SKIP_BUILD_RPATH=1 -DCMAKE_PREFIX_PATH=${_prefix}/lib64/cmake/Qore .
+make %{?_smp_mflags}
+make %{?_smp_mflags} docs
 
 %install
-rm -rf $RPM_BUILD_ROOT
-mkdir -p $RPM_BUILD_ROOT/%{module_dir}
-mkdir -p $RPM_BUILD_ROOT/%{user_module_dir}
-mkdir -p $RPM_BUILD_ROOT/usr/share/doc/qore-ssh2-module
-make install DESTDIR=$RPM_BUILD_ROOT
+make DESTDIR=%{buildroot} install %{?_smp_mflags}
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -99,10 +102,10 @@ This RPM provides API documentation, test and example programs
 
 %files doc
 %defattr(-,root,root,-)
-%doc docs/ssh2/ docs/SftpPoller/ test/
+%doc docs/ssh2/ docs/SftpPoller/ docs/SftpPollerUtil docs/Ssh2Connection test/
 
 %changelog
-* Thu Aug 10 2023 David Nichols <david@qore.org> - 1.4.2
+* Sat Aug 12 2023 David Nichols <david@qore.org> - 1.4.2
 - updated to version 1.4.2
 
 * Fri Jan 14 2022 David Nichols <david@qore.org> - 1.4.1
