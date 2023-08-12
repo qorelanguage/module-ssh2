@@ -51,9 +51,11 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: cmake >= 3.5
 BuildRequires: gcc-c++
 BuildRequires: qore-devel >= 1.18
+BuildRequires: qore-stdlib >= 1.18
 BuildRequires: qore >= 1.18
 BuildRequires: libssh2-devel >= 1.1
 BuildRequires: openssl-devel
+BuildRequires: doxygen
 Requires: /usr/bin/env
 Requires: qore-module(abi)%{?_isa} = %{module_api}
 
