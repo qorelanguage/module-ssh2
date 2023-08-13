@@ -42,7 +42,11 @@ Summary: SSH2 module for Qore
 Name: qore-ssh2-module
 Version: %{mod_ver}
 Release: 1%{dist}
-License: LGPL
+%if 0%{?suse_version}
+License: LGPL-2.0+ or GPL-2.0+ or MIT
+%else
+License: LGPLv2+ or GPLv2+ or MIT
+%endif
 Group: Development/Languages
 URL: http://www.qoretechnologies.com/qore
 Source: http://prdownloads.sourceforge.net/qore/%{name}-%{version}.tar.bz2
@@ -56,6 +60,9 @@ BuildRequires: qore >= 1.18
 BuildRequires: libssh2-devel >= 1.1
 BuildRequires: openssl-devel
 BuildRequires: doxygen
+%if 0%{?el7}
+BuildRequires: devtoolset-7-gcc-c++
+%endif
 Requires: /usr/bin/env
 Requires: qore-module(abi)%{?_isa} = %{module_api}
 
@@ -116,7 +123,7 @@ This RPM provides API documentation, test and example programs
 * Sun May 10 2020 David Nichols <david@qore.org> - 1.4
 - updated to version 1.4
 
-* Sun Jan 26 2018 David Nichols <david@qore.org> - 1.3
+* Sun Jan 28 2018 David Nichols <david@qore.org> - 1.3
 - updated to version 1.3
 
 * Thu Feb 2 2017 David Nichols <david@qore.org> - 1.2
