@@ -127,8 +127,10 @@ public class Ssh2ClientConnection inherits AbstractSsh2Connection {
             "cls": Class::forName("Ssh2ClientConnection"),
             "options": {
                 "keyfile": <ConnectionOptionInfo>{
+                    "display_name": "SSH Private Key",
+                    "short_desc": "A path to an SSH private key file in PEM forma",
                     "type": "string",
-                    "desc": "a path to a private key file in PEM format to use for key-based authentication",
+                    "desc": "A path to an SSH private key file in PEM format to use for key-based authentication",
                 },
             },
         };
@@ -189,8 +191,10 @@ public class SftpConnection inherits AbstractSsh2Connection {
             "cls": Class::forName("SftpConnection"),
             "options": {
                 "keyfile": <ConnectionOptionInfo>{
+                    "display_name": "SSH Private Key",
+                    "short_desc": "A path to an SSH private key file in PEM forma",
                     "type": "string",
-                    "desc": "a path to a private key file in PEM format to use for key-based authentication",
+                    "desc": "a path to an SSH private key file in PEM format to use for key-based authentication",
                 },
             },
         };
