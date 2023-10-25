@@ -23,7 +23,7 @@
 */
 
 # make sure we have the required qore version
-%requires qore >= 1.0
+%requires qore >= 2.0
 
 # requires ssh2 functionality
 %requires (reexport) ssh2
@@ -71,29 +71,69 @@ public class SftpPollerFileEventInfoDataType inherits HashDataType {
     public {
         #! Markdown descriptions for hashdecl members
         const FieldDescriptions = {
-            "name": "the name of the file, link, or directory",
-            "size": "the size of the file in bytes",
-            "uid": "the UID of the owner of the file",
-            "gid": "the GID of the owner of the file",
-            "mode": "the permissions / mode of the file",
-            "atime": "the last accessed date/time of the file",
-            "mtime": "the last modified date/time of the file",
-            "type": "the type of file; one of:\n- `REGULAR`\n- `DIRECTORY`\n- `SYMBOLIC-LINK`\n"
-                "- `BLOCK-DEVICE`\n- `CHARACTER-DEVICE`\n- `FIFO`\n- `SYMBOLIC-LINK`\n- `SOCKET`\n"
-                "- `UNKNOWN`",
-            "perm": "a string giving UNIX-style permissions for the file (ex: `-rwxr-xr-x`)",
-            "data": "the file's data; this will be a string unless the `binary` option is set to `True`, in "
-                "which case this key is assigned to the files binary data; this hash key is only present if "
-                "`skip_file_content_retrieval` was `False` in the `SftpPoller::constructor()` option hash",
-            "filepath": "the remote filepath relative to SFTP root directory",
+            "name": {
+                "display_name": "Name",
+                "desc": "the name of the file, link, or directory",
+            },
+            "size": {
+                "display_name": "Size",
+                "desc": "the size of the file in bytes",
+            },
+            "uid": {
+                "display_name": "User ID",
+                "desc": "the UID of the owner of the file",
+            },
+            "gid": {
+                "display_name": "Group ID",
+                "desc": "the GID of the owner of the file",
+            },
+            "mode": {
+                "display_name": "File Mode",
+                "desc": "the permissions / mode of the file",
+            },
+            "atime": {
+                "display_name": "Last Access Time",
+                "desc": "the last accessed date/time of the file",
+            },
+            "mtime": {
+                "display_name": "Last Modified Time",
+                "desc": "the last modified date/time of the file",
+            },
+            "type": {
+                "display_name": "Type",
+                "short_desc": "The type of file",
+                "desc": "The type of file; one of:\n- `REGULAR`\n- `DIRECTORY`\n- `SYMBOLIC-LINK`\n"
+                    "- `BLOCK-DEVICE`\n- `CHARACTER-DEVICE`\n- `FIFO`\n- `SYMBOLIC-LINK`\n- `SOCKET`\n"
+                    "- `UNKNOWN`",
+            },
+            "perm": {
+                "display_name": "Permissions",
+                "short_desc": "A string giving UNIX-style permissions for the file",
+                "desc": "A string giving UNIX-style permissions for the file (ex: `-rwxr-xr-x`)",
+            },
+            "data": {
+                "display_name": "File Data",
+                "short_desc": "The file's data",
+                "desc": "the file's data; this will be a string unless the `binary` option is set to `True`, in "
+                    "which case this key is assigned to the files binary data; this hash key is only present if "
+                    "`skip_file_content_retrieval` was `False` in the `SftpPoller::constructor()` option hash",
+            },
+            "filepath": {
+                "display_name": "Remote Path",
+                "desc": "the remote filepath relative to SFTP root directory",
+            },
         };
     }
 
     #! Creates the type
     constructor() {
         # add members for base hashdecl
-        map addField(new QoreDataField($1.getName(), FieldDescriptions{$1.getName()}, $1.getType(),
-            $1.getDefaultValue())), TypedHash::forName("SftpPoller::SftpPollerFileEventInfo").getMembers();
+        map addField(new QoreDataField({
+            "name": $1.getName(),
+            "type": $1.getType(),
+            "default_value": $1.getDefaultValue(),
+        } + FieldDescriptions{$1.getName()})),
+            TypedHash::forName("SftpPoller::SftpPollerFileEventInfo").getMembers();
     }
 }
 
