@@ -23,7 +23,7 @@
 */
 
 # minimum required Qore version
-%requires qore >= 0.9.5
+%requires qore >= 2.0
 
 # require type definitions everywhere
 %require-types
@@ -124,6 +124,9 @@ public class Ssh2ClientConnection inherits AbstractSsh2Connection {
     public {
         #! Connection entry info
         const ConnectionScheme = <ConnectionSchemeInfo>{
+            "display_name": "SSH Connection",
+            "short_desc": "A connection to a server with SSH",
+            "desc": "A connection to a server with SSH",
             "cls": Class::forName("Ssh2ClientConnection"),
             "options": {
                 "keyfile": <ConnectionOptionInfo>{
@@ -188,6 +191,9 @@ public class SftpConnection inherits AbstractSsh2Connection {
     public {
         #! Connection entry info
         const ConnectionScheme = <ConnectionSchemeInfo>{
+            "display_name": "SFTP Connection",
+            "short_desc": "A connection to a server with SFTP",
+            "desc": "A connection to a server with SFTP",
             "cls": Class::forName("SftpConnection"),
             "options": {
                 "keyfile": <ConnectionOptionInfo>{
