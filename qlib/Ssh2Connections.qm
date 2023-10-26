@@ -1,7 +1,7 @@
 # -*- mode: qore; indent-tabs-mode: nil -*-
 #! @file Ssh2Connections.qm SSH2 module connection implementations
 
-/*  Ssh2Connections.qm Copyright 2013 - 2021 Qore Technologies, s.r.o.
+/*  Ssh2Connections.qm Copyright 2013 - 2023 Qore Technologies, s.r.o.
 
     Permission is hereby granted, free of charge, to any person obtaining a
     copy of this software and associated documentation files (the "Software"),
@@ -136,6 +136,9 @@ public class Ssh2ClientConnection inherits AbstractSsh2Connection {
                     "desc": "A path to an SSH private key file in PEM format to use for key-based authentication",
                 },
             },
+            "schemes": {
+                "ssh2": True,
+            },
         };
     }
 
@@ -202,6 +205,9 @@ public class SftpConnection inherits AbstractSsh2Connection {
                     "type": "string",
                     "desc": "a path to an SSH private key file in PEM format to use for key-based authentication",
                 },
+            },
+            "schemes": {
+                "sftp": True,
             },
         };
     }
