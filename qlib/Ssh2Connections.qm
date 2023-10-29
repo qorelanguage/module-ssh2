@@ -1,7 +1,7 @@
 # -*- mode: qore; indent-tabs-mode: nil -*-
 #! @file Ssh2Connections.qm SSH2 module connection implementations
 
-/*  Ssh2Connections.qm Copyright 2013 - 2021 Qore Technologies, s.r.o.
+/*  Ssh2Connections.qm Copyright 2013 - 2023 Qore Technologies, s.r.o.
 
     Permission is hereby granted, free of charge, to any person obtaining a
     copy of this software and associated documentation files (the "Software"),
@@ -23,7 +23,7 @@
 */
 
 # minimum required Qore version
-%requires qore >= 0.9.5
+%requires qore >= 2.0
 
 # require type definitions everywhere
 %require-types
@@ -124,12 +124,20 @@ public class Ssh2ClientConnection inherits AbstractSsh2Connection {
     public {
         #! Connection entry info
         const ConnectionScheme = <ConnectionSchemeInfo>{
+            "display_name": "SSH Connection",
+            "short_desc": "A connection to a server with SSH",
+            "desc": "A connection to a server with SSH",
             "cls": Class::forName("Ssh2ClientConnection"),
             "options": {
                 "keyfile": <ConnectionOptionInfo>{
+                    "display_name": "SSH Private Key",
+                    "short_desc": "A path to an SSH private key file in PEM forma",
                     "type": "string",
-                    "desc": "a path to a private key file in PEM format to use for key-based authentication",
+                    "desc": "A path to an SSH private key file in PEM format to use for key-based authentication",
                 },
+            },
+            "schemes": {
+                "ssh2": True,
             },
         };
     }
@@ -186,12 +194,20 @@ public class SftpConnection inherits AbstractSsh2Connection {
     public {
         #! Connection entry info
         const ConnectionScheme = <ConnectionSchemeInfo>{
+            "display_name": "SFTP Connection",
+            "short_desc": "A connection to a server with SFTP",
+            "desc": "A connection to a server with SFTP",
             "cls": Class::forName("SftpConnection"),
             "options": {
                 "keyfile": <ConnectionOptionInfo>{
+                    "display_name": "SSH Private Key",
+                    "short_desc": "A path to an SSH private key file in PEM forma",
                     "type": "string",
-                    "desc": "a path to a private key file in PEM format to use for key-based authentication",
+                    "desc": "a path to an SSH private key file in PEM format to use for key-based authentication",
                 },
+            },
+            "schemes": {
+                "sftp": True,
             },
         };
     }
