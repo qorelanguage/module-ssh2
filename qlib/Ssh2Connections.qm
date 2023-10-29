@@ -124,7 +124,6 @@ public class Ssh2ClientConnection inherits AbstractSsh2Connection {
     public {
         #! Connection entry info
         const ConnectionScheme = <ConnectionSchemeInfo>{
-            "desc": "A connection to a server with SSH",
             "cls": Class::forName("Ssh2ClientConnection"),
             "options": {
                 "keyfile": <ConnectionOptionInfo>{
@@ -187,7 +186,6 @@ public class SftpConnection inherits AbstractSsh2Connection {
     public {
         #! Connection entry info
         const ConnectionScheme = <ConnectionSchemeInfo>{
-            "desc": "A connection to a server with SFTP",
             "cls": Class::forName("SftpConnection"),
             "options": {
                 "keyfile": <ConnectionOptionInfo>{
